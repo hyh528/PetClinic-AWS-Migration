@@ -28,15 +28,15 @@ git clone https://github.com/hyh528/PetClinic-AWS-Migration.git
 cd PetClinic-AWS-Migration
 ```
 
-### 1.2. `develop` 브랜치 생성 (PM이 한 번만 실행)
+### 1.2. `dev` 브랜치 생성 (PM이 한 번만 실행)
 
 > **Note:** 이 작업은 PM(영현님)이 이미 완료했습니다. 팀원들은 2단계부터 진행하면 됩니다.
 
 ```bash
-# main 브랜치에서 develop 브랜치를 생성합니다.
-git checkout -b develop
-# 원격 저장소에 develop 브랜치를 Push하여 팀원들이 공유할 수 있도록 합니다.
-git push origin develop
+# main 브랜치에서 dev 브랜치를 생성합니다.
+git checkout -b dev
+# 원격 저장소에 dev 브랜치를 Push하여 팀원들이 공유할 수 있도록 합니다.
+git push origin dev
 ```
 
 ---
@@ -51,14 +51,14 @@ git push origin develop
 
 ### 2.2. 최신 코드로 업데이트 (매우 중요!)
 
-- 다른 팀원들의 작업이 이미 `develop` 브랜치에 반영되었을 수 있습니다. 항상 최신 버전의 코드에서 내 작업을 시작해야 충돌을 피할 수 있습니다.
+- 다른 팀원들의 작업이 이미 `dev` 브랜치에 반영되었을 수 있습니다. 항상 최신 버전의 코드에서 내 작업을 시작해야 충돌을 피할 수 있습니다.
 
 ```bash
-# 1. 공동 작업실인 develop 브랜치로 이동합니다.
-git checkout develop
+# 1. 공동 작업실인 dev 브랜치로 이동합니다.
+git checkout dev
 
-# 2. 원격 저장소(origin)의 최신 develop 브랜치 내용을 내 컴퓨터로 가져옵니다.
-git pull origin develop
+# 2. 원격 저장소(origin)의 최신 dev 브랜치 내용을 내 컴퓨터로 가져옵니다.
+git pull origin dev
 ```
 
 ### 2.3. 내 작업용 브랜치 만들기
@@ -90,7 +90,7 @@ git checkout -b security/draft-ecs-task-policy
 git add .
 
 # 2. 커밋 메시지와 함께 저장합니다.
-git commit -m "Security: Draft IAM policy for ECS Task Role"
+git commit -m "Security: ECS Task 실행을 위한 IAM 정책 초안 작성"
 ```
 
 ---
@@ -108,7 +108,7 @@ git push origin security/draft-ecs-task-policy
 
 ## 5단계: Pull Request(PR) 요청하기
 
-이제 내 작업을 `develop` 브랜치에 합쳐달라고 공식적으로 요청할 차례입니다.
+이제 내 작업을 `dev` 브랜치에 합쳐달라고 공식적으로 요청할 차례입니다.
 
 1.  **GitHub 저장소**에 접속하면, 방금 Push한 브랜치에 대해 **"Compare & pull request"** 버튼이 노란색으로 표시됩니다. 이 버튼을 클릭합니다.
 2.  PR 생성 화면이 나타나면, 우리가 만든 **PR 템플릿**이 자동으로 적용되어 있습니다. 템플릿의 각 항목을 꼼꼼히 채워줍니다.
@@ -123,7 +123,7 @@ git push origin security/draft-ecs-task-policy
 
 1.  리뷰어가 내 코드를 보고 의견(Comment)을 남기거나 변경을 요청할 수 있습니다.
 2.  요청 사항이 있다면, 동료와 충분히 소통한 후 내 컴퓨터의 `security/draft-ecs-task-policy` 브랜치에서 **코드를 다시 수정하고 커밋, 푸시**합니다. (PR에 자동으로 반영됩니다.)
-3.  리뷰어에게 **Approve(승인)** 를 받으면, PR 페이지의 **"Merge pull request"** 버튼을 눌러 내 작업을 `develop` 브랜치에 최종적으로 합칩니다.
+3.  리뷰어에게 **Approve(승인)** 를 받으면, PR 페이지의 **"Merge pull request"** 버튼을 눌러 내 작업을 `dev` 브랜치에 최종적으로 합칩니다.
 4.  Merge가 완료된 후 나타나는 **"Delete branch"** 버튼을 눌러, 이제 역할이 끝난 `security/draft-ecs-task-policy` 브랜치를 깨끗하게 삭제합니다.
 
 **이것으로 하나의 작업이 모두 끝났습니다! 이제 다시 2단계로 돌아가 다음 작업을 시작하면 됩니다.**
