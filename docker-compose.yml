@@ -46,6 +46,11 @@ services:
         condition: service_healthy
     ports:
     - 8081:8081
+    environment:
+      - SPRING_PROFILES_ACTIVE=mysql
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
 
   visits-service:
     image: springcommunity/spring-petclinic-visits-service
@@ -61,6 +66,11 @@ services:
         condition: service_healthy
     ports:
      - 8082:8082
+    environment:
+      - SPRING_PROFILES_ACTIVE=mysql
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
 
   vets-service:
     image: springcommunity/spring-petclinic-vets-service
@@ -76,7 +86,11 @@ services:
         condition: service_healthy
     ports:
      - 8083:8083
-
+    environment:
+      - SPRING_PROFILES_ACTIVE=mysql
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
 
   genai-service:
     image: springcommunity/spring-petclinic-genai-service
@@ -96,7 +110,6 @@ services:
         condition: service_healthy
     ports:
      - 8084:8084
-
 
   api-gateway:
     image: springcommunity/spring-petclinic-api-gateway
@@ -137,8 +150,6 @@ services:
         condition: service_healthy
     ports:
      - 9090:9090
-
-  ## Grafana / Prometheus
 
   grafana-server:
     build: ./docker/grafana
