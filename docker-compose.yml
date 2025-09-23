@@ -1,3 +1,26 @@
+# 공통 설정
+x-service-base: &service-base
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+  depends_on:
+    config-server:
+      condition: service_healthy
+    discovery-server:
+      condition: service_healthy
+
+x-database-env: &database-env
+  - SPRING_PROFILES_ACTIVE=mysql,docker
+  - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
+  - SPRING_DATASOURCE_USERNAME=${DB_USER}
+  - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+  - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+
+x-eureka-env: &eureka-env
+  - SPRING_PROFILES_ACTIVE=docker
+  - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+
 services:
   config-server:
     image: springcommunity/spring-petclinic-config-server
@@ -13,6 +36,12 @@ services:
       retries: 10
     ports:
      - 8888:8888
+    environment:
+      - SPRING_PROFILES_ACTIVE=native,docker
+      - GIT_REPO=/config
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_URI=
+    volumes:
+      - ./config:/config
 
   discovery-server:
     image: springcommunity/spring-petclinic-discovery-server
@@ -31,100 +60,61 @@ services:
         condition: service_healthy
     ports:
      - 8761:8761
+    environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - EUREKA_INSTANCE_HOSTNAME=discovery-server
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
 
   customers-service:
+    <<: *service-base
     image: springcommunity/spring-petclinic-customers-service
     container_name: customers-service
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    depends_on:
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
     ports:
-    - 8081:8081
+    - 8081:8080
     environment:
-      - SPRING_PROFILES_ACTIVE=mysql
-      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
-      - SPRING_DATASOURCE_USERNAME=${DB_USER}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      <<: *database-env
 
   visits-service:
+    <<: *service-base
     image: springcommunity/spring-petclinic-visits-service
     container_name: visits-service
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    depends_on:
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
     ports:
-     - 8082:8082
+     - 8082:8080
     environment:
-      - SPRING_PROFILES_ACTIVE=mysql
-      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
-      - SPRING_DATASOURCE_USERNAME=${DB_USER}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      <<: *database-env
 
   vets-service:
+    <<: *service-base
     image: springcommunity/spring-petclinic-vets-service
     container_name: vets-service
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    depends_on:
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
     ports:
-     - 8083:8083
+     - 8083:8080
     environment:
-      - SPRING_PROFILES_ACTIVE=mysql
-      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
-      - SPRING_DATASOURCE_USERNAME=${DB_USER}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      <<: *database-env
 
   genai-service:
+    <<: *service-base
     image: springcommunity/spring-petclinic-genai-service
     container_name: genai-service
+    ports:
+     - 8084:8084
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    depends_on:
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
-    ports:
-     - 8084:8084
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
 
   api-gateway:
+    <<: *service-base
     image: springcommunity/spring-petclinic-api-gateway
     container_name: api-gateway
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    depends_on:
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
     ports:
      - 8080:8080
+    environment:
+      <<: *eureka-env
 
   tracing-server:
     image: openzipkin/zipkin
@@ -137,19 +127,13 @@ services:
      - 9411:9411
 
   admin-server:
+    <<: *service-base
     image: springcommunity/spring-petclinic-admin-server
     container_name: admin-server
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    depends_on:
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
     ports:
-     - 9090:9090
+     - 9090:8080
+    environment:
+      <<: *eureka-env
 
   grafana-server:
     build: ./docker/grafana

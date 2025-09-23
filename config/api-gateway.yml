@@ -1,0 +1,12 @@
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-server:8761/eureka/
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  zipkin:
+    tracing:
+      endpoint: http://tracing-server:9411/api/v2/spans
