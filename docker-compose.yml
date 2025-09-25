@@ -13,8 +13,8 @@ x-service-base: &service-base
 x-database-env: &database-env
   SPRING_PROFILES_ACTIVE: mysql,docker
   SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
-  SPRING_DATASOURCE_USERNAME: ${DB_USER}
-  SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+  SPRING_DATASOURCE_USERNAME: root
+  SPRING_DATASOURCE_PASSWORD: 1234
   EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
 
 x-eureka-env: &eureka-env
@@ -84,6 +84,13 @@ services:
      - 8082:8080
     environment:
       <<: *database-env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      customers-service:
+        condition: service_started
 
   vets-service:
     <<: *service-base

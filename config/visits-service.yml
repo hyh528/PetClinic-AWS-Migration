@@ -1,8 +1,13 @@
 spring:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/mysql/schema.sql
+      data-locations: classpath:db/mysql/data.sql
   datasource:
     url: jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    username: root
+    password: 1234
 eureka:
   client:
     serviceUrl:
