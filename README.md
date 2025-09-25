@@ -32,6 +32,31 @@
 
 ---
 
+## 빠른 시작 (Quick Start) - 로컬 MYSQL로 실행 방법
+
+### 환경 설정
+1. **환경 변수 파일 생성:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **.env 파일 편집:**
+   - 데이터베이스 비밀번호 설정
+   - AI 서비스 키 설정 (선택사항)
+
+3. **서비스 실행:**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **서비스 확인:**
+   - API Gateway: http://localhost:8080
+   - Admin Server: http://localhost:9090
+   - Grafana: http://localhost:3030
+   - Prometheus: http://localhost:9091
+
+---
+
 ## ✨ 프로젝트 핵심 특징 (Key Features)
 
 ### 1. Infrastructure as Code (IaC)

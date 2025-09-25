@@ -1,11 +1,11 @@
-# my global config
+# 글로벌 설정
 global:
-  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
+  scrape_interval:     15s # 스크랩 간격을 15초로 설정. 기본값은 1분입니다.
+  evaluation_interval: 15s # 규칙을 15초마다 평가. 기본값은 1분입니다.
+  # scrape_timeout은 글로벌 기본값(10s)으로 설정됩니다.
 
-# A scrape configuration containing exactly one endpoint to scrape:
-# Here it's Prometheus itself.
+# 스크랩할 엔드포인트가 정확히 하나인 스크랩 구성:
+# 여기서는 Prometheus 자체입니다.
 scrape_configs:
 - job_name: prometheus
   static_configs:
@@ -19,14 +19,14 @@ scrape_configs:
 - job_name: customers-service
   metrics_path: /actuator/prometheus
   static_configs:
-  - targets: ['customers-service:8081']
+  - targets: ['customers-service:8080']
 
 - job_name: visits-service
   metrics_path: /actuator/prometheus
   static_configs:
-  - targets: ['visits-service:8082']
+  - targets: ['visits-service:8080']
 
 - job_name: vets-service
   metrics_path: /actuator/prometheus
   static_configs:
-  - targets: ['vets-service:8083']
+  - targets: ['vets-service:8080']
