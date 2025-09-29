@@ -7,18 +7,18 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "petclinic-tfstate-team-jungsu-kopo"
+    bucket         = var.tfstate_bucket_name
     key            = "dev/yeonghyeon/network/terraform.tfstate"
-    region         = "ap-northeast-2"
-    dynamodb_table = "petclinic-tf-locks"
-    encrypt        = true
-    profile        = "2501340070@office.kopo.ac.kr"  # 학교 계정
+    region         = var.aws_region
+    dynamodb_table = var.tf_lock_table_name
+    encrypt        = var.encrypt_state
+    profile        = "petclinic-yeonghyeon"  # 프로젝트 계정
   }
 }
 
 provider "aws" {
   region  = "ap-northeast-2"
-  profile = "2501340070@office.kopo.ac.kr"  # 예: petclinic-yeonghyeon
+  profile = "petclinic-yeonghyeon"  # 프로젝트 계정
 
   default_tags {
     tags = {

@@ -32,8 +32,8 @@ provider "aws" {
   # 서울 리전 사용 (ap-northeast-2)
   region = "ap-northeast-2"
 
-  # 학교 계정 프로필 사용
-  profile = "2501340070@office.kopo.ac.kr"  # 학교 이메일 프로필 이름으로 변경
+  # 프로젝트 계정 프로필 사용
+  profile = "petclinic-yeonghyeon"  # 프로젝트 계정
 
   # 모든 AWS 리소스에 자동으로 붙는 기본 태그들
   # 비용 추적, 리소스 관리, 보안 감사에 필수적
@@ -66,7 +66,7 @@ locals {
 
   # DynamoDB 테이블 이름 (리전 내 고유)
   # Terraform 상태 파일 잠금용
-  tf_lock_table_name  = "petclinic-tf-locks"
+  tf_lock_table_name  = "petclinic-tf-locks-jungsu-kopo"
 }
 
 # ==========================================

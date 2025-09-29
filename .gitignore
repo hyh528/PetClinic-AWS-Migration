@@ -28,5 +28,13 @@ GEMINI.md
 # 개인 작업
 /todolist/
 
-# Environment variables
+# 환경 변수
 .env
+
+# .terraform/ 디렉터리 (모듈, 플러그인 등)
+.terraform/
+
+# terraform.tfstate (민감 정보 및 상태)
+*.tfstate
+*.tfstate.*
+
