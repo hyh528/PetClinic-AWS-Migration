@@ -30,3 +30,10 @@ GEMINI.md
 
 # Environment variables
 .env
+
+# .terraform/ 디렉터리 (모듈, 플러그인 등)
+.terraform/
+.terraform.lock.* 
+# terraform.tfstate (민감 정보 및 상태)
+*.tfstate
+*.tfstate.*

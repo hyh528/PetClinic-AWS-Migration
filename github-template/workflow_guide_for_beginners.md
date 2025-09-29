@@ -7,7 +7,8 @@
 ### 📖 시나리오
 
 - **담당자:** 휘권 (Security & Compliance Lead)
-- **할 일:** GitHub 이슈 #6으로 등록된 "ECS Task 실행을 위한 IAM 정책 초안 작성" 작업을 진행한다.
+- **할 일:** GitHub git clone --branch dev https://github.com/hyh528/PetClinic-AWS-Migration.git
+이슈 #6으로 등록된 "ECS Task 실행을 위한 IAM 정책 초안 작성" 작업을 진행한다.
 
 ---
 
