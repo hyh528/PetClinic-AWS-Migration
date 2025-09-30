@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.13.0"
+  required_version = ">= 1.12.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -12,13 +12,14 @@ terraform {
     region         = var.aws_region
     dynamodb_table = var.tf_lock_table_name
     encrypt        = var.encrypt_state
-    profile        = "petclinic-hwigwon"  # 휘권이의 IAM 계정
+    profile        = var.aws_profile # 변수화된 프로파일(backend.tfvars 또는 -var-file로 주입)
   }
 }
 
 provider "aws" {
-  region  = "ap-northeast-2"
-  profile = "petclinic-hwigwon"  # 휘권이의 IAM 계정
+  # 리전/프로파일을 변수로 노출하여 환경 간 일관성 및 재사용성 향상
+  region  = var.aws_region
+  profile = var.aws_profile # backend.tfvars 또는 -var-file로 오버라이드 가능
 
   default_tags {
     tags = {
@@ -33,14 +34,15 @@ provider "aws" {
 }
 
 # Network 레이어 원격 상태 참조 (VPC, 서브넷, 라우팅 테이블 등)
+# - 버킷/리전/락테이블/암호화/프로파일을 변수로 표준화
 data "terraform_remote_state" "network" {
   backend = "s3"
   config = {
-    bucket         = "petclinic-tfstate-team-jungsu-kopo"
-    key            = "dev/yeonghyeon/network/terraform.tfstate"
-    region         = "ap-northeast-2"
-    dynamodb_table = "petclinic-tf-locks"
-    encrypt        = true
-    profile        = "petclinic-yeonghyeon"  # Network 레이어 계정으로 상태 파일 접근
+    bucket         = var.tfstate_bucket_name
+    key            = "dev/yeonghyeon/network/terraform.tfstate" # 팀별 경로 표준 유지
+    region         = var.aws_region
+    dynamodb_table = var.tf_lock_table_name
+    encrypt        = var.encrypt_state
+    profile        = var.network_state_profile # Network 상태 접근 프로파일
   }
 }

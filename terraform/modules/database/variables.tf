@@ -16,21 +16,15 @@ variable "vpc_security_group_ids" {
 }
 
 variable "engine_version" {
-  description = "MySQL 엔진 버전"
+  description = "Aurora MySQL 엔진 버전"
   type        = string
-  default     = "8.0"
+  default     = "8.0.mysql_aurora.3.04.0"
 }
 
 variable "instance_class" {
-  description = "RDS 인스턴스 클래스"
+  description = "Aurora 인스턴스 클래스"
   type        = string
-  default     = "db.t3.micro"
-}
-
-variable "allocated_storage" {
-  description = "할당된 저장소 크기 (GB)"
-  type        = number
-  default     = 20
+  default     = "db.t3.small"
 }
 
 variable "db_name" {

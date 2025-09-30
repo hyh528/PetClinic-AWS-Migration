@@ -3,9 +3,9 @@
 # VPC는 우리 애플리케이션이 실행될 가상의 네트워크 공간입니다.
 locals {
   azs = var.azs
-# Locals: Terraform에서 지역 변수를 선언합니다.
-# 코드 내에서 재사용할 수 있는 값들을 정의합니다.
-# 여기서는 서브넷을 만들기 위한 설정값들을 계산합니다.
+  # Locals: Terraform에서 지역 변수를 선언합니다.
+  # 코드 내에서 재사용할 수 있는 값들을 정의합니다.
+  # 여기서는 서브넷을 만들기 위한 설정값들을 계산합니다.
 
   # for_each 맵을 위한 결정적 문자열 키("0","1",...) 생성
   public_defs = {
@@ -37,10 +37,10 @@ locals {
 
 # VPC
 resource "aws_vpc" "this" {
-  cidr_block                           = var.vpc_cidr
-  enable_dns_support                   = true
-  enable_dns_hostnames                 = true
-  assign_generated_ipv6_cidr_block     = var.enable_ipv6
+  cidr_block                       = var.vpc_cidr
+  enable_dns_support               = true
+  enable_dns_hostnames             = true
+  assign_generated_ipv6_cidr_block = var.enable_ipv6
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-vpc"
@@ -52,8 +52,8 @@ resource "aws_vpc" "this" {
 # 인터넷 게이트웨이
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
-# 인터넷 게이트웨이 (Internet Gateway): VPC가 인터넷과 연결될 수 있게 해줍니다.
-# 퍼블릭 서브넷의 리소스들이 인터넷에 접근할 수 있습니다.
+  # 인터넷 게이트웨이 (Internet Gateway): VPC가 인터넷과 연결될 수 있게 해줍니다.
+  # 퍼블릭 서브넷의 리소스들이 인터넷에 접근할 수 있습니다.
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-igw"
@@ -72,20 +72,20 @@ resource "aws_egress_only_internet_gateway" "this" {
     Name        = "${var.name_prefix}-eigw"
     Environment = var.environment
   })
-# IPv6 CIDR 블록 계산: VPC의 IPv6 주소 범위에서 서브넷용 작은 범위를 만듭니다.
+  # IPv6 CIDR 블록 계산: VPC의 IPv6 주소 범위에서 서브넷용 작은 범위를 만듭니다.
 }
 
 # VPC의 /56에서 서브넷용 IPv6 /64 블록 파생 (활성화 시)
 locals {
-  vpc_ipv6_cidr       = var.enable_ipv6 ? aws_vpc.this.ipv6_cidr_block : null
+  vpc_ipv6_cidr = var.enable_ipv6 ? aws_vpc.this.ipv6_cidr_block : null
   # 겹침 방지를 위해 각 티어에 다른 인덱스 범위 할당
-  public_ipv6_blocks  = var.enable_ipv6 ? { for k, v in local.public_defs      : k => cidrsubnet(local.vpc_ipv6_cidr, 8, tonumber(k)      ) } : {}
-  app_ipv6_blocks     = var.enable_ipv6 ? { for k, v in local.private_app_defs : k => cidrsubnet(local.vpc_ipv6_cidr, 8, tonumber(k) + 10 ) } : {}
-  db_ipv6_blocks      = var.enable_ipv6 ? { for k, v in local.private_db_defs  : k => cidrsubnet(local.vpc_ipv6_cidr, 8, tonumber(k) + 20 ) } : {}
+  public_ipv6_blocks = var.enable_ipv6 ? { for k, v in local.public_defs : k => cidrsubnet(local.vpc_ipv6_cidr, 8, tonumber(k)) } : {}
+  app_ipv6_blocks    = var.enable_ipv6 ? { for k, v in local.private_app_defs : k => cidrsubnet(local.vpc_ipv6_cidr, 8, tonumber(k) + 10) } : {}
+  db_ipv6_blocks     = var.enable_ipv6 ? { for k, v in local.private_db_defs : k => cidrsubnet(local.vpc_ipv6_cidr, 8, tonumber(k) + 20) } : {}
 
-  egress_only_igw_id  = var.enable_ipv6 ? aws_egress_only_internet_gateway.this[0].id : null
-# 퍼블릭 서브넷: 인터넷 게이트웨이를 통해 인터넷에 직접 연결된 서브넷입니다.
-# 로드 밸런서나 웹 서버 같은 공개 서비스를 여기에 배치합니다.
+  egress_only_igw_id = var.enable_ipv6 ? aws_egress_only_internet_gateway.this[0].id : null
+  # 퍼블릭 서브넷: 인터넷 게이트웨이를 통해 인터넷에 직접 연결된 서브넷입니다.
+  # 로드 밸런서나 웹 서버 같은 공개 서비스를 여기에 배치합니다.
 }
 
 # 퍼블릭 서브넷 (런치 시 퍼블릭 IP 매핑 = true)

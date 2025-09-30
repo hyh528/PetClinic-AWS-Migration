@@ -9,7 +9,7 @@ module "vpc" {
   vpc_cidr    = var.vpc_cidr
   enable_ipv6 = var.enable_ipv6
 
-  azs                     = var.azs
+  azs                      = var.azs
   public_subnet_cidrs      = var.public_subnet_cidrs
   private_app_subnet_cidrs = var.private_app_subnet_cidrs
   private_db_subnet_cidrs  = var.private_db_subnet_cidrs
