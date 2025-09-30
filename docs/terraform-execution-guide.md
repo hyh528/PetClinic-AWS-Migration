@@ -86,7 +86,7 @@ terraform version
 
 ## 실행 순서 및 담당자별 가이드
 
-### 📋 **실행 순서 개요** (실무 방식 - 최적화):
+### **실행 순서 개요** (실무 방식 - 최적화):
 1. **휘권이**: IAM 생성 (학생 계정)
 2. **영현이**: Bootstrap + Network (프로젝트 계정)
 3. **휘권이**: Security (프로젝트 계정)
@@ -95,7 +95,7 @@ terraform version
 
 ---
 
-### 👤 **휘권이: 단계 1 (IAM 생성 전용)**
+### **휘권이: 단계 1 (IAM 생성 전용)**
 **사용 계정**: 학생 계정 (Administrator 권한)
 **예상 시간**: 2-3분
 
@@ -139,7 +139,7 @@ aws configure --profile petclinic-yeonghyeon
 
 ---
 
-### 👤 **영현이: 단계 2-3 (Bootstrap + Network)**
+### **영현이: 단계 2-3 (Bootstrap + Network)**
 **사용 계정**: 프로젝트 계정 (`petclinic-yeonghyeon`)
 **의존성**: IAM 생성 완료 필수
 **예상 시간**: 8-13분
@@ -197,8 +197,8 @@ terraform apply
 terraform output
 
 # 출력 예시:
-# tfstate_bucket_name = "petclinic-tfstate"
-# tf_lock_table_name = "petclinic-tf-locks"
+# tfstate_bucket_name = "petclinic-tfstate-jungsu-kopo"
+# tf_lock_table_name = "petclinic-tf-locks-jungsu-kopo"
 ```
 
 #### 1-6. AWS 콘솔에서 확인 (선택)
@@ -304,7 +304,7 @@ aws s3 ls s3://petclinic-tfstate/dev/network/ --profile petclinic-[이름]
 
 ---
 
-### 👤 **휘권이: 단계 3 (Security Layer)**
+### **휘권이: 단계 3 (Security Layer)**
 **사용 계정**: 프로젝트 계정 (`petclinic-hwigwon`)
 **의존성**: IAM 생성 + Network Layer 완료 필수
 **예상 시간**: 3-5분
@@ -388,7 +388,7 @@ aws sts get-caller-identity --profile petclinic-[팀원명]
 
 ---
 
-### 👤 **준제: 단계 4 (Database Layer)**
+### **준제: 단계 4 (Database Layer)**
 **사용 계정**: 프로젝트 계정 (`petclinic-junje`)
 **의존성**: Network + Security Layer 완료 필수
 **예상 시간**: 5-8분
@@ -444,7 +444,7 @@ terraform output
 
 ---
 
-### 👤 **석겸이: 단계 5 (Application Layer)**
+### **석겸이: 단계 5 (Application Layer)**
 **사용 계정**: 프로젝트 계정 (`petclinic-seokgyeom`)
 **의존성**: Network + Security + Database Layer 완료 필수
 **예상 시간**: 8-15분 (Docker 이미지 다운로드 포함)
@@ -626,16 +626,16 @@ terraform destroy
 
 ---
 
-## 🏗️ **레이어 아키텍처 상세 설명 (Layer Architecture Deep Dive)**
+## **레이어 아키텍처 상세 설명 (Layer Architecture Deep Dive)**
 
-### 📚 **레이어 구조란 무엇인가?**
+### **레이어 구조란 무엇인가?**
 
 **비유로 이해하기:**
 집을 짓는다고 생각해보세요:
-- 🏠 **기초 (Network)**: 땅 다지기, 기둥 세우기
-- 🔐 **벽과 문 (Security)**: 담장 쌓기, 문단속하기
-- 💾 **배관과 전기 (Database)**: 수도관, 전선 설치
-- 🛋️ **인테리어 (Application)**: 가구 배치, 집 꾸미기
+- **기초 (Network)**: 땅 다지기, 기둥 세우기
+- **벽과 문 (Security)**: 담장 쌓기, 문단속하기
+- **배관과 전기 (Database)**: 수도관, 전선 설치
+- **인테리어 (Application)**: 가구 배치, 집 꾸미기
 
 **왜 레이어로 나누나요?**
 - **독립성**: 각자 자신의 일을 할 수 있음
@@ -645,7 +645,7 @@ terraform destroy
 
 ---
 
-### 🗂️ **각 레이어 상세 설명**
+### **각 레이어 상세 설명**
 
 #### **1️⃣ Bootstrap 레이어 (선행 준비)**
 **담당자**: 영현이
@@ -784,8 +784,8 @@ Security ─────────────┼─→ Database
 | 4 | Database | 준제 | Network + Security | 5-8분 |
 | 5 | Application | 석겸이 | Network + Database | 8-15분 |
 
-**실무 팁:**
-- 각 레이어 완료 시 TEams으로 알림
+**팁:**
+- 각 레이어 완료 시 Teams으로 알림
 - 다음 담당자가 바로 시작할 수 있도록 준비
 
 ---
@@ -825,7 +825,7 @@ module "endpoints" {
 
 ---
 
-### 🎯 **레이어 구조의 장점**
+### **레이어 구조의 장점**
 
 #### **1. 팀 협업 효율성**
 - 각자 자신의 전문 영역 담당
@@ -881,7 +881,7 @@ tags = {
 
 ---
 
-### 🏆 **성공 사례**
+### **성공 사례**
 
 이 레이어 구조로 여러분의 팀은:
 - **혼란 없는 협업** 가능
@@ -891,7 +891,7 @@ tags = {
 
 이제 각자 자신의 레이어를 책임지고 완성해봅시다! 🤝
 
-## 🤝 협업 모범 사례 (Collaboration Best Practices)
+## 협업 모범 사례 (Collaboration Best Practices)
 
 ### 모듈 관리 전략
 **중요**: Terraform 모듈은 **로컬 저장소에 유지**하는 것을 권장합니다.
@@ -939,7 +939,7 @@ terraform apply # 변경사항 S3에 자동 저장
 4. **브랜치**: 모듈 변경 시 브랜치/PR 사용
 5. **의존성**: 이전 레이어 완료 후 다음 레이어 작업 시작
 
-## 👶 왕초보자를 위한 상세 가이드 (Step by Step)
+## 👶 이해 안 가는 팀원을 위해 한 번 더 상세 가이드 (Step by Step)
 
 ### 📚 먼저 이해하기: Terraform 상태 파일이란?
 
@@ -966,8 +966,8 @@ terraform apply # 변경사항 S3에 자동 저장
 ##### 1단계: 프로젝트 다운로드
 ```bash
 # Git이 설치되어 있어야 합니다
-git clone [프로젝트 저장소 URL]
-cd spring-petclinic-microservices
+git clone https://github.com/hyh528/PetClinic-AWS-Migration.git
+cd PetClinic-AWS-Migration
 ```
 
 ##### 2단계: 자신의 작업 폴더로 이동
@@ -1006,10 +1006,10 @@ terraform init
 ```
 
 **무슨 일이 일어나나요?**
-- 🔍 S3 버킷에 연결을 시도합니다
-- 📥 자신의 상태 파일을 다운로드합니다
-- 💾 로컬에 `.terraform` 폴더를 만듭니다
-- 🔧 필요한 플러그인을 설치합니다
+- S3 버킷에 연결을 시도합니다
+- 자신의 상태 파일을 다운로드합니다
+- 로컬에 `.terraform` 폴더를 만듭니다
+- 필요한 플러그인을 설치합니다
 
 **성공 시 출력 예시:**
 ```
@@ -1030,10 +1030,10 @@ terraform plan
 ```
 
 **무슨 일이 일어나나요?**
-- 📊 현재 AWS에 무엇이 있는지 확인
-- 📝 어떤 변경을 할지 계획을 세움
-- 💰 예상 비용 표시
-- 🚫 실제로는 아무것도 만들지 않음 (안전!)
+- 현재 AWS에 무엇이 있는지 확인
+- 어떤 변경을 할지 계획을 세움
+- 예상 비용 표시
+- 실제로는 아무것도 만들지 않음 (안전!)
 
 **출력 예시:**
 ```
@@ -1060,9 +1060,9 @@ terraform apply
 ```
 
 **무슨 일이 일어나나요?**
-- ⚠️ 정말 실행할지 물어봅니다: `Do you want to perform these actions? (yes/no)`
-- ⏳ AWS에 리소스를 만듭니다 (시간 걸릴 수 있음)
-- 💾 변경사항을 S3에 자동 저장합니다
+- 정말 실행할지 물어봅니다: `Do you want to perform these actions? (yes/no)`
+- AWS에 리소스를 만듭니다 (시간 걸릴 수 있음)
+- 변경사항을 S3에 자동 저장합니다
 
 **성공 시 출력:**
 ```
@@ -1178,7 +1178,7 @@ Error: AccessDenied
 
 ---
 
-### 💡 초보자를 위한 팁
+### 초보자를 위한 팁
 
 1. **항상 `terraform plan` 먼저!** 실제 변경 전에 미리 보기
 2. **에러 메시지 읽기** - 영어지만 힌트가 됩니다
@@ -1190,7 +1190,7 @@ Error: AccessDenied
 
 ---
 
-### 📋 간단 버전 체크리스트
+### 간단 버전 체크리스트
 
 - [ ] Git 저장소 클론
 - [ ] 자신의 폴더로 이동 (`cd terraform/envs/dev/[레이어]`)
@@ -1203,7 +1203,7 @@ Error: AccessDenied
 
 ---
 
-## 📁 **Terraform 파일 구조 완전 가이드**
+## **Terraform 파일 구조 완전 가이드**
 
 ### **🏗️ 전체 프로젝트 구조**
 
@@ -1250,7 +1250,7 @@ spring-petclinic-microservices/
 
 ---
 
-### **🔍 로컬 모듈 시스템 이해하기**
+### **로컬 모듈 시스템 이해하기**
 
 #### **모듈이란?**
 **비유로 이해하기:**
@@ -1278,7 +1278,7 @@ vpc/
 
 ---
 
-### **🔗 모듈 사용 방식 (실제 코드 예시)**
+### **모듈 사용 방식 (실제 코드 예시)**
 
 #### **1. 환경에서 모듈 호출**
 ```hcl
@@ -1328,7 +1328,7 @@ output "public_subnet_ids" {
 
 ---
 
-### **🌊 데이터 흐름: 모듈 → 환경 → 레이어 간 공유**
+### **데이터 흐름: 모듈 → 환경 → 레이어 간 공유**
 
 ```
 1. 모듈 실행
@@ -1349,7 +1349,7 @@ output "public_subnet_ids" {
 
 ---
 
-### **🎯 실무적 장점**
+### **실무적 장점**
 
 #### **1. 코드 재사용**
 ```hcl
@@ -1372,7 +1372,7 @@ module "vpc" {
 
 ---
 
-### **🚀 Bootstrap: 특별한 시작점**
+### **Bootstrap: 특별한 시작점**
 
 #### **Bootstrap의 역할**
 ```
@@ -1399,7 +1399,7 @@ terraform init   # 이제 S3 백엔드 자동 연결!
 
 ---
 
-### **💡 초보자를 위한 Q&A**
+### **초보자를 위한 Q&A**
 
 #### **Q: 왜 상대 경로를 사용할까?**
 **A:** `../../../modules/vpc`처럼 상대 경로를 사용하면:
@@ -1422,7 +1422,7 @@ vpc_cidr = "10.1.0.0/16"
 
 이제 팀원들이 **파일 구조와 모듈 시스템을 완벽하게 이해**할 수 있을 것입니다! 🎯
 
-## 🏗️ **Clean Architecture: 백엔드 설정 개선**
+## **Clean Architecture: 백엔드 설정 개선**
 
 ### **왜 변수를 사용하나?**
 
@@ -1474,9 +1474,9 @@ terraform init -backend-config=../backend.tfvars
 terraform init
 ```
 
-이제 **실무 수준의 Clean Architecture**를 따르고 있습니다! 🎯
+이제 **실무 수준의 Clean Architecture**를 따르고 있습니다!
 
-## 🎯 실행 체크리스트 (팀별 담당)
+## 실행 체크리스트 (팀별 담당)
 
 ### **공통 준비사항**:
 - [ ] AWS CLI 설치 및 버전 확인
@@ -1503,7 +1503,7 @@ terraform init
 - [ ] ALB DNS로 애플리케이션 접속 확인
 - [ ] CloudWatch 로그 및 모니터링 확인
 
-## 💡 초보자를 위한 팁
+## 초보자를 위한 팁
 
 1. **항상 `terraform plan` 먼저 실행**: 무엇이 생성/변경되는지 확인
 2. **팀 커뮤니케이션**: 각 레이어 완료 시 팀원들에게 공유
@@ -1513,7 +1513,7 @@ terraform init
 6. **천천히 진행**: 각 레이어 완료 확인 후 다음 담당자에게 전달
 7. **문서화**: 변경사항은 기록해두세요
 
-## 🎉 **실무 협업 완성!**
+## **실무 협업 완성!**
 
 이제 각 팀원이 자신의 역할을 담당하여 **실무 방식으로 협업**할 수 있습니다!
 
@@ -1529,5 +1529,3 @@ terraform init
 - **휘권이**: IAM + 보안 관리 🔐
 - **준제**: 데이터베이스 관리 🗄️
 - **석겸이**: 애플리케이션 배포 🚀
-
-이제 **혼란 없이 순차적으로 진행**할 수 있습니다! 🤝

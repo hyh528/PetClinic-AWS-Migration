@@ -59,39 +59,19 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
 # ==========================================
-# Network 환경 공통 변수 선언 (백엔드/프로바이더)
+# Provider 변수 (인터랙티브 프롬프트 방지)
 # ==========================================
-# - backend "s3" 및 provider "aws"에서 참조하는 공통 값
-# - 값은 terraform/backend.tfvars 또는 -var-file/-var로 주입
-# - 프로파일은 기본값을 제공하되 필요 시 override 가능
 
-# 원격 상태(S3) 버킷 이름
-variable "tfstate_bucket_name" {
-  description = "Terraform 원격 상태 보관용 S3 버킷 이름"
-  type        = string
-}
-
-# 상태 잠금(DynamoDB) 테이블 이름
-variable "tf_lock_table_name" {
-  description = "Terraform 상태 잠금을 위한 DynamoDB 테이블 이름"
-  type        = string
-}
-
-# 리전
 variable "aws_region" {
-  description = "리소스를 배포할 AWS 리전 (예: ap-northeast-2)"
+  description = "리소스를 배포할 AWS 리전"
   type        = string
+  default     = "ap-northeast-2"
 }
 
-# 상태 암호화 사용 여부
-variable "encrypt_state" {
-  description = "원격 상태 암호화 사용 여부"
-  type        = bool
-}
-
-# 이 환경에서 리소스를 생성/변경하는 기본 AWS CLI 프로파일
 variable "aws_profile" {
-  description = "Network 레이어에서 사용하는 기본 AWS CLI 프로파일"
+  description = "사용할 AWS CLI 프로파일"
   type        = string
+  default     = "petclinic-yeonghyeon"
 }

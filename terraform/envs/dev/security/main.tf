@@ -1,6 +1,6 @@
 # 보안 계층: IAM, 보안 그룹, VPC 엔드포인트
 
-# 1) IAM 사용자/그룹 (팀 온보딩)
+# 1) IAM 사용자/그룹
 # TODO: IAM 모듈 수정 후 재활성화
 # module "iam" {
 #   source = "../../../modules/iam"
