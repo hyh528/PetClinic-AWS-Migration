@@ -247,9 +247,9 @@ terraform init
 #### 2-3. 실행 계획 검토
 ```bash
 # 네트워크 리소스 생성 계획 확인
-terraform plan
+terraform plan -var-file=dev.tfvars
 
-# 모든 변수가 variables.tf에서 기본값으로 설정되어 있어
+# dev.tfvars 파일에 AWS 프로필 정보가 설정되어 있어
 # 별도의 설정 파일 없이 바로 실행 가능
 
 # 확인할 주요 리소스들:
@@ -265,7 +265,7 @@ terraform plan
 #### 2-4. 네트워크 인프라 생성
 ```bash
 # 계획 확인 후 실제 생성
-terraform apply
+terraform apply -var-file=dev.tfvars
 
 # 진행 상황 모니터링:
 # aws_vpc.this: Creating...
@@ -339,9 +339,9 @@ terraform init
 #### 3-3. 보안 리소스 계획 검토
 ```bash
 # 보안 관련 리소스 생성 계획 확인
-terraform plan
+terraform plan -var-file=dev.tfvars
 
-# 팀 멤버 정보와 설정이 코드에 하드코딩되어 있어
+# dev.tfvars 파일에 AWS 프로필 정보가 설정되어 있어
 # 별도의 설정 파일 없이 바로 실행 가능
 
 # 생성될 주요 리소스들:
@@ -354,7 +354,7 @@ terraform plan
 #### 3-4. 보안 인프라 생성
 ```bash
 # 보안 리소스 생성 실행
-terraform apply
+terraform apply -var-file=dev.tfvars
 
 # 생성 과정 모니터링:
 # module.iam.aws_iam_user.team_member[0]: Creating...
@@ -417,7 +417,7 @@ terraform init
 
 ##### 4-3. Database 생성 계획 검토
 ```bash
-terraform plan
+terraform plan -var-file=dev.tfvars
 
 # 생성될 리소스들:
 # + RDS MySQL 인스턴스
@@ -427,7 +427,7 @@ terraform plan
 
 ##### 4-4. Database 인프라 생성
 ```bash
-terraform apply
+terraform apply -var-file=dev.tfvars
 
 # DB 비밀번호 입력 필요
 # var.db_password: [데이터베이스 비밀번호 입력]
@@ -459,7 +459,11 @@ cd ../application
 
 # 필수 파일들 확인
 ls -la
-# main.tf, providers.tf
+# main.tf, providers.tf, dev.tfvars
+
+# 변수 파일 확인
+cat dev.tfvars
+# 각 팀원의 AWS 프로필이 설정되어 있는지 확인
 
 # 이전 레이어들의 출력 값 참조 확인
 cat main.tf | grep data.terraform_remote_state
@@ -478,11 +482,8 @@ terraform init
 
 #### 4-3. 애플리케이션 배포 계획 검토
 ```bash
-# 전체 애플리케이션 스택 생성 계획 확인
-terraform plan
-
-# 모든 설정이 코드에 하드코딩되어 있어
-# 별도의 설정 파일 없이 바로 실행 가능
+# 애플리케이션 배포 계획 검토
+terraform plan -var-file=dev.tfvars
 
 # 생성될 주요 리소스들:
 # + Application Load Balancer (ALB)
@@ -497,7 +498,7 @@ terraform plan
 #### 4-4. 애플리케이션 인프라 생성
 ```bash
 # 애플리케이션 배포 실행
-terraform apply
+terraform apply -var-file=dev.tfvars
 
 # 배포 과정 모니터링 (시간이 오래 걸릴 수 있음):
 # module.alb.aws_lb.this: Creating...

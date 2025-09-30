@@ -30,24 +30,20 @@ variable "encrypt_state" {
 variable "aws_profile" {
   description = "Application 레이어에서 사용하는 기본 AWS CLI 프로파일"
   type        = string
-  default     = "petclinic-seokgyeom"
 }
 
 # 원격 상태 접근 프로파일(크로스-어카운트/크로스-프로파일을 위한 분리)
 variable "network_state_profile" {
   description = "Network 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로파일"
   type        = string
-  default     = "petclinic-yeonghyeon"
 }
 
 variable "database_state_profile" {
   description = "Database 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로파일"
   type        = string
-  default     = "petclinic-junje"
 }
 
 variable "security_state_profile" {
   description = "Security 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로파일"
   type        = string
-  default     = "petclinic-hwigwon"
 }

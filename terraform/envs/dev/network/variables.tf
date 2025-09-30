@@ -94,5 +94,4 @@ variable "encrypt_state" {
 variable "aws_profile" {
   description = "Network 레이어에서 사용하는 기본 AWS CLI 프로파일"
   type        = string
-  default     = "petclinic-yeonghyeon"
 }

@@ -33,14 +33,12 @@ variable "encrypt_state" {
 variable "aws_profile" {
   description = "Security 레이어에서 사용하는 기본 AWS CLI 프로파일"
   type        = string
-  default     = "petclinic-hwigwon"
 }
 
 # 원격 상태 접근 프로파일(네트워크 상태 참조)
 variable "network_state_profile" {
   description = "Network 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로파일"
   type        = string
-  default     = "petclinic-yeonghyeon"
 }
 
 # 네이밍/태깅을 위한 표준 값
