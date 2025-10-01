@@ -1,15 +1,22 @@
 variable "project_name" {
-  description = "A prefix for all created resources."
+  description = "리소스용 프로젝트 이름 접두사"
   type        = string
-}
-
-variable "group_name" {
-  description = "The name of the IAM group."
-  type        = string
+  default     = "petclinic"
 }
 
 variable "team_members" {
-  description = "A list of team member names to create IAM users for."
+  description = "팀 멤버 이름 목록"
   type        = list(string)
-  default     = []
+  default = [
+    "yeonghyeon",
+    "seokgyeom",
+    "junje",
+    "hwigwon"
+  ]
+}
+
+variable "enable_role_based_policies" {
+  description = "AdministratorAccess 대신 역할 기반 정책 활성화"
+  type        = bool
+  default     = false
 }
