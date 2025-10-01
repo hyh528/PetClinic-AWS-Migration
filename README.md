@@ -84,7 +84,7 @@
 - **CI/CD:** `GitHub Actions`
 - **Container:** `Docker`, `Amazon ECR`
 - **Orchestration:** `Amazon ECS (Fargate)`
-- **Database:** `Amazon RDS for MySQL`
+- **Database:** `Amazon Aurora (MySQL-compatible)`
 - **Networking:** `Amazon VPC`, `API Gateway`, `Application Load Balancer`
 - **Monitoring:** `Amazon CloudWatch`
 - **Config Management:** `AWS Systems Manager Parameter Store`

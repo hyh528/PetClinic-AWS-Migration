@@ -14,25 +14,25 @@ VERSION="${VERSION:-latest}"
 
 # 마이크로서비스 목록 (기존 레거시 서비스들)
 SERVICES=(
-    "spring-petclinic-config-server" # AWS parameter store로 대체 예정
-    "spring-petclinic-discovery-server" # AWS Cloud Map으로 대체 예정
-    "spring-petclinic-api-gateway" # AWS API Gateway로 대체 예정
+    #"spring-petclinic-config-server"  AWS parameter store로 대체
+    #"spring-petclinic-discovery-server"  AWS Cloud Map으로 대체
+    #"spring-petclinic-api-gateway"  AWS API Gateway로 대체 
     "spring-petclinic-visits-service" # ECS Fargate로 배포
     "spring-petclinic-vets-service" # ECS Fargate로 배포
     "spring-petclinic-customers-service" # ECS Fargate로 배포
     "spring-petclinic-admin-server" # ECS Fargate로 배포 + CloudWatch
 )
 
-echo "🚀 AWS ECR로 마이크로서비스 이미지 푸시 시작"
-echo "📍 리전: $AWS_REGION"
-echo "🏷️  버전: $VERSION"
-echo "📦 서비스 개수: ${#SERVICES[@]}"
+echo "AWS ECR로 마이크로서비스 이미지 푸시 시작"
+echo "리전: $AWS_REGION"
+echo "버전: $VERSION"
+echo "서비스 개수: ${#SERVICES[@]}"
 
 # ==========================================
 # 1. AWS ECR 로그인
 # ==========================================
 echo ""
-echo "🔐 AWS ECR에 로그인 중..."
+echo "AWS ECR에 로그인 중..."
 if ! aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com; then
     echo "❌ ECR 로그인 실패!"
     exit 1
