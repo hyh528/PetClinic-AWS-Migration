@@ -17,7 +17,7 @@ provider "aws" {
     tags = {
       Project     = "petclinic"
       Environment = "dev"
-      Layer       = "security"
+      Layer       = "database"
       ManagedBy   = "terraform"
       Owner       = "team-petclinic"
       CostCenter  = "training"
