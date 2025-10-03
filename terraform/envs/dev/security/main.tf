@@ -204,19 +204,19 @@ module "db_password_secret" {
   environment             = var.environment
 }
 
-# # =================================================
-# # 6) Cognito (사용자 인증 및 권한 부여)
-# # =================================================
+# =================================================
+# 6) Cognito (사용자 인증 및 권한 부여)
+# =================================================
 
-# # --- Cognito User Pool 및 클라이언트 생성 ---
-# # 웹 및 모바일 앱에 사용자 가입, 로그인 및 액세스 제어를 제공합니다.
-# module "cognito" {
-#   source = "../../../modules/cognito"
+# --- Cognito User Pool 및 클라이언트 생성 ---
+# 웹 및 모바일 앱에 사용자 가입, 로그인 및 액세스 제어를 제공합니다.
+module "cognito" {
+  source = "../../../modules/cognito"
 
-#   project_name        = var.name_prefix
-#   environment         = var.environment
-#   # 콜백 및 로그아웃 URL은 애플리케이션의 URL에 따라 달라집니다.
-#   # 현재는 개발용 기본값을 사용하며, 나중에 실제 URL로 업데이트해야 합니다.
-#   cognito_callback_urls = ["http://localhost:8080/login"] # 예시: 애플리케이션의 로그인 후 리다이렉트 URL
-#   cognito_logout_urls   = ["http://localhost:8080/logout"] # 예시: 애플리케이션의 로그아웃 후 리다이렉트 URL
-# }
+  project_name        = var.name_prefix
+  environment         = var.environment
+  # 콜백 및 로그아웃 URL은 애플리케이션의 URL에 따라 달라집니다.
+  # 현재는 개발용 기본값을 사용하며, 나중에 실제 URL로 업데이트해야 합니다.
+  cognito_callback_urls = ["http://localhost:8080/login"] # 예시: 애플리케이션의 로그인 후 리다이렉트 URL
+  cognito_logout_urls   = ["http://localhost:8080/logout"] # 예시: 애플리케이션의 로그아웃 후 리다이렉트 URL
+}
