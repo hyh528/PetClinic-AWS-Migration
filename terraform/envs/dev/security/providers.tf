@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.0"
+      version = "~> 5.0" # network 폴더와 버전을 맞추는 것이 안전합니다.
     }
   }
 }
@@ -17,7 +17,7 @@ provider "aws" {
     tags = {
       Project     = "petclinic"
       Environment = "dev"
-      Layer       = "security"
+      Layer       = "security" # 이 디렉토리의 역할은 'security' 입니다.
       ManagedBy   = "terraform"
       Owner       = "team-petclinic"
       CostCenter  = "training"
