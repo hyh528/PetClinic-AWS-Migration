@@ -128,3 +128,28 @@ resource "aws_xray_sampling_rule" "petclinic" {
     ManagedBy   = "terraform"
   }
 }
+
+# CloudTrail 감사 로그 모듈 호출
+module "cloudtrail" {
+  source = "../../../modules/cloudtrail"
+
+  cloudtrail_name        = "petclinic-dev-audit-trail"
+  cloudtrail_bucket_name = "petclinic-dev-cloudtrail-logs-${random_id.bucket_suffix.hex}"
+  aws_region            = "ap-northeast-2"
+  log_retention_days    = 90
+  sns_topic_arn         = aws_sns_topic.alerts.arn
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "monitoring"
+    ManagedBy   = "terraform"
+    Owner       = "team-petclinic"
+    CostCenter  = "training"
+  }
+}
+
+# S3 버킷 이름 고유성을 위한 랜덤 ID
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
+}

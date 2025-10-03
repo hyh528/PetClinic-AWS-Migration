@@ -21,3 +21,18 @@ output "xray_sampling_rule_name" {
   description = "X-Ray 샘플링 규칙 이름"
   value       = aws_xray_sampling_rule.petclinic.rule_name
 }
+
+output "cloudtrail_arn" {
+  description = "CloudTrail ARN"
+  value       = module.cloudtrail.cloudtrail_arn
+}
+
+output "cloudtrail_s3_bucket" {
+  description = "CloudTrail 로그 S3 버킷 이름"
+  value       = module.cloudtrail.s3_bucket_name
+}
+
+output "cloudtrail_log_group" {
+  description = "CloudTrail CloudWatch 로그 그룹 이름"
+  value       = module.cloudtrail.cloudwatch_log_group_name
+}
