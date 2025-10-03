@@ -4,6 +4,6 @@ output "ecs_security_group_id" {
 }
 
 output "rds_security_group_id" {
-  description = "RDS용 보안 그룹 ID"
+  description = "Aurora 클러스터용 보안 그룹 ID (RDS 호환)"
   value       = aws_security_group.rds.id
 }

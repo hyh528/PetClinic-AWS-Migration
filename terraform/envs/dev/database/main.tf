@@ -10,7 +10,7 @@ module "database" {
   name_prefix = var.name_prefix
 
   private_db_subnet_ids  = var.private_db_subnet_ids
-  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.rds_security_group_id]
+  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.aurora_security_group_id]
 
   engine_version = var.engine_version
   instance_class = var.instance_class

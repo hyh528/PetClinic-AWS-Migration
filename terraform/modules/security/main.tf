@@ -57,33 +57,33 @@ resource "aws_vpc_security_group_egress_rule" "ecs_out_to_internet_443_ipv6" {
   ip_protocol       = "tcp"
 }
 
-# RDS 보안 그룹
+# Aurora 클러스터 보안 그룹
 resource "aws_security_group" "rds" {
-  name        = "${var.name_prefix}-rds-sg"
-  description = "RDS MySQL용 보안 그룹"
+  name        = "${var.name_prefix}-aurora-sg"
+  description = "Aurora MySQL 클러스터용 보안 그룹"
   vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-rds-sg"
+    Name        = "${var.name_prefix}-aurora-sg"
     Environment = var.environment
     Tier        = "db"
   })
 }
 
-# ECS SG에서 DB 인그레스 허용
+# ECS SG에서 Aurora 클러스터 인그레스 허용
 resource "aws_vpc_security_group_ingress_rule" "rds_in_from_ecs" {
   security_group_id            = aws_security_group.rds.id
-  description                  = "ECS 태스크 SG에서 DB 포트 허용"
+  description                  = "ECS 태스크 SG에서 Aurora 포트 허용"
   referenced_security_group_id = aws_security_group.ecs.id
   from_port                    = var.rds_port
   to_port                      = var.rds_port
   ip_protocol                  = "tcp"
 }
 
-# (선택 사항) ECS에서 RDS로 송신 (상태 저장인 경우 엄격히 필요하지 않지만 최소 권한을 위해 강화)
+# (선택 사항) ECS에서 Aurora로 송신 (상태 저장인 경우 엄격히 필요하지 않지만 최소 권한을 위해 강화)
 resource "aws_vpc_security_group_egress_rule" "ecs_out_to_rds" {
   security_group_id            = aws_security_group.ecs.id
-  description                  = "ECS에서 RDS 포트로 송신 허용"
+  description                  = "ECS에서 Aurora 포트로 송신 허용"
   referenced_security_group_id = aws_security_group.rds.id
   from_port                    = var.rds_port
   to_port                      = var.rds_port

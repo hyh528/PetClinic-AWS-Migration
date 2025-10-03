@@ -1,7 +1,7 @@
 # Security 레이어 출력 값들
 
-output "rds_security_group_id" {
-  description = "RDS용 보안 그룹 ID"
+output "aurora_security_group_id" {
+  description = "Aurora 클러스터용 보안 그룹 ID"
   value       = module.security.rds_security_group_id
 }
 
