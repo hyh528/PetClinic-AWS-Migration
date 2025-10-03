@@ -40,20 +40,11 @@ data "terraform_remote_state" "application" {
   }
 }
 
-data "terraform_remote_state" "api_gateway" {
+data "terraform_remote_state" "aws_native" {
   backend = "s3"
   config = {
     bucket = "petclinic-terraform-state-dev"
-    key    = "api-gateway/terraform.tfstate"
-    region = "ap-northeast-2"
-  }
-}
-
-data "terraform_remote_state" "lambda_genai" {
-  backend = "s3"
-  config = {
-    bucket = "petclinic-terraform-state-dev"
-    key    = "lambda-genai/terraform.tfstate"
+    key    = "aws-native/terraform.tfstate"
     region = "ap-northeast-2"
   }
 }
@@ -65,11 +56,11 @@ module "cloudwatch" {
   dashboard_name        = "PetClinic-Dev-Dashboard"
   aws_region           = "ap-northeast-2"
   
-  # 각 레이어에서 가져온 리소스 정보
-  api_gateway_name     = data.terraform_remote_state.api_gateway.outputs.api_gateway_name
+  # 각 레이어에서 가져온 리소스 정보 (의존성 역전)
+  api_gateway_name     = data.terraform_remote_state.aws_native.outputs.api_gateway_name
   ecs_cluster_name     = "petclinic-dev-cluster"
   ecs_service_name     = "petclinic-app-service"
-  lambda_function_name = data.terraform_remote_state.lambda_genai.outputs.function_name
+  lambda_function_name = data.terraform_remote_state.aws_native.outputs.lambda_function_name
   aurora_cluster_name  = data.terraform_remote_state.database.outputs.cluster_identifier
   alb_name            = data.terraform_remote_state.application.outputs.alb_name
   
