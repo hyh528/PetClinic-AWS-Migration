@@ -89,11 +89,35 @@ module "ecs" {
         }
       ]
 
-      # 환경 변수 정의 (중복 키 제거, 하나의 리스트로 통합)
+      # 환경 변수 정의 (Spring Cloud AWS 설정 추가)
       environment = [
         {
           name  = "SPRING_PROFILES_ACTIVE"
-          value = "mysql"
+          value = "mysql,aws"
+        },
+        {
+          name  = "AWS_REGION"
+          value = "ap-northeast-2"
+        },
+        {
+          name  = "SPRING_CLOUD_AWS_REGION_STATIC"
+          value = "ap-northeast-2"
+        },
+        {
+          name  = "SPRING_CLOUD_AWS_PARAMSTORE_ENABLED"
+          value = "true"
+        },
+        {
+          name  = "SPRING_CLOUD_AWS_PARAMSTORE_PREFIX"
+          value = "/petclinic"
+        },
+        {
+          name  = "SPRING_CLOUD_AWS_SECRETSMANAGER_ENABLED"
+          value = "true"
+        },
+        {
+          name  = "SPRING_CLOUD_AWS_SECRETSMANAGER_PREFIX"
+          value = "/petclinic"
         },
         {
           name  = "DB_HOST"
@@ -214,4 +238,53 @@ resource "aws_iam_role" "ecs_task_execution" {
 resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   role       = aws_iam_role.ecs_task_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# Parameter Store 및 Secrets Manager 접근 권한 추가
+resource "aws_iam_role_policy" "ecs_task_execution_parameter_store" {
+  name = "petclinic-dev-ecs-parameter-store-policy"
+  role = aws_iam_role.ecs_task_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = [
+          "arn:aws:ssm:ap-northeast-2:*:parameter/petclinic/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:ap-northeast-2:*:secret:petclinic/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = [
+          "arn:aws:kms:ap-northeast-2:*:key/*"
+        ]
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = [
+              "ssm.ap-northeast-2.amazonaws.com",
+              "secretsmanager.ap-northeast-2.amazonaws.com"
+            ]
+          }
+        }
+      }
+    ]
+  })
 }
