@@ -151,41 +151,41 @@ module "nacl_private_db" {
   subnet_ids = values(data.terraform_remote_state.network.outputs.private_db_subnet_ids)
 }
 
-# # =================================================
-# # 4) VPC 엔드포인트 (VPC Endpoints)
-# # =================================================
+# =================================================
+# 4) VPC 엔드포인트 (VPC Endpoints)
+# =================================================
 
-# # --- 현재 AWS 리전 정보 가져오기 ---
-# data "aws_region" "current" {}
+# --- 현재 AWS 리전 정보 가져오기 ---
+data "aws_region" "current" {}
 
-# # --- VPC 엔드포인트 보안 그룹 생성 ---
-# # VPC 엔드포인트는 특정 포트를 통해 AWS 서비스와 통신하므로,
-# # 이 통신을 허용하는 보안 그룹이 필요합니다.
-# module "sg_vpce" {
-#   source = "../../../modules/sg"
+# --- VPC 엔드포인트 보안 그룹 생성 ---
+# VPC 엔드포인트는 특정 포트를 통해 AWS 서비스와 통신하므로,
+# 이 통신을 허용하는 보안 그룹이 필요합니다.
+module "sg_vpce" {
+  source = "../../../modules/sg"
 
-#   sg_type     = "vpce" # "vpce" 타입의 보안 그룹을 생성하도록 지정
-#   name_prefix = var.name_prefix # 기존 name_prefix 변수 사용
-#   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
-#   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr # 변경 이유: 'sg' 모듈의 'vpc_cidr' 변수가 추가됨에 따라, network 레이어에서 가져온 VPC CIDR 값을 전달합니다. 이는 'terraform plan' 실행 시 발생했던 'Missing required argument: vpc_cidr' 에러를 해결합니다。
+  sg_type     = "vpce" # "vpce" 타입의 보안 그룹을 생성하도록 지정
+  name_prefix = var.name_prefix # 기존 name_prefix 변수 사용
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
+  vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr # 변경 이유: 'sg' 모듈의 'vpc_cidr' 변수가 추가됨에 따라, network 레이어에서 가져온 VPC CIDR 값을 전달합니다. 이는 'terraform plan' 실행 시 발생했던 'Missing required argument: vpc_cidr' 에러를 해결합니다。
 
-#   tags = {
-#     Service = "VPCE"
-#   }
-# }
+  tags = {
+    Service = "VPCE"
+  }
+}
 
-# # --- VPC 엔드포인트 모듈 호출 ---
-# # 프라이빗 서브넷에서 AWS 서비스에 안전하게 접근하기 위한 VPC 엔드포인트를 생성합니다.
-# module "endpoint" {
-#   source = "../../../modules/endpoint"
+# --- VPC 엔드포인트 모듈 호출 ---
+# 프라이빗 서브넷에서 AWS 서비스에 안전하게 접근하기 위한 VPC 엔드포인트를 생성합니다.
+module "endpoint" {
+  source = "../../../modules/endpoint"
 
-#   vpc_id               = data.terraform_remote_state.network.outputs.vpc_id
-#   private_subnet_ids   = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
-#   vpc_endpoint_sg_id   = module.sg_vpce.security_group_id
-#   aws_region           = data.aws_region.current.name
-#   project_name         = var.name_prefix # name_prefix를 project_name으로 전달
-#   environment          = var.environment
-# }
+  vpc_id               = data.terraform_remote_state.network.outputs.vpc_id
+  private_subnet_ids   = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
+  vpc_endpoint_sg_id   = module.sg_vpce.security_group_id
+  aws_region           = data.aws_region.current.name
+  project_name         = var.name_prefix # name_prefix를 project_name으로 전달
+  environment          = var.environment
+}
 
 # # =================================================
 # # 5) Secrets Manager (민감 정보 관리)
