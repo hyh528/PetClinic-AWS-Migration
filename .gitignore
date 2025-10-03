@@ -42,3 +42,6 @@ GEMINI.md
 .kiro/
 .vscode/
 venv/
+
+# Generated/Temporary Files
+*.json
