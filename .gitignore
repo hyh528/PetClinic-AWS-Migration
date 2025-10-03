@@ -38,3 +38,7 @@ GEMINI.md
 *.tfstate
 *.tfstate.*
 
+# Local environment and IDE settings
+.kiro/
+.vscode/
+venv/
