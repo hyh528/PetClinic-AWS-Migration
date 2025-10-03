@@ -98,58 +98,58 @@ module "sg_db" {
   }
 }
 
-# # =================================================
-# # 3) 네트워크 ACL (Network Access Control List)
-# # =================================================
+# =================================================
+# 3) 네트워크 ACL (Network Access Control List)
+# =================================================
 
-# # --- 3-1. Public Subnet용 NACL 생성 ---
-# # Public Subnet은 외부 인터넷과 직접 통신하므로, HTTP/HTTPS 트래픽을 허용하고
-# # 응답 트래픽을 위한 임시 포트 범위를 허용하는 규칙이 필요합니다.
-# module "nacl_public" {
-#   source = "../../../modules/nacl" # NACL 모듈 경로
+# --- 3-1. Public Subnet용 NACL 생성 ---
+# Public Subnet은 외부 인터넷과 직접 통신하므로, HTTP/HTTPS 트래픽을 허용하고
+# 응답 트래픽을 위한 임시 포트 범위를 허용하는 규칙이 필요합니다.
+module "nacl_public" {
+  source = "../../../modules/nacl" # NACL 모듈 경로
 
-#   name_prefix = "public" # NACL 이름 접두사
-#   environment = var.environment # 환경 변수 (dev, prod 등)
-#   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id # network 레이어에서 가져온 VPC ID
-#   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr # NACL 모듈 내부에서 사용할 VPC CIDR
-#   nacl_type   = "public" # Public Subnet용 NACL임을 지정
+  name_prefix = "public" # NACL 이름 접두사
+  environment = var.environment # 환경 변수 (dev, prod 등)
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id # network 레이어에서 가져온 VPC ID
+  vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr # NACL 모듈 내부에서 사용할 VPC CIDR
+  nacl_type   = "public" # Public Subnet용 NACL임을 지정
 
-#   # Public Subnet ID 목록을 전달합니다.
-#   # network 레이어의 public_subnet_ids는 맵 형태이므로 values() 함수로 값만 추출합니다.
-#   subnet_ids = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
-# }
+  # Public Subnet ID 목록을 전달합니다.
+  # network 레이어의 public_subnet_ids는 맵 형태이므로 values() 함수로 값만 추출합니다.
+  subnet_ids = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
+}
 
-# # --- 3-2. Private App Subnet용 NACL 생성 ---
-# # Private App Subnet은 ALB로부터의 트래픽과 VPC 내부 서비스(DB, VPC Endpoint)와의 통신을 허용합니다.
-# # 외부 인터넷으로는 NAT Gateway를 통해 나갑니다.
-# module "nacl_private_app" {
-#   source = "../../../modules/nacl"
+# --- 3-2. Private App Subnet용 NACL 생성 ---
+# Private App Subnet은 ALB로부터의 트래픽과 VPC 내부 서비스(DB, VPC Endpoint)와의 통신을 허용합니다.
+# 외부 인터넷으로는 NAT Gateway를 통해 나갑니다.
+module "nacl_private_app" {
+  source = "../../../modules/nacl"
 
-#   name_prefix = "private-app"
-#   environment = var.environment
-#   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
-#   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
-#   nacl_type   = "private-app" # Private App Subnet용 NACL임을 지정
+  name_prefix = "private-app"
+  environment = var.environment
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
+  vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
+  nacl_type   = "private-app" # Private App Subnet용 NACL임을 지정
 
-#   # Private App Subnet ID 목록을 전달합니다.
-#   subnet_ids = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
-# }
+  # Private App Subnet ID 목록을 전달합니다.
+  subnet_ids = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
+}
 
-# # --- 3-3. Private DB Subnet용 NACL 생성 ---
-# # Private DB Subnet은 Private App Subnet으로부터의 DB 트래픽만 허용하고,
-# # VPC 내부 통신 및 응답 트래픽을 허용합니다. 외부 인터넷 접근은 제한됩니다.
-# module "nacl_private_db" {
-#   source = "../../../modules/nacl"
+# --- 3-3. Private DB Subnet용 NACL 생성 ---
+# Private DB Subnet은 Private App Subnet으로부터의 DB 트래픽만 허용하고,
+# VPC 내부 통신 및 응답 트래픽을 허용합니다. 외부 인터넷 접근은 제한됩니다.
+module "nacl_private_db" {
+  source = "../../../modules/nacl"
 
-#   name_prefix = "private-db"
-#   environment = var.environment
-#   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
-#   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
-#   nacl_type   = "private-db" # Private DB Subnet용 NACL임을 지정
+  name_prefix = "private-db"
+  environment = var.environment
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
+  vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
+  nacl_type   = "private-db" # Private DB Subnet용 NACL임을 지정
 
-#   # Private DB Subnet ID 목록을 전달합니다.
-#   subnet_ids = values(data.terraform_remote_state.network.outputs.private_db_subnet_ids)
-# }
+  # Private DB Subnet ID 목록을 전달합니다.
+  subnet_ids = values(data.terraform_remote_state.network.outputs.private_db_subnet_ids)
+}
 
 # # =================================================
 # # 4) VPC 엔드포인트 (VPC Endpoints)
