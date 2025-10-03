@@ -74,8 +74,9 @@ module "ecs" {
   cluster_name       = "petclinic-dev-cluster"
   task_family        = "petclinic-app"
   execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  task_role_arn      = aws_iam_role.ecs_task_role.arn
 
-  # 컨테이너 설정 (JSON 형식)
+  # 컨테이너 설정 (JSON 형식) - X-Ray 데몬 사이드카 포함
   container_definitions = jsonencode([
     {
       name  = "petclinic-app"
@@ -89,7 +90,7 @@ module "ecs" {
         }
       ]
 
-      # 환경 변수 정의 (Spring Cloud AWS 설정 추가)
+      # 환경 변수 정의 (Spring Cloud AWS 설정 + X-Ray 추가)
       environment = [
         {
           name  = "SPRING_PROFILES_ACTIVE"
@@ -118,6 +119,14 @@ module "ecs" {
         {
           name  = "SPRING_CLOUD_AWS_SECRETSMANAGER_PREFIX"
           value = "/petclinic"
+        },
+        {
+          name  = "AWS_XRAY_TRACING_NAME"
+          value = "petclinic-app"
+        },
+        {
+          name  = "AWS_XRAY_DAEMON_ADDRESS"
+          value = "xray-daemon:2000"
         },
         {
           name  = "DB_HOST"
@@ -182,6 +191,38 @@ module "ecs" {
         timeout  = 5
         retries  = 3
       }
+
+      # X-Ray 데몬과의 링크 설정
+      links = ["xray-daemon"]
+    },
+    {
+      name  = "xray-daemon"
+      image = "amazon/aws-xray-daemon:latest"
+
+      portMappings = [
+        {
+          containerPort = 2000
+          protocol      = "udp"
+        }
+      ]
+
+      environment = [
+        {
+          name  = "AWS_REGION"
+          value = "ap-northeast-2"
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/xray-daemon"
+          "awslogs-region"        = "ap-northeast-2"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+
+      essential = false
     }
   ])
 
@@ -284,6 +325,70 @@ resource "aws_iam_role_policy" "ecs_task_execution_parameter_store" {
             ]
           }
         }
+      }
+    ]
+  })
+}
+
+# X-Ray 데몬용 CloudWatch 로그 그룹
+resource "aws_cloudwatch_log_group" "xray_daemon" {
+  name              = "/ecs/xray-daemon"
+  retention_in_days = 30
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "application"
+    ManagedBy   = "terraform"
+    Owner       = "team-petclinic"
+    CostCenter  = "training"
+  }
+}
+
+# ECS 태스크 역할 (X-Ray 권한 포함)
+resource "aws_iam_role" "ecs_task_role" {
+  name = "petclinic-dev-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "application"
+    ManagedBy   = "terraform"
+    Owner       = "team-petclinic"
+    CostCenter  = "training"
+  }
+}
+
+# X-Ray 추적 권한 정책
+resource "aws_iam_role_policy" "ecs_task_xray" {
+  name = "petclinic-dev-ecs-xray-policy"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords",
+          "xray:GetSamplingRules",
+          "xray:GetSamplingTargets"
+        ]
+        Resource = "*"
       }
     ]
   })
