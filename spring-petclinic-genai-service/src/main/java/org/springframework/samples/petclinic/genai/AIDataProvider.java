@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AIDataProvider {
 
 	private final VectorStore vectorStore;
-    private final String ownersHostname = "http://customers-service/";
+    private final String ownersHostname = "http://customers.petclinic.local:8080/";
 
     private final WebClient webClient;
 

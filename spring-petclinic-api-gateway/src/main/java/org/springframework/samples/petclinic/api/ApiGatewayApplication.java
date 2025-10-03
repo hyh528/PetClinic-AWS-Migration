@@ -23,8 +23,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
 import org.springframework.cloud.client.circuitbreaker.Customizer;
-import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -42,7 +40,6 @@ import java.time.Duration;
 /**
  * @author Maciej Szarlinski
  */
-@EnableDiscoveryClient
 @SpringBootApplication
 public class ApiGatewayApplication {
 
@@ -51,14 +48,12 @@ public class ApiGatewayApplication {
     }
 
     @Bean
-    @LoadBalanced
-    RestTemplate loadBalancedRestTemplate() {
+    RestTemplate restTemplate() {
         return new RestTemplate();
     }
 
     @Bean
-    @LoadBalanced
-    public WebClient.Builder loadBalancedWebClientBuilder() {
+    public WebClient.Builder webClientBuilder() {
         return WebClient.builder();
     }
 

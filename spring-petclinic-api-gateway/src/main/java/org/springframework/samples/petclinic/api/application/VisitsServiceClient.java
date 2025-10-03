@@ -31,7 +31,7 @@ import static java.util.stream.Collectors.joining;
 public class VisitsServiceClient {
 
     // Could be changed for testing purpose
-    private String hostname = "http://visits-service/";
+    private String hostname = "http://visits.petclinic.local:8080/";
 
     private final WebClient.Builder webClientBuilder;
 

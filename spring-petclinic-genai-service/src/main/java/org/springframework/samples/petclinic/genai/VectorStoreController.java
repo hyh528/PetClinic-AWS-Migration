@@ -64,7 +64,7 @@ public class VectorStoreController {
 		// If vectorstore.json is deleted, the data will be loaded on startup every time.
 		// Warning - this can be costly in terms of credits used with the AI provider.
 		// Fetches all Vet entites and creates a document per vet
-        String vetsHostname = "http://vets-service/";
+        String vetsHostname = "http://vets.petclinic.local:8080/";
         List<Vet> vets = webClient
 	            .get()
 	            .uri(vetsHostname + "vets")
