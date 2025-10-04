@@ -22,6 +22,10 @@ resource "aws_cognito_user_pool" "this" {
   # MFA 설정 (보안 강화)
   mfa_configuration = var.mfa_configuration
 
+  software_token_mfa_configuration {
+    enabled = var.enable_software_token_mfa
+  }
+
   # 사용자 속성 스키마 정의
   schema {
     attribute_data_type = "String"
@@ -73,9 +77,9 @@ resource "aws_cognito_user_pool" "this" {
     allow_admin_create_user_only = var.admin_create_user_only
 
     invite_message_template {
-      email_message = "안녕하세요! PetClinic에 오신 것을 환영합니다. 임시 비밀번호: {password}"
+      email_message = "안녕하세요, {username}님! PetClinic 임시 비밀번호는 {####}입니다."
       email_subject = "PetClinic 계정 생성"
-      sms_message   = "PetClinic 임시 비밀번호: {password}"
+      sms_message   = "안녕하세요, {username}님! PetClinic 임시 비밀번호는 {####}입니다."
     }
   }
 
