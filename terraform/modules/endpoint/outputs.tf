@@ -41,3 +41,15 @@ output "kms_vpce_id" {
   description = "생성된 KMS VPC 엔드포인트의 ID입니다."
   value       = aws_vpc_endpoint.kms.id
 }
+
+# S3 Gateway VPC 엔드포인트 ID 출력
+output "s3_gateway_vpce_id" {
+  description = "생성된 S3 Gateway VPC 엔드포인트의 ID입니다."
+  value       = aws_vpc_endpoint.s3.id
+}
+
+# CloudWatch Monitoring VPC 엔드포인트 ID 출력
+output "cloudwatch_monitoring_vpce_id" {
+  description = "생성된 CloudWatch Monitoring VPC 엔드포인트의 ID입니다."
+  value       = aws_vpc_endpoint.cloudwatch_monitoring.id
+}

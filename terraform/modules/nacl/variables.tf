@@ -6,10 +6,17 @@ variable "vpc_id" {
   type        = string
 }
 
-# NACL 규칙에서 사용할 VPC의 CIDR 블록 변수
+# NACL 규칙에서 사용할 VPC의 CIDR 블록 변수 (IPv4)
 variable "vpc_cidr" {
-  description = "NACL 규칙에서 사용할 VPC의 CIDR 블록입니다."
+  description = "NACL 규칙에서 사용할 VPC의 IPv4 CIDR 블록입니다."
   type        = string
+}
+
+# NACL 규칙에서 사용할 VPC의 IPv6 CIDR 블록 변수 (선택사항)
+variable "vpc_ipv6_cidr" {
+  description = "NACL 규칙에서 사용할 VPC의 IPv6 CIDR 블록입니다 (선택사항)."
+  type        = string
+  default     = null
 }
 
 # NACL이 연결될 서브넷 ID 목록 변수

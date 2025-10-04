@@ -1,53 +1,58 @@
-# API Gateway REST API 생성
+# API Gateway REST API 생성 (Spring Cloud Gateway 대체)
 resource "aws_api_gateway_rest_api" "this" {
-  # API Gateway의 이름입니다.
   name        = "${var.project_name}-${var.environment}-api"
-  # API Gateway의 설명입니다.
-  description = "API Gateway for PetClinic application"
-  # 엔드포인트 유형을 Regional로 설정합니다.
+  description = "PetClinic 애플리케이션용 API Gateway"
+
+  # Regional 엔드포인트 (설계서 요구사항)
   endpoint_configuration {
     types = ["REGIONAL"]
   }
 
-  # API Gateway 태그입니다.
   tags = {
     Name        = "${var.project_name}-${var.environment}-api"
     Project     = var.project_name
     Environment = var.environment
+    Purpose     = "마이크로서비스 API 라우팅"
+    ManagedBy   = "terraform"
   }
 }
 
-# API Gateway 리소스 (루트 경로)
-resource "aws_api_gateway_resource" "root" {
+# API Gateway 프록시 리소스 (모든 경로 처리)
+resource "aws_api_gateway_resource" "proxy" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_rest_api.this.root_resource_id
-  path_part   = "{proxy+}" # 모든 하위 경로를 처리하기 위한 프록시 리소스
+  path_part   = "{proxy+}" # 모든 하위 경로를 ALB로 프록시
 }
 
-# API Gateway 메서드 (ANY 메서드)
+# API Gateway 메서드 (모든 HTTP 메서드 허용)
 resource "aws_api_gateway_method" "proxy_any" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
-  resource_id   = aws_api_gateway_resource.root.id
+  resource_id   = aws_api_gateway_resource.proxy.id
   http_method   = "ANY"
-  # 인증 유형입니다 (NONE은 인증 없음).
-  authorization = "NONE"
+  authorization = "NONE" # 인증 없음 (설계서 요구사항)
+
+  request_parameters = {
+    "method.request.path.proxy" = true
+  }
 }
 
-# API Gateway 통합 (ALB로 프록시 통합)
+# API Gateway 통합 (ALB로 직접 프록시)
 resource "aws_api_gateway_integration" "proxy_alb" {
   rest_api_id             = aws_api_gateway_rest_api.this.id
-  resource_id             = aws_api_gateway_resource.root.id
+  resource_id             = aws_api_gateway_resource.proxy.id
   http_method             = aws_api_gateway_method.proxy_any.http_method
   type                    = "HTTP_PROXY"
   integration_http_method = "ANY"
-  # 통합 엔드포인트 URI입니다. ALB의 DNS 이름을 사용합니다.
-  # 이 값은 var.alb_dns_name 변수로 받아올 것입니다.
-  uri                     = "http://${var.alb_dns_name}/{proxy}"
+
+  # ALB로 직접 연결 (Public ALB이므로 VPC Link 불필요)
+  uri = "http://${var.alb_dns_name}/{proxy}"
+
   request_parameters = {
     "integration.request.path.proxy" = "method.request.path.proxy"
   }
-  connection_type         = "VPC_LINK"
-  connection_id           = var.vpc_link_id
+
+  # 타임아웃 설정
+  timeout_milliseconds = 29000
 }
 
 # API Gateway 배포
@@ -55,12 +60,15 @@ resource "aws_api_gateway_deployment" "this" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   description = "Deployment for ${var.environment} stage"
 
-  # 통합 리소스가 변경될 때마다 배포를 다시 하도록 트리거합니다.
+  # 리소스 변경 시 자동 재배포 트리거
   triggers = {
     redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.root.id,
+      aws_api_gateway_resource.proxy.id,
       aws_api_gateway_method.proxy_any.id,
       aws_api_gateway_integration.proxy_alb.id,
+      # CORS 관련 리소스도 포함
+      aws_api_gateway_method.proxy_options.id,
+      aws_api_gateway_integration.proxy_options.id,
     ]))
   }
 
@@ -72,42 +80,39 @@ resource "aws_api_gateway_deployment" "this" {
 
 # API Gateway 스테이지
 resource "aws_api_gateway_stage" "this" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id   = aws_api_gateway_rest_api.this.id
   deployment_id = aws_api_gateway_deployment.this.id
   stage_name    = var.environment
-  description   = "PetClinic ${var.environment} stage"
+  description   = "PetClinic ${var.environment} 환경 스테이지"
 
-  # 스로틀링 설정 (var.throttling_rate와 var.throttling_burst 변수 사용)
-  xray_tracing_enabled = true # X-Ray 트레이싱 활성화
+  # X-Ray 트레이싱 활성화 (설계서 9.4절 요구사항)
+  xray_tracing_enabled = true
+
+  # 액세스 로깅 설정 - 생성한 로그 그룹 참조
   access_log_settings {
-    destination_arn = var.api_gateway_log_group_arn # CloudWatch Logs 그룹 ARN
-    format          = jsonencode({
-      requestId               = "$context.requestId"
-      ip                      = "$context.identity.sourceIp"
-      caller                  = "$context.identity.caller"
-      user                    = "$context.identity.user"
-      requestTime             = "$context.requestTime"
-      httpMethod              = "$context.httpMethod"
-      resourcePath            = "$context.resourcePath"
-      status                  = "$context.status"
-      protocol                = "$context.protocol"
-      responseLength          = "$context.responseLength"
-      integrationLatency      = "$context.integrationLatency"
-      integrationStatus       = "$context.integrationStatus"
-      authorizerLatency       = "$context.authorizerLatency"
-      authorizerStatus        = "$context.authorizerStatus"
-      errorResponseMessage    = "$context.error.message"
-      extendedRequestId       = "$context.extendedRequestId"
+    destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
+    format = jsonencode({
+      requestId            = "$context.requestId"
+      ip                   = "$context.identity.sourceIp"
+      caller               = "$context.identity.caller"
+      user                 = "$context.identity.user"
+      requestTime          = "$context.requestTime"
+      httpMethod           = "$context.httpMethod"
+      resourcePath         = "$context.resourcePath"
+      status               = "$context.status"
+      protocol             = "$context.protocol"
+      responseLength       = "$context.responseLength"
+      integrationLatency   = "$context.integrationLatency"
+      integrationStatus    = "$context.integrationStatus"
+      authorizerLatency    = "$context.authorizerLatency"
+      authorizerStatus     = "$context.authorizerStatus"
+      errorResponseMessage = "$context.error.message"
+      extendedRequestId    = "$context.extendedRequestId"
     })
   }
 
-  # 스로틀링 설정 (현재 Terraform 버전/Provider 호환성 문제로 임시 주석 처리됨)
-  # 이 블록을 주석 처리하는 것은 'terraform plan' 오류 진단을 위한 임시 조치이며,
-  # 스로틀링 기능이 비활성화되므로 프로덕션 환경에서는 반드시 재활성화 및 검토가 필요합니다.
-  # throttle_settings {
-  #   rate_limit  = var.throttling_rate
-  #   burst_limit = var.throttling_burst
-  # }
+  # 참고: 스로틀링 설정은 aws_api_gateway_usage_plan에서 관리
+  # throttle_settings는 stage에서 지원되지 않음
 
   # 태그
   tags = {
@@ -117,36 +122,78 @@ resource "aws_api_gateway_stage" "this" {
   }
 }
 
-# API Gateway VPC 링크 (ALB 통합을 위해 필요)
-# 이 리소스는 ALB가 속한 VPC와 API Gateway를 연결합니다.
-resource "aws_api_gateway_vpc_link" "this" {
-  # VPC 링크의 이름입니다.
-  name        = "${var.project_name}-${var.environment}-vpc-link"
-  # VPC 링크의 설명입니다.
-  description = "VPC Link for PetClinic ALB integration"
-  # 대상 로드 밸런서의 ARN 목록입니다.
-  # 이 값은 var.target_nlb_arns 변수로 받아올 것입니다。
-  target_arns = [var.target_nlb_arn]
+# CORS 지원을 위한 OPTIONS 메서드 (개발 환경 필수)
+resource "aws_api_gateway_method" "proxy_options" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.proxy.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
 
-  # 태그
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-vpc-link"
-    Project     = var.project_name
-    Environment = var.environment
+# CORS 통합 설정 (MOCK 응답)
+resource "aws_api_gateway_integration" "proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.proxy.id
+  http_method = aws_api_gateway_method.proxy_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
   }
 }
 
-# CloudWatch Logs 그룹 (API Gateway 액세스 로그용)
-resource "aws_cloudwatch_log_group" "api_gateway_logs" {
-  # 로그 그룹 이름입니다.
-  name              = "/aws/api-gateway/${aws_api_gateway_rest_api.this.name}/${aws_api_gateway_stage.this.stage_name}"
-  # 로그 보존 기간 (일)입니다.
-  retention_in_days = 7
+# CORS 응답 헤더 설정
+resource "aws_api_gateway_method_response" "proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.proxy.id
+  http_method = aws_api_gateway_method.proxy_options.http_method
+  status_code = "200"
 
-  # 태그
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+# CORS 통합 응답 설정
+resource "aws_api_gateway_integration_response" "proxy_options" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.proxy.id
+  http_method = aws_api_gateway_method.proxy_options.http_method
+  status_code = aws_api_gateway_method_response.proxy_options.status_code
+
+  response_parameters = {
+    # Dev 환경용 - 모든 오리진 허용 (개발 편의성 우선)
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = ""
+  }
+}
+
+# VPC Link는 제거됨 - Public ALB와 직접 통합하므로 불필요
+# API Gateway → ALB → ECS 구조로 단순화
+
+# CloudWatch Logs 그룹 (API Gateway 액세스 로그)
+resource "aws_cloudwatch_log_group" "api_gateway_logs" {
+  name              = "/aws/api-gateway/${var.project_name}-${var.environment}"
+  retention_in_days = var.log_retention_days
+
   tags = {
     Name        = "${var.project_name}-${var.environment}-api-gateway-logs"
     Project     = var.project_name
     Environment = var.environment
+    Purpose     = "API Gateway 액세스 로그"
+    ManagedBy   = "terraform"
   }
 }

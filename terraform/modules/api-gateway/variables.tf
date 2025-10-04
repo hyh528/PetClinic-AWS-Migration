@@ -1,49 +1,32 @@
-# 프로젝트 이름 변수 정의
+# 프로젝트 이름 변수
 variable "project_name" {
-  description = "The name of the project, used for tagging and resource naming."
+  description = "리소스 태그 및 이름에 사용될 프로젝트 이름입니다."
   type        = string
 }
 
-# 환경 변수 정의
+# 환경 변수
 variable "environment" {
-  description = "The environment name (e.g., dev, prod), used for tagging and resource naming."
+  description = "리소스 태그 및 이름에 사용될 환경 이름입니다 (예: dev, prod)."
   type        = string
 }
 
-# ALB DNS 이름 변수 정의
+# ALB DNS 이름 변수
 variable "alb_dns_name" {
-  description = "The DNS name of the Application Load Balancer for API Gateway integration."
+  description = "API Gateway 통합을 위한 Application Load Balancer의 DNS 이름입니다."
   type        = string
 }
 
-# API Gateway VPC 링크 ID 변수 정의
-variable "vpc_link_id" {
-  description = "The ID of the VPC Link for API Gateway to integrate with internal ALB."
-  type        = string
-}
+# 참고: 스로틀링 설정은 향후 사용량 계획(Usage Plan)에서 관리 예정
+# 현재는 기본 기능에 집중하여 변수 제거
 
-# 대상 네트워크 로드 밸런서 ARN 변수 정의
-variable "target_nlb_arn" {
-  description = "The ARN of the target Network Load Balancer for the API Gateway VPC Link."
-  type        = string
-}
-
-# API Gateway 로그 그룹 ARN 변수 정의
-variable "api_gateway_log_group_arn" {
-  description = "The ARN of the CloudWatch Log Group for API Gateway access logs."
-  type        = string
-}
-
-# API Gateway 스로틀링 속도 제한 변수 정의
-variable "throttling_rate" {
-  description = "The API Gateway throttling rate limit (requests per second)."
+# 로그 보존 기간 변수
+variable "log_retention_days" {
+  description = "CloudWatch 로그 보존 기간(일)입니다."
   type        = number
-  default     = 1000
-}
+  default     = 7
 
-# API Gateway 스로틀링 버스트 제한 변수 정의
-variable "throttling_burst" {
-  description = "The API Gateway throttling burst limit."
-  type        = number
-  default     = 2000
+  validation {
+    condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653], var.log_retention_days)
+    error_message = "로그 보존 기간은 AWS에서 지원하는 값이어야 합니다."
+  }
 }

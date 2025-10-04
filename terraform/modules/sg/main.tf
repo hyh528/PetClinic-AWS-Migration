@@ -7,7 +7,7 @@ resource "aws_security_group" "alb" {
   count = var.sg_type == "alb" ? 1 : 0
 
   name        = "${var.name_prefix}-alb-sg"
-  description = "ALB용 보안 그룹"
+  description = "Security group for Application Load Balancer"
   vpc_id      = var.vpc_id
 
   # 인바운드 규칙: HTTP (80) 및 HTTPS (443) 트래픽을 모든 곳에서 허용
@@ -16,14 +16,14 @@ resource "aws_security_group" "alb" {
     from_port   = 80
     to_port     = 80
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow HTTP from anywhere"
+    description = "HTTP from anywhere"
   }
   ingress {
     protocol    = "tcp"
     from_port   = 443
     to_port     = 443
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow HTTPS from anywhere"
+    description = "HTTPS from anywhere"
   }
 
   # 아웃바운드 규칙: 모든 트래픽을 허용
@@ -47,16 +47,16 @@ resource "aws_security_group" "app" {
   count = var.sg_type == "app" ? 1 : 0
 
   name        = "${var.name_prefix}-app-sg"
-  description = "App (ECS)용 보안 그룹"
+  description = "Security group for Application (ECS)"
   vpc_id      = var.vpc_id
 
-  # 인바운드 규칙: ALB 보안 그룹으로부터의 모든 트래픽을 허용
+  # 인바운드 규칙: ALB 보안 그룹으로부터 8080 포트만 허용 (보안 강화)
   ingress {
-    protocol        = "-1"
-    from_port       = 0
-    to_port         = 0
+    protocol        = "tcp"
+    from_port       = 8080
+    to_port         = 8080
     security_groups = [var.alb_source_security_group_id]
-    description = "Allow all traffic from ALB"
+    description     = "HTTP traffic on port 8080 from ALB"
   }
 
   # 아웃바운드 규칙: 모든 트래픽을 허용
@@ -80,7 +80,7 @@ resource "aws_security_group" "db" {
   count = var.sg_type == "db" ? 1 : 0
 
   name        = "${var.name_prefix}-db-sg"
-  description = "DB (Aurora)용 보안 그룹"
+  description = "Security group for Database (Aurora)"
   vpc_id      = var.vpc_id
 
   # 인바운드 규칙: APP 보안 그룹으로부터의 MySQL/Aurora (3306) 트래픽만 허용
@@ -89,16 +89,11 @@ resource "aws_security_group" "db" {
     from_port       = 3306
     to_port         = 3306
     security_groups = [var.app_source_security_group_id]
-    description = "Allow MySQL/Aurora traffic from App"
+    description     = "MySQL/Aurora traffic from App"
   }
 
-  # 아웃바운드 규칙: 모든 트래픽을 허용
-  egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # 아웃바운드 규칙: DB는 일반적으로 아웃바운드 연결이 필요 없음 (보안 강화)
+  # 필요시에만 특정 규칙 추가
 
   tags = merge(
     var.tags,
@@ -113,7 +108,7 @@ resource "aws_security_group" "vpce" {
   count = var.sg_type == "vpce" ? 1 : 0
 
   name        = "${var.name_prefix}-vpce-sg"
-  description = "VPC Endpoints용 보안 그룹"
+  description = "Security group for VPC Endpoints"
   vpc_id      = var.vpc_id
 
   # 인바운드 규칙: VPC 내부에서 443 포트 (HTTPS) 트래픽을 허용
@@ -122,7 +117,7 @@ resource "aws_security_group" "vpce" {
     from_port   = 443
     to_port     = 443
     cidr_blocks = [var.vpc_cidr]
-    description = "Allow HTTPS from within VPC for VPCE"
+    description = "HTTPS for VPCE from within VPC"
   }
 
   # 아웃바운드 규칙: VPC 내부로의 모든 트래픽을 허용
@@ -131,7 +126,7 @@ resource "aws_security_group" "vpce" {
     from_port   = 0
     to_port     = 0
     cidr_blocks = [var.vpc_cidr]
-    description = "Allow all outbound traffic within VPC"
+    description = "All outbound traffic within VPC"
   }
 
   tags = merge(

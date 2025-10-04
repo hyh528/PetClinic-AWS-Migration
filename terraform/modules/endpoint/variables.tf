@@ -35,3 +35,9 @@ variable "environment" {
   description = "리소스 태그에 사용될 환경 이름입니다 (예: dev, prod)."
   type        = string
 }
+
+# 프라이빗 라우트 테이블 ID 목록 변수 정의 (S3 Gateway 엔드포인트용)
+variable "private_route_table_ids" {
+  description = "S3 Gateway VPC 엔드포인트와 연결할 프라이빗 라우트 테이블 ID 목록입니다."
+  type        = list(string)
+}

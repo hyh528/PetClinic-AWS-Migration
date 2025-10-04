@@ -1,5 +1,6 @@
 # NACL (Network Access Control List) 모듈 메인 파일
 # 이 파일은 지정된 VPC에 네트워크 ACL을 생성하고 서브넷에 연결합니다.
+# IPv4/IPv6 듀얼스택 지원 및 AWS 권장 보안 모범 사례를 적용합니다.
 
 # 네트워크 ACL을 생성합니다.
 resource "aws_network_acl" "this" {
@@ -7,29 +8,29 @@ resource "aws_network_acl" "this" {
 
   tags = {
     Name        = "${var.name_prefix}-${var.environment}-nacl" # NACL의 이름 태그
-    Environment = var.environment                               # 환경 태그 (예: dev, prod)
-    ManagedBy   = "terraform"                                   # Terraform으로 관리됨을 명시
+    Environment = var.environment                              # 환경 태그 (예: dev, prod)
+    ManagedBy   = "terraform"                                  # Terraform으로 관리됨을 명시
   }
 }
 
 # NACL 타입에 따른 인바운드/아웃바운드 규칙을 정의합니다.
 # 이 규칙들은 'To-Be 아키텍처 인프라 설계 초안 문서.md'를 기반으로 합니다.
 locals {
-  # Public Subnet용 인바운드 규칙
+  # Public Subnet용 인바운드 규칙 (ALB, NAT Gateway 위치)
   public_ingress_rules = {
-    "http" = {
+    "http_ipv4" = {
       rule_no    = 100
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = "0.0.0.0/0"
+      cidr_block = "0.0.0.0/0" # 전 세계에서 HTTP 접근 허용
       from_port  = 80
       to_port    = 80
     },
-    "https" = {
+    "https_ipv4" = {
       rule_no    = 110
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = "0.0.0.0/0"
+      cidr_block = "0.0.0.0/0" # 전 세계에서 HTTPS 접근 허용
       from_port  = 443
       to_port    = 443
     },
@@ -37,31 +38,31 @@ locals {
       rule_no    = 120
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = var.vpc_cidr # VPC 내부에서 시작된 응답 트래픽 허용
-      from_port  = 1024
+      cidr_block = var.vpc_cidr # VPC 내부에서 시작된 응답 트래픽 허용 (AWS 권장 에페메랄 포트 범위)
+      from_port  = 32768
       to_port    = 65535
     }
   }
 
-  # Public Subnet용 아웃바운드 규칙
+  # Public Subnet용 아웃바운드 규칙 (ALB에서 Private App으로, NAT Gateway 트래픽)
   public_egress_rules = {
-    "all_outbound" = {
+    "all_outbound_ipv4" = {
       rule_no    = 100
       action     = "allow"
       protocol   = "-1"
-      cidr_block = "0.0.0.0/0"
+      cidr_block = "0.0.0.0/0" # 모든 아웃바운드 트래픽 허용 (ALB → App, NAT Gateway 기능)
       from_port  = 0
       to_port    = 0
     }
   }
 
-  # Private App Subnet용 인바운드 규칙
+  # Private App Subnet용 인바운드 규칙 (ECS Fargate 서비스 위치)
   private_app_ingress_rules = {
     "alb_to_app" = {
       rule_no    = 100
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = var.vpc_cidr # ALB가 위치한 VPC CIDR로부터의 트래픽 허용
+      cidr_block = var.vpc_cidr # ALB에서 ECS 서비스로의 트래픽 허용 (8080 포트)
       from_port  = 8080
       to_port    = 8080
     },
@@ -69,7 +70,7 @@ locals {
       rule_no    = 110
       action     = "allow"
       protocol   = "-1"
-      cidr_block = var.vpc_cidr # VPC 내부 통신 허용 (DB, VPC Endpoint 등)
+      cidr_block = var.vpc_cidr # VPC 내부 통신 허용 (DB 접근, VPC Endpoint 통신 등)
       from_port  = 0
       to_port    = 0
     },
@@ -77,31 +78,31 @@ locals {
       rule_no    = 120
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = "0.0.0.0/0" # 외부로 나간 트래픽에 대한 응답 허용
-      from_port  = 1024
+      cidr_block = "0.0.0.0/0" # 외부 API 호출에 대한 응답 허용 (ECR Pull, 패키지 다운로드 등)
+      from_port  = 32768
       to_port    = 65535
     }
   }
 
-  # Private App Subnet용 아웃바운드 규칙
+  # Private App Subnet용 아웃바운드 규칙 (ECS 서비스의 외부 통신)
   private_app_egress_rules = {
     "all_outbound" = {
       rule_no    = 100
       action     = "allow"
       protocol   = "-1"
-      cidr_block = "0.0.0.0/0"
+      cidr_block = "0.0.0.0/0" # DB 접근, VPC Endpoint 통신, NAT Gateway를 통한 외부 API 호출
       from_port  = 0
       to_port    = 0
     }
   }
 
-  # Private DB Subnet용 인바운드 규칙
+  # Private DB Subnet용 인바운드 규칙 (Aurora MySQL 클러스터 위치)
   private_db_ingress_rules = {
     "app_to_db" = {
       rule_no    = 100
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = var.vpc_cidr # Private App Subnet이 위치한 VPC CIDR로부터의 트래픽 허용
+      cidr_block = var.vpc_cidr # ECS 서비스에서 Aurora MySQL로의 연결 허용 (3306 포트)
       from_port  = 3306
       to_port    = 3306
     },
@@ -109,7 +110,7 @@ locals {
       rule_no    = 110
       action     = "allow"
       protocol   = "-1"
-      cidr_block = var.vpc_cidr # VPC 내부 통신 허용
+      cidr_block = var.vpc_cidr # VPC 내부 관리 트래픽 허용 (백업, 모니터링 등)
       from_port  = 0
       to_port    = 0
     },
@@ -117,35 +118,35 @@ locals {
       rule_no    = 120
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = "0.0.0.0/0" # 외부로 나간 트래픽에 대한 응답 허용 (Egress-only IGW 등)
-      from_port  = 1024
+      cidr_block = "0.0.0.0/0" # IPv6 Egress-only IGW를 통한 응답 트래픽 (패치, 업데이트 응답)
+      from_port  = 32768
       to_port    = 65535
     }
   }
 
-  # Private DB Subnet용 아웃바운드 규칙
+  # Private DB Subnet용 아웃바운드 규칙 (보안 강화: 최소 권한 원칙 적용)
   private_db_egress_rules = {
-    "all_outbound_to_vpc" = {
+    "vpc_internal_response" = {
       rule_no    = 100
       action     = "allow"
-      protocol   = "-1"
-      cidr_block = var.vpc_cidr # VPC 내부로 나가는 모든 트래픽 허용
-      from_port  = 0
-      to_port    = 0
+      protocol   = "tcp"
+      cidr_block = var.vpc_cidr # VPC 내부 응답 트래픽만 허용 (App 서버로의 응답)
+      from_port  = 32768
+      to_port    = 65535
     },
-    "ephemeral_outbound_to_internet" = {
+    "ipv6_egress_only" = {
       rule_no    = 110
       action     = "allow"
       protocol   = "tcp"
-      cidr_block = "0.0.0.0/0" # Egress-only IGW를 통한 IPv6 아웃바운드 등
-      from_port  = 1024
-      to_port    = 65535
+      cidr_block = "::/0" # IPv6 Egress-only IGW를 통한 아웃바운드 (패치, 업데이트용)
+      from_port  = 443
+      to_port    = 443
     }
   }
 
   # nacl_type에 따라 선택될 규칙 세트 맵
   all_nacl_rules = {
-    "public"      = {
+    "public" = {
       ingress = local.public_ingress_rules
       egress  = local.public_egress_rules
     },
@@ -153,7 +154,7 @@ locals {
       ingress = local.private_app_ingress_rules
       egress  = local.private_app_egress_rules
     },
-    "private-db"  = {
+    "private-db" = {
       ingress = local.private_db_ingress_rules
       egress  = local.private_db_egress_rules
     },

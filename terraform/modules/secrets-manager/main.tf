@@ -1,27 +1,33 @@
 # Secrets Manager 시크릿 생성
 resource "aws_secretsmanager_secret" "this" {
-  # 시크릿의 이름입니다.
-  name        = var.secret_name
-  # 시크릿의 설명입니다.
-  description = var.secret_description
-  # 시크릿에 대한 복구 기간 (기본 30일)을 설정합니다.
+  name                    = var.secret_name
+  description             = var.secret_description
   recovery_window_in_days = var.recovery_window_in_days
 
-  # 시크릿 태그입니다.
+  # KMS 키를 사용한 암호화 (설계서 8.4절 요구사항)
+  kms_key_id = var.kms_key_id
+
+
+
   tags = {
     Name        = var.secret_name
     Project     = var.project_name
     Environment = var.environment
+    Purpose     = "민감 정보 보안 저장"
+    ManagedBy   = "terraform"
   }
 }
 
-# Secrets Manager 시크릿 버전 (선택 사항: 초기 값 설정)
-# 이 리소스는 시크릿의 초기 값을 설정하는 데 사용될 수 있습니다.
-# 실제 민감 정보는 Terraform 코드에 직접 노출하지 않는 것이 좋습니다.
-# 여기서는 플레이스홀더 값을 사용하거나, 이 리소스를 생략하고 수동으로 값을 추가할 수 있습니다.
+# Secrets Manager 시크릿 버전 (초기값 설정 - 선택사항)
+# 보안 주의사항: 실제 민감 정보는 Terraform 코드에 직접 노출하지 마세요!
+# 초기값은 플레이스홀더로 설정하고, 실제 값은 AWS 콘솔이나 CLI로 별도 설정하세요.
 resource "aws_secretsmanager_secret_version" "this" {
-  # 시크릿의 ARN 또는 이름입니다.
+  count = var.create_initial_version ? 1 : 0
+
   secret_id     = aws_secretsmanager_secret.this.id
-  # 시크릿의 값입니다. 실제 비밀번호는 여기에 직접 넣지 마세요.
-  secret_string = var.secret_string_initial_value
+  secret_string = var.secret_string_value
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
