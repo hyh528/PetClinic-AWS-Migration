@@ -187,22 +187,22 @@ module "endpoint" {
   environment          = var.environment
 }
 
-# # =================================================
-# # 5) Secrets Manager (민감 정보 관리)
-# # =================================================
+# =================================================
+# 5) Secrets Manager (민감 정보 관리)
+# =================================================
 
-# # --- DB 비밀번호를 위한 Secrets Manager 시크릿 생성 ---
-# # 데이터베이스 비밀번호와 같은 민감 정보를 안전하게 저장하고 관리합니다.
-# # 실제 비밀번호 값은 Terraform 코드에 직접 노출하지 않고, AWS 콘솔이나 다른 방법으로 설정합니다.
-# module "db_password_secret" {
-#   source = "../../../modules/secrets-manager"
+# --- DB 비밀번호를 위한 Secrets Manager 시크릿 생성 ---
+# 데이터베이스 비밀번호와 같은 민감 정보를 안전하게 저장하고 관리합니다.
+# 실제 비밀번호 값은 Terraform 코드에 직접 노출하지 않고, AWS 콘솔이나 다른 방법으로 설정합니다.
+module "db_password_secret" {
+  source = "../../../modules/secrets-manager"
 
-#   secret_name             = "${var.name_prefix}/dev/db-password" # 시크릿 이름: petclinic/dev/db-password
-#   secret_description      = "Database password for PetClinic application"
-#   recovery_window_in_days = 7 # 7일 후 영구 삭제 (기본 30일에서 변경)
-#   project_name            = var.name_prefix
-#   environment             = var.environment
-# }
+  secret_name             = "${var.name_prefix}/dev/db-password" # 시크릿 이름: petclinic/dev/db-password
+  secret_description      = "Database password for PetClinic application"
+  recovery_window_in_days = 7 # 7일 후 영구 삭제 (기본 30일에서 변경)
+  project_name            = var.name_prefix
+  environment             = var.environment
+}
 
 # # =================================================
 # # 6) Cognito (사용자 인증 및 권한 부여)
