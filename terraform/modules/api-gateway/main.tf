@@ -1,6 +1,9 @@
 # API Gateway 모듈 - Spring Cloud Gateway 대체
 # REST API 타입으로 ALB와 통합하여 마이크로서비스 라우팅 제공
 
+# 현재 AWS 리전 정보
+data "aws_region" "current" {}
+
 # REST API 생성
 resource "aws_api_gateway_rest_api" "petclinic" {
   name        = "${var.name_prefix}-api"
@@ -91,11 +94,8 @@ resource "aws_api_gateway_stage" "petclinic" {
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
   stage_name    = var.stage_name
 
-  # 스로틀링 설정
-  throttle_settings {
-    rate_limit  = var.throttle_rate_limit
-    burst_limit = var.throttle_burst_limit
-  }
+  # 스로틀링 설정은 별도 리소스로 관리
+  # throttle_settings는 aws_api_gateway_stage에서 지원되지 않음
 
   # 액세스 로깅 설정
   access_log_settings {
@@ -120,11 +120,7 @@ resource "aws_api_gateway_stage" "petclinic" {
   # X-Ray 추적 활성화
   xray_tracing_enabled = var.enable_xray_tracing
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-stage-${var.stage_name}"
-    Environment = var.environment
-    Stage       = var.stage_name
-  })
+  # tags는 aws_api_gateway_stage에서 지원되지 않음
 }
 
 # CloudWatch 로그 그룹 (API Gateway 액세스 로그용)
@@ -870,9 +866,5 @@ resource "aws_cloudwatch_dashboard" "api_gateway" {
     ]
   })
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-dashboard"
-    Environment = var.environment
-    Type        = "monitoring"
-  })
+  # tags는 aws_cloudwatch_dashboard에서 지원되지 않음
 }

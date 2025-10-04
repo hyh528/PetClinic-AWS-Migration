@@ -132,8 +132,9 @@ variable "tags" {
     condition     = length(var.tags) <= 50
     error_message = "태그는 최대 50개까지 설정 가능합니다."
   }
-}var
-iable "task_role_arn" {
+}
+
+variable "task_role_arn" {
   description = "ECS 태스크 역할 ARN (선택사항)"
   type        = string
   default     = null

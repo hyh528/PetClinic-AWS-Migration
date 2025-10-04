@@ -34,13 +34,13 @@ resource "aws_service_discovery_service" "microservices" {
     routing_policy = var.routing_policy
   }
 
-  # 헬스체크 설정
-  health_check_grace_period_seconds = var.health_check_grace_period
+  # 헬스체크 설정 (이 속성은 AWS Service Discovery에서 지원되지 않음)
+  # health_check_grace_period_seconds = var.health_check_grace_period
 
   # 헬스체크 커스텀 설정 (선택사항)
   dynamic "health_check_custom_config" {
     for_each = var.enable_custom_health_check ? [1] : []
-    
+
     content {
       failure_threshold = var.health_check_failure_threshold
     }
@@ -68,8 +68,8 @@ resource "aws_cloudwatch_log_group" "service_discovery" {
   })
 }
 
-# CloudWatch 메트릭 필터 (선택사항)
-resource "aws_cloudwatch_metric_filter" "service_registration" {
+# CloudWatch 로그 메트릭 필터 (선택사항)
+resource "aws_cloudwatch_log_metric_filter" "service_registration" {
   count = var.enable_logging && var.enable_metrics ? 1 : 0
 
   name           = "${var.name_prefix}-service-registrations"

@@ -42,7 +42,7 @@ resource "aws_ssm_parameter" "environment_config" {
 
 # 보안 파라미터 (SecureString)
 resource "aws_ssm_parameter" "secure_config" {
-  for_each = var.secure_parameters
+  for_each = nonsensitive(var.secure_parameters)
 
   name   = each.key
   type   = "SecureString"

@@ -1,0 +1,86 @@
+# ==========================================
+# Terraform 상태 관리 설정 예제
+# ==========================================
+# 이 파일을 terraform.tfvars로 복사하고 값을 수정하세요
+
+# ==========================================
+# 기본 설정
+# ==========================================
+
+aws_region  = "ap-northeast-2"
+environment = "dev"
+
+# ==========================================
+# S3 및 DynamoDB 설정
+# ==========================================
+
+# S3 버킷 이름 (전역적으로 고유해야 함)
+bucket_name = "petclinic-terraform-state-dev-ap-northeast-2"
+
+# DynamoDB 테이블 이름
+lock_table_name = "petclinic-terraform-lock-dev"
+
+# ==========================================
+# 보안 설정
+# ==========================================
+
+# 개발 환경에서는 true (운영 환경에서는 false)
+force_destroy = true
+
+# KMS 키 삭제 대기 기간 (7-30일)
+kms_key_deletion_window = 7
+
+# S3 버킷 버전 관리
+versioning_status = "Enabled"
+
+# ==========================================
+# 교차 리전 복제 설정 (선택사항)
+# ==========================================
+
+# 재해 복구를 위한 교차 리전 복제 (비용 증가)
+enable_cross_region_replication = false
+
+# 복제본 저장 리전
+replica_region = "ap-northeast-1"
+
+# ==========================================
+# 비용 최적화 설정
+# ==========================================
+
+# S3 라이프사이클 규칙
+lifecycle_rules = {
+  transition_to_ia_days      = 30   # 30일 후 IA로 전환
+  transition_to_glacier_days = 90   # 90일 후 Glacier로 전환
+  expiration_days           = 180   # 180일 후 삭제 (개발 환경)
+}
+
+# DynamoDB Point-in-Time Recovery
+point_in_time_recovery = true
+
+# ==========================================
+# 모니터링 설정
+# ==========================================
+
+# CloudTrail 로깅 활성화
+enable_cloudtrail_logging = true
+
+# 알림 이메일 (선택사항)
+notification_email = ""
+
+# ==========================================
+# 태그 설정
+# ==========================================
+
+tags = {
+  Project     = "petclinic"
+  Environment = "dev"
+  ManagedBy   = "terraform"
+  Component   = "state-management"
+  Owner       = "devops-team"
+  CostCenter  = "development"
+  
+  # 추가 태그 (필요에 따라)
+  Team        = "platform-engineering"
+  Repository  = "spring-petclinic-microservices"
+  Contact     = "devops@company.com"
+}
