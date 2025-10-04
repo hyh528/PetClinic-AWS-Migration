@@ -135,12 +135,12 @@ locals {
       to_port    = 65535
     },
     "ipv6_egress_only" = {
-      rule_no    = 110
-      action     = "allow"
-      protocol   = "tcp"
-      cidr_block = "::/0" # IPv6 Egress-only IGW를 통한 아웃바운드 (패치, 업데이트용)
-      from_port  = 443
-      to_port    = 443
+      rule_no         = 110
+      action          = "allow"
+      protocol        = "tcp"
+      ipv6_cidr_block = "::/0" # IPv6 Egress-only IGW를 통한 아웃바운드 (패치, 업데이트용)
+      from_port       = 443
+      to_port         = 443
     }
   }
 
@@ -172,14 +172,15 @@ locals {
 resource "aws_network_acl_rule" "ingress" {
   for_each = local.current_nacl_rules.ingress
 
-  network_acl_id = aws_network_acl.this.id
-  rule_number    = each.value.rule_no
-  egress         = false
-  rule_action    = each.value.action
-  protocol       = each.value.protocol
-  cidr_block     = each.value.cidr_block
-  from_port      = each.value.from_port
-  to_port        = each.value.to_port
+  network_acl_id  = aws_network_acl.this.id
+  rule_number     = each.value.rule_no
+  egress          = false
+  rule_action     = each.value.action
+  protocol        = each.value.protocol
+  cidr_block      = lookup(each.value, "cidr_block", null)
+  ipv6_cidr_block = lookup(each.value, "ipv6_cidr_block", null)
+  from_port       = each.value.from_port
+  to_port         = each.value.to_port
 }
 
 # 아웃바운드(Egress) 규칙을 정의합니다.
@@ -187,14 +188,15 @@ resource "aws_network_acl_rule" "ingress" {
 resource "aws_network_acl_rule" "egress" {
   for_each = local.current_nacl_rules.egress
 
-  network_acl_id = aws_network_acl.this.id
-  rule_number    = each.value.rule_no
-  egress         = true
-  rule_action    = each.value.action
-  protocol       = each.value.protocol
-  cidr_block     = each.value.cidr_block
-  from_port      = each.value.from_port
-  to_port        = each.value.to_port
+  network_acl_id  = aws_network_acl.this.id
+  rule_number     = each.value.rule_no
+  egress          = true
+  rule_action     = each.value.action
+  protocol        = each.value.protocol
+  cidr_block      = lookup(each.value, "cidr_block", null)
+  ipv6_cidr_block = lookup(each.value, "ipv6_cidr_block", null)
+  from_port       = each.value.from_port
+  to_port         = each.value.to_port
 }
 
 # NACL과 서브넷을 연결합니다.

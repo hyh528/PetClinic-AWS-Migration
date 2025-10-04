@@ -177,13 +177,13 @@ module "sg_vpce" {
 module "endpoint" {
   source = "../../../modules/endpoint"
 
-  vpc_id                    = data.terraform_remote_state.network.outputs.vpc_id
-  private_subnet_ids        = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
-  private_route_table_ids   = values(data.terraform_remote_state.network.outputs.private_app_route_table_ids)
-  vpc_endpoint_sg_id        = module.sg_vpce.security_group_id
-  aws_region                = data.aws_region.current.name
-  project_name              = var.name_prefix
-  environment               = var.environment
+  vpc_id                  = data.terraform_remote_state.network.outputs.vpc_id
+  private_subnet_ids      = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
+  private_route_table_ids = values(data.terraform_remote_state.network.outputs.private_app_route_table_ids)
+  vpc_endpoint_sg_id      = module.sg_vpce.security_group_id
+  aws_region                = data.aws_region.current.id
+  project_name            = var.name_prefix
+  environment             = var.environment
 }
 
 # =================================================

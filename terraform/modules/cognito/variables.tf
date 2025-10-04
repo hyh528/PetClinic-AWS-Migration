@@ -60,6 +60,12 @@ variable "mfa_configuration" {
   }
 }
 
+variable "enable_software_token_mfa" {
+  description = "소프트웨어 토큰 MFA(인증 앱)를 활성화할지 여부입니다."
+  type        = bool
+  default     = true
+}
+
 # 고급 보안 모드
 variable "advanced_security_mode" {
   description = "고급 보안 모드 설정입니다."
