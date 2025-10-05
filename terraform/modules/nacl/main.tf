@@ -133,14 +133,6 @@ locals {
       cidr_block = var.vpc_cidr # VPC 내부 응답 트래픽만 허용 (App 서버로의 응답)
       from_port  = 32768
       to_port    = 65535
-    },
-    "ipv6_egress_only" = {
-      rule_no    = 110
-      action     = "allow"
-      protocol   = "tcp"
-      cidr_block = "::/0" # IPv6 Egress-only IGW를 통한 아웃바운드 (패치, 업데이트용)
-      from_port  = 443
-      to_port    = 443
     }
   }
 

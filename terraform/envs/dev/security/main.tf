@@ -7,13 +7,14 @@
 # --- 1-1. 팀 멤버 IAM 사용자 생성 ---
 # 현재: 모든 팀원에게 AdministratorAccess 권한 부여
 # 향후: 역할별 세분화된 권한 정책 적용 예정
-module "iam" {
-  source = "../../../modules/iam"
-
-  project_name = "petclinic"
-  team_members = ["yeonghyeon", "seokgyeom", "junje", "hwigwon"]
-  # enable_role_based_policies = false  # Phase 2에서 true로 변경 예정
-}
+# 임시로 주석 처리 - 이미 존재하는 사용자들
+# module "iam" {
+#   source = "../../../modules/iam"
+#
+#   project_name = "petclinic"
+#   team_members = ["yeonghyeon", "seokgyeom", "junje", "hwigwon"]
+#   # enable_role_based_policies = false  # Phase 2에서 true로 변경 예정
+# }
 
 
 # =================================================
@@ -200,6 +201,7 @@ module "db_password_secret" {
   recovery_window_in_days = 7
   project_name            = var.name_prefix
   environment             = var.environment
+  
 }
 
 # =================================================
