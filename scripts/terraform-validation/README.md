@@ -11,11 +11,19 @@
 - 리소스 연결성 테스트
 - 보안 및 컴플라이언스 검사
 
-### 🌐 `network-validation.sh`
-**용도:** Network 레이어 검증
+### 🌐 `validate-routing-gateways.sh`
+**용도:** 라우팅 테이블 및 게이트웨이 검증 (완전 버전)
 - VPC, Subnet, Route Table 구성 확인
 - Internet Gateway, NAT Gateway 연결성 테스트
-- DNS 해석 및 네트워크 연결성 검증
+- 라우팅 규칙 및 경로 추적 시뮬레이션
+- IPv6 라우팅 설정 검증
+- AWS Well-Architected Framework 준수 확인
+
+### 🌐 `validate-routing-gateways-simple.sh`
+**용도:** 라우팅 테이블 및 게이트웨이 검증 (간단 버전)
+- 의존성 최소화 (terraform, aws cli, jq 불필요)
+- 모의 테스트 모드로 검증 로직 확인
+- 네트워크 아키텍처 설계 검증
 
 ### 🔒 `security-validation.sh`
 **용도:** Security 레이어 검증
@@ -40,8 +48,13 @@
 
 ### 개별 레이어 검증
 ```bash
-# Network 레이어 검증
-./scripts/terraform-validation/network-validation.sh
+# 라우팅 테이블 및 게이트웨이 검증 (완전 버전)
+./scripts/terraform-validation/validate-routing-gateways.sh
+./scripts/terraform-validation/validate-routing-gateways.sh --mock --verbose
+
+# 라우팅 테이블 및 게이트웨이 검증 (간단 버전)
+./scripts/terraform-validation/validate-routing-gateways-simple.sh
+./scripts/terraform-validation/validate-routing-gateways-simple.sh --verbose
 
 # Security 레이어 검증
 ./scripts/terraform-validation/security-validation.sh

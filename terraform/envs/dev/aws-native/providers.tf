@@ -16,13 +16,7 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket         = "petclinic-terraform-state-dev"
-    key            = "aws-native/terraform.tfstate"
-    region         = "ap-northeast-2"
-    encrypt        = true
-    dynamodb_table = "petclinic-terraform-locks"
-  }
+
 }
 
 provider "aws" {
