@@ -1,8 +1,19 @@
 spring:
   application:
     name: discovery-server
-  config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888/}
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+      paramstore:
+        enabled: true
+        prefix: /petclinic
+        profile-separator: /
+        fail-fast: false
+      secretsmanager:
+        enabled: true
+        prefix: /petclinic
+        fail-fast: false
 
 # Avoid some debugging logs at startup
 logging:
@@ -17,5 +28,17 @@ spring:
   config:
     activate:
       on-profile: docker
-    import: configserver:http://config-server:8888
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+      paramstore:
+        enabled: true
+        prefix: /petclinic
+        profile-separator: /
+        fail-fast: false
+      secretsmanager:
+        enabled: true
+        prefix: /petclinic
+        fail-fast: false
 

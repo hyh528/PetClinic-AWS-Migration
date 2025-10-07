@@ -1,0 +1,42 @@
+﻿Spring PetClinic AWS VPC Network Architecture Diagram
+
+Generated using AWS Diagram MCP (attempted)
+
+Architecture Overview:
+- VPC: 10.0.0.0/16
+- 2 Availability Zones: ap-northeast-2a, ap-northeast-2c
+- High Availability Multi-AZ deployment
+
+Network Flow:
+Internet -> Internet Gateway -> Public Subnets -> Private App Subnets -> Private DB Subnets
+
+Components:
+
+Public Subnets (AZ-a):
+- ALB (Application Load Balancer)
+- NAT Gateway
+
+Public Subnets (AZ-c):
+- ALB (Application Load Balancer)
+- NAT Gateway
+
+Private App Subnets (AZ-a):
+- ECS Fargate Services (customers, vets, visits)
+
+Private App Subnets (AZ-c):
+- ECS Fargate Services (customers, vets, visits)
+
+Private DB Subnets (AZ-a):
+- Aurora MySQL Writer Instance
+
+Private DB Subnets (AZ-c):
+- Aurora MySQL Reader Instance
+
+Security:
+- ALB handles HTTPS traffic
+- NAT Gateway for outbound internet access from private subnets
+- Aurora accessible only from ECS services
+- Multi-layer security with Security Groups and NACLs
+
+Note: PNG diagram generation failed due to MCP server communication issues.
+This text representation shows the architecture.

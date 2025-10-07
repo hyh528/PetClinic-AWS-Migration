@@ -1,9 +1,19 @@
 spring:
   application:
     name: api-gateway
-  config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
   cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+      paramstore:
+        enabled: true
+        prefix: /petclinic
+        profile-separator: /
+        fail-fast: false
+      secretsmanager:
+        enabled: true
+        prefix: /petclinic
+        fail-fast: false
     gateway:
       default-filters:
         - name: CircuitBreaker
@@ -17,25 +27,25 @@ spring:
             methods: POST
       routes:
         - id: vets-service
-          uri: lb://vets-service
+          uri: http://vets.petclinic.local:8080
           predicates:
             - Path=/api/vet/**
           filters:
             - StripPrefix=2
         - id: visits-service
-          uri: lb://visits-service
+          uri: http://visits.petclinic.local:8080
           predicates:
             - Path=/api/visit/**
           filters:
             - StripPrefix=2
         - id: customers-service
-          uri: lb://customers-service
+          uri: http://customers.petclinic.local:8080
           predicates:
             - Path=/api/customer/**
           filters:
             - StripPrefix=2
         - id: genai-service
-          uri: lb://genai-service
+          uri: http://genai.petclinic.local:8080
           predicates:
             - Path=/api/genai/**
           filters:
@@ -47,4 +57,16 @@ spring:
   config:
     activate:
       on-profile: docker
-    import: configserver:http://config-server:8888
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+      paramstore:
+        enabled: true
+        prefix: /petclinic
+        profile-separator: /
+        fail-fast: false
+      secretsmanager:
+        enabled: true
+        prefix: /petclinic
+        fail-fast: false
