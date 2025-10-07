@@ -201,7 +201,6 @@ module "db_password_secret" {
   recovery_window_in_days = 7
   project_name            = var.name_prefix
   environment             = var.environment
-  
 }
 
 # =================================================
