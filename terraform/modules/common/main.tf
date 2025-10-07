@@ -176,7 +176,7 @@ resource "aws_ssm_parameter" "project_metadata" {
   value = jsonencode({
     project_name = var.project_name
     environment  = var.environment
-    region      = data.aws_region.current.name
+    region      = data.aws_region.current.id
     account_id  = data.aws_caller_identity.current.account_id
     created_at  = timestamp()
   })

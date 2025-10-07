@@ -130,3 +130,67 @@ variable "aws_region" {
     error_message = "유효한 AWS 리전 형식이어야 합니다 (예: ap-northeast-2)."
   }
 }
+
+# ==========================================
+# 보안 변수
+# ==========================================
+variable "kms_deletion_window" {
+  description = "KMS 키 삭제 대기 기간 (일)"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.kms_deletion_window >= 7 && var.kms_deletion_window <= 30
+    error_message = "KMS 키 삭제 대기 기간은 7-30일 사이여야 합니다."
+  }
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch 로그 보존 기간 (일)"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653], var.log_retention_days)
+    error_message = "로그 보존 기간은 CloudWatch에서 지원하는 값 중 하나여야 합니다."
+  }
+}
+
+variable "default_log_level" {
+  description = "기본 로그 레벨"
+  type        = string
+  default     = "INFO"
+
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARN", "ERROR"], var.default_log_level)
+    error_message = "로그 레벨은 DEBUG, INFO, WARN, ERROR 중 하나여야 합니다."
+  }
+}
+
+variable "data_classification" {
+  description = "데이터 분류 레벨"
+  type        = string
+  default     = "internal"
+
+  validation {
+    condition     = contains(["public", "internal", "confidential", "restricted"], var.data_classification)
+    error_message = "데이터 분류는 public, internal, confidential, restricted 중 하나여야 합니다."
+  }
+}
+
+variable "compliance_requirements" {
+  description = "컴플라이언스 요구사항"
+  type        = string
+  default     = "general"
+
+  validation {
+    condition     = length(var.compliance_requirements) > 0
+    error_message = "컴플라이언스 요구사항은 비어있을 수 없습니다."
+  }
+}
+
+variable "auto_shutdown_enabled" {
+  description = "자동 종료 활성화 여부"
+  type        = bool
+  default     = false
+}
