@@ -237,8 +237,6 @@ resource "aws_cloudwatch_dashboard" "aws_native_integration" {
       }
     ]
   })
-
-  tags = local.common_tags
 }
 
 # ==========================================

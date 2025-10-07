@@ -64,8 +64,6 @@ resource "aws_cloudwatch_dashboard" "state_management" {
       }
     ]
   })
-
-  tags = var.tags
 }
 
 # ==========================================
@@ -212,8 +210,6 @@ resource "aws_iam_role" "cloudtrail_logs_role" {
       }
     ]
   })
-
-  tags = var.tags
 }
 
 resource "aws_iam_role_policy" "cloudtrail_logs_policy" {
@@ -250,16 +246,6 @@ resource "aws_budgets_budget" "state_management_cost" {
   limit_amount = "10"  # $10 USD
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
-
-  cost_filters = {
-    Service = [
-      "Amazon Simple Storage Service",
-      "Amazon DynamoDB",
-      "AWS Key Management Service"
-    ]
-    TagKey = ["Project"]
-    TagValue = ["petclinic"]
-  }
 
   notification {
     comparison_operator        = "GREATER_THAN"

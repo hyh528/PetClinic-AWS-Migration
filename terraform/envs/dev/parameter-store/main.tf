@@ -107,7 +107,7 @@ module "parameter_store" {
   create_iam_policy = var.create_iam_policy
 
   # 로깅 설정
-  enable_access_logging = var.enable_access_logging
+  enable_access_logging = true
   log_retention_days    = var.log_retention_days
 
   # 고급 설정

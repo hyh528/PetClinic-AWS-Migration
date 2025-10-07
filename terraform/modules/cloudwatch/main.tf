@@ -140,8 +140,6 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
       }
     ]
   })
-
-  tags = var.tags
 }
 
 # CloudWatch 로그 그룹들 (이미 ECS 모듈에서 생성되지만 중앙 관리용)

@@ -40,7 +40,7 @@ module "cloud_map" {
   health_check_failure_threshold = var.health_check_failure_threshold
 
   # 모니터링 설정
-  enable_logging      = var.enable_logging
+  enable_logging      = true
   enable_metrics      = var.enable_metrics
   enable_health_alarms = var.enable_health_alarms
   log_retention_days  = var.log_retention_days

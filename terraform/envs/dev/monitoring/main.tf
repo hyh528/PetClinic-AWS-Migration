@@ -120,6 +120,11 @@ resource "aws_xray_sampling_rule" "petclinic" {
   }
 }
 
+# S3 버킷 이름 고유성을 위한 랜덤 ID
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
+}
+
 # CloudTrail 감사 로그 모듈 호출
 module "cloudtrail" {
   source = "../../../modules/cloudtrail"
@@ -138,9 +143,4 @@ module "cloudtrail" {
     Owner       = "team-petclinic"
     CostCenter  = "training"
   }
-}
-
-# S3 버킷 이름 고유성을 위한 랜덤 ID
-resource "random_id" "bucket_suffix" {
-  byte_length = 4
 }

@@ -2,34 +2,14 @@
 # 개발 환경 Terraform 상태 관리 설정
 # ==========================================
 
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
 # ==========================================
-# Provider 설정
+# 상태 관리 모듈 호출
 # ==========================================
 
-provider "aws" {
-  region = var.aws_region
+# ==========================================
+# Provider 설정 (복제용)
+# ==========================================
 
-  default_tags {
-    tags = {
-      Environment = var.environment
-      Project     = "petclinic"
-      ManagedBy   = "terraform"
-      Layer       = "state-management"
-    }
-  }
-}
-
-# 복제용 Provider (교차 리전 복제 시 사용)
 provider "aws" {
   alias  = "replica"
   region = var.replica_region
@@ -43,10 +23,6 @@ provider "aws" {
     }
   }
 }
-
-# ==========================================
-# 상태 관리 모듈 호출
-# ==========================================
 
 module "state_management" {
   source = "../../../modules/state-management"
