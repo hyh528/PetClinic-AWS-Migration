@@ -9,9 +9,10 @@ module "config" {
   project_name = var.project_name
   environment  = var.environment
 
-  # DB 모듈에서 생성될 정보들을 전달받게 됩니다.
-  db_username = var.db_master_username
-  db_password = var.db_master_password
-  # db_endpoint = module.aurora_db.cluster_endpoint # Aurora DB 생성 후 연결
+  # 1단계: 정해진 값으로 먼저 파라미터를 생성합니다.
+  # 실제 DB 생성 후 db_endpoint 값은 실제 DB의 정보로 대체될 예정입니다.
+  db_username = "petclinic"
+  db_password = "KOPOpetclini@#"
+  db_endpoint = "please-run-terraform-apply-to-update.rds.amazonaws.com"
   db_name     = var.db_name
 }
