@@ -118,6 +118,6 @@ echo "3. 상태 관리 인프라 배포"
 echo ""
 echo "📚 자세한 내용: README_CURRENT_STATUS.md"
 echo ""
-echo "🆘 도움이 필요하면 팀 Slack #devops-terraform 채널로!"
+echo "🆘 도움이 필요하면 팀즈 채널로!"
 
 echo -e "\n✨ 체크 완료!"

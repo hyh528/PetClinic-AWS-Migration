@@ -55,7 +55,7 @@ module "cloudwatch" {
 
   dashboard_name        = "PetClinic-Dev-Dashboard"
   aws_region           = "ap-northeast-2"
-  
+
   # 각 레이어에서 가져온 리소스 정보 (의존성 역전)
   api_gateway_name     = data.terraform_remote_state.aws_native.outputs.api_gateway_name
   ecs_cluster_name     = "petclinic-dev-cluster"
@@ -63,7 +63,7 @@ module "cloudwatch" {
   lambda_function_name = data.terraform_remote_state.aws_native.outputs.lambda_function_name
   aurora_cluster_name  = data.terraform_remote_state.database.outputs.cluster_identifier
   alb_name            = data.terraform_remote_state.application.outputs.alb_name
-  
+
   log_retention_days   = 30
   sns_topic_arn       = aws_sns_topic.alerts.arn
 
@@ -74,6 +74,137 @@ module "cloudwatch" {
     ManagedBy   = "terraform"
     Owner       = "team-petclinic"
     CostCenter  = "training"
+  }
+}
+
+# ==========================================
+# 상세 CloudWatch 알람 설정
+# ==========================================
+
+# API Gateway 5XX 에러율 알람
+resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx" {
+  alarm_name          = "petclinic-dev-api-gateway-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "API Gateway 5XX 에러가 5건 이상 발생"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ApiName = data.terraform_remote_state.aws_native.outputs.api_gateway_name
+  }
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "monitoring"
+    ManagedBy   = "terraform"
+  }
+}
+
+# ECS CPU 사용률 알람
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu_utilization" {
+  alarm_name          = "petclinic-dev-ecs-cpu-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "ECS CPU 사용률이 80% 이상"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ClusterName = "petclinic-dev-cluster"
+    ServiceName = "petclinic-app-service"
+  }
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "monitoring"
+    ManagedBy   = "terraform"
+  }
+}
+
+# ECS 메모리 사용률 알람
+resource "aws_cloudwatch_metric_alarm" "ecs_memory_utilization" {
+  alarm_name          = "petclinic-dev-ecs-memory-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "ECS 메모리 사용률이 80% 이상"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ClusterName = "petclinic-dev-cluster"
+    ServiceName = "petclinic-app-service"
+  }
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "monitoring"
+    ManagedBy   = "terraform"
+  }
+}
+
+# Aurora CPU 사용률 알람
+resource "aws_cloudwatch_metric_alarm" "aurora_cpu_utilization" {
+  alarm_name          = "petclinic-dev-aurora-cpu-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/RDS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "Aurora CPU 사용률이 80% 이상"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    DBClusterIdentifier = data.terraform_remote_state.database.outputs.cluster_identifier
+  }
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "monitoring"
+    ManagedBy   = "terraform"
+  }
+}
+
+# ALB 5XX 에러율 알람
+resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
+  alarm_name          = "petclinic-dev-alb-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "HTTPCode_Target_5XX_Count"
+  namespace           = "AWS/ApplicationELB"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "ALB 5XX 에러가 5건 이상 발생"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    LoadBalancer = data.terraform_remote_state.application.outputs.alb_arn_suffix
+  }
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    Layer       = "monitoring"
+    ManagedBy   = "terraform"
   }
 }
 

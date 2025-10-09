@@ -49,3 +49,54 @@ output "nat_gateway_ids" {
   value       = module.vpc.nat_gateway_ids
 }
 
+# VPC 엔드포인트 출력값들
+output "ssm_vpc_endpoint_id" {
+  description = "SSM VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.ssm.id
+}
+
+output "secretsmanager_vpc_endpoint_id" {
+  description = "Secrets Manager VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.secretsmanager.id
+}
+
+output "ecr_api_vpc_endpoint_id" {
+  description = "ECR API VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.ecr_api.id
+}
+
+output "ecr_dkr_vpc_endpoint_id" {
+  description = "ECR DKR VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.ecr_dkr.id
+}
+
+output "logs_vpc_endpoint_id" {
+  description = "CloudWatch Logs VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.logs.id
+}
+
+output "xray_vpc_endpoint_id" {
+  description = "X-Ray VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.xray.id
+}
+
+output "kms_vpc_endpoint_id" {
+  description = "KMS VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.kms.id
+}
+
+output "s3_vpc_endpoint_id" {
+  description = "S3 VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.s3.id
+}
+
+output "monitoring_vpc_endpoint_id" {
+  description = "CloudWatch Monitoring VPC 엔드포인트 ID"
+  value       = aws_vpc_endpoint.monitoring.id
+}
+
+output "vpc_endpoint_security_group_id" {
+  description = "VPC 엔드포인트용 보안 그룹 ID"
+  value       = aws_security_group.vpc_endpoint.id
+}
+
