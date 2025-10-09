@@ -299,7 +299,17 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Parameter Store 및 Secrets Manager 접근 권한 추가
+# ==========================================
+# Security 레이어에서 관리하는 IAM 정책 연결
+# ==========================================
+# RDS 시크릿 접근 정책 (Security 레이어에서 중앙 관리)
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_rds_secret" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = data.terraform_remote_state.security.outputs.rds_secret_access_policy_arn
+}
+
+# Parameter Store 접근 권한 (기존 유지)
 resource "aws_iam_role_policy" "ecs_task_execution_parameter_store" {
   name = "petclinic-dev-ecs-parameter-store-policy"
   role = aws_iam_role.ecs_task_execution.id
@@ -321,16 +331,6 @@ resource "aws_iam_role_policy" "ecs_task_execution_parameter_store" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = [
-          "arn:aws:secretsmanager:ap-northeast-2:*:secret:petclinic/*",
-          "arn:aws:secretsmanager:ap-northeast-2:*:secret:rds-db-credentials/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "kms:Decrypt"
         ]
         Resource = [
@@ -338,10 +338,7 @@ resource "aws_iam_role_policy" "ecs_task_execution_parameter_store" {
         ]
         Condition = {
           StringEquals = {
-            "kms:ViaService" = [
-              "ssm.ap-northeast-2.amazonaws.com",
-              "secretsmanager.ap-northeast-2.amazonaws.com"
-            ]
+            "kms:ViaService" = "ssm.ap-northeast-2.amazonaws.com"
           }
         }
       }

@@ -15,3 +15,8 @@ output "vpce_security_group_id" {
   description = "VPC 엔드포인트용 보안 그룹 ID"
   value       = module.endpoints.vpce_security_group_id
 }
+
+output "rds_secret_access_policy_arn" {
+  description = "RDS 관리 시크릿 접근 정책 ARN"
+  value       = aws_iam_policy.rds_secret_access.arn
+}
