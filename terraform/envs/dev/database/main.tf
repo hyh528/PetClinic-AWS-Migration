@@ -17,7 +17,6 @@ module "database" {
 
   db_name     = var.db_name
   db_username = var.db_username
-  db_password = var.db_password
   db_port     = var.db_port
 
   backup_retention_period = var.backup_retention_period

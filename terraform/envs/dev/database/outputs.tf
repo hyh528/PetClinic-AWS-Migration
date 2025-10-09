@@ -44,8 +44,3 @@ output "db_subnet_group_name" {
   description = "DB 서브넷 그룹 이름"
   value       = module.database.db_subnet_group_name
 }
-
-output "db_password_secret_arn" {
-  description = "데이터베이스 비밀번호 Secret ARN"
-  value       = module.database.db_password_secret_arn
-}

@@ -35,11 +35,6 @@ variable "db_username" {
   default     = "petclinic"
 }
 
-variable "db_password" {
-  description = "데이터베이스 비밀번호 (실무에서는 AWS Secrets Manager 사용 권장)"
-  type        = string
-  sensitive   = true
-}
 
 variable "db_port" {
   description = "데이터베이스 포트"

@@ -49,6 +49,11 @@ data "aws_ssm_parameter" "db_name" {
   name = "/petclinic/dev/customers/database.name"
 }
 
+# RDS 관리 DB 비밀번호 시크릿 (manage_master_user_password 사용)
+data "aws_secretsmanager_secret" "db_password" {
+  name = "rds-db-credentials/petclinic-dev-aurora-cluster/petclinic"
+}
+
 # ==========================================
 # 2. ALB 모듈 호출 (로드 밸런서)
 # ==========================================
@@ -185,7 +190,7 @@ module "ecs" {
       secrets = [
         {
           name      = "DB_PASSWORD"
-          valueFrom = data.aws_secretsmanager_secret_version.db_password.arn
+          valueFrom = data.aws_secretsmanager_secret.db_password.arn
         }
       ]
 
@@ -319,7 +324,8 @@ resource "aws_iam_role_policy" "ecs_task_execution_parameter_store" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          "arn:aws:secretsmanager:ap-northeast-2:*:secret:petclinic/*"
+          "arn:aws:secretsmanager:ap-northeast-2:*:secret:petclinic/*",
+          "arn:aws:secretsmanager:ap-northeast-2:*:secret:rds-db-credentials/*"
         ]
       },
       {

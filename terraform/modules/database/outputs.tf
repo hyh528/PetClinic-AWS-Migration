@@ -30,10 +30,8 @@ output "db_subnet_group_name" {
   value       = aws_db_subnet_group.this.name
 }
 
-output "db_password_secret_arn" {
-  description = "데이터베이스 비밀번호 Secret ARN"
-  value       = aws_secretsmanager_secret.db_password.arn
-}
+# RDS 관리 시크릿은 Terraform에서 직접 참조하지 않음
+# 애플리케이션에서 시크릿 이름을 계산하여 사용
 
 output "cluster_arn" {
   description = "Aurora 클러스터 ARN"

@@ -3,22 +3,6 @@
 # ==========================================
 # 재사용 가능한 Aurora Database 모듈
 
-# ==========================================
-# 1. DB Password Secret (AWS Secrets Manager)
-# ==========================================
-resource "aws_secretsmanager_secret" "db_password" {
-  name        = "${var.name_prefix}/db-password"
-  description = "${var.name_prefix} Aurora 클러스터 데이터베이스 비밀번호"
-
-  tags = merge(var.tags, {
-    Name = "${var.name_prefix}-db-password-secret"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "db_password" {
-  secret_id     = aws_secretsmanager_secret.db_password.id
-  secret_string = var.db_password  # 초기 비밀번호 설정
-}
 
 # ==========================================
 # 2. DB 서브넷 그룹 생성
@@ -45,8 +29,10 @@ resource "aws_rds_cluster" "this" {
   # 데이터베이스 접속 정보
   database_name   = var.db_name
   master_username = var.db_username
-  master_password = var.db_password
   port            = var.db_port
+
+  # RDS가 Secrets Manager에서 비밀번호 관리
+  manage_master_user_password = true
 
   # 네트워크 설정
   db_subnet_group_name   = aws_db_subnet_group.this.name
