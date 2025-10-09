@@ -5,6 +5,6 @@ terraform {
     region         = "ap-northeast-2"
     dynamodb_table = "petclinic-tf-locks-jungsu-kopo"
     encrypt        = true
-    profile        = "petclinic-yeonghyeon"
+    profile        = "petclinic-dev"
   }
 }

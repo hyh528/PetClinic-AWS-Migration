@@ -37,6 +37,19 @@ module "ecr" {
 }
 
 # ==========================================
+# DB Configuration Parameters (Parameter Store)
+# ==========================================
+# 하드코딩 제거: DB 사용자명, DB명 등을 Parameter Store에서 동적 로드
+
+data "aws_ssm_parameter" "db_username" {
+  name = "/petclinic/dev/customers/database.username"
+}
+
+data "aws_ssm_parameter" "db_name" {
+  name = "/petclinic/dev/customers/database.name"
+}
+
+# ==========================================
 # 2. ALB 모듈 호출 (로드 밸런서)
 # ==========================================
 # 책임: 외부 트래픽 라우팅 및 분산
@@ -98,11 +111,11 @@ module "ecs" {
         },
         {
           name  = "AWS_REGION"
-          value = "ap-northeast-2"
+          value = var.aws_region
         },
         {
           name  = "SPRING_CLOUD_AWS_REGION_STATIC"
-          value = "ap-northeast-2"
+          value = var.aws_region
         },
         {
           name  = "SPRING_CLOUD_AWS_PARAMSTORE_ENABLED"
@@ -137,12 +150,12 @@ module "ecs" {
           value = tostring(data.terraform_remote_state.database.outputs.cluster_port)
         },
         {
-          name  = "DB_NAME"
-          value = "petclinic_customers"
+          name  = "DB_USERNAME"
+          value = data.aws_ssm_parameter.db_username.value
         },
         {
-          name  = "DB_USERNAME"
-          value = "petclinic"
+          name  = "DB_NAME"
+          value = data.aws_ssm_parameter.db_name.value
         }
       ]
 
@@ -180,7 +193,7 @@ module "ecs" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = "/ecs/petclinic-app"
-          "awslogs-region"        = "ap-northeast-2"
+          "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "ecs"
         }
       }
@@ -209,7 +222,7 @@ module "ecs" {
       environment = [
         {
           name  = "AWS_REGION"
-          value = "ap-northeast-2"
+          value = var.aws_region
         }
       ]
 
@@ -217,7 +230,7 @@ module "ecs" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = "/ecs/xray-daemon"
-          "awslogs-region"        = "ap-northeast-2"
+          "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "ecs"
         }
       }

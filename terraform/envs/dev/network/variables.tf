@@ -71,7 +71,7 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  description = "사용할 AWS CLI 프로파일"
+  description = "공유 AWS CLI 프로필 (모든 레이어에서 동일하게 사용)"
   type        = string
-  default     = "petclinic-yeonghyeon"
+  default     = "petclinic-dev"
 }

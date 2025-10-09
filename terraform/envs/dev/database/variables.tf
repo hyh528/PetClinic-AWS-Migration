@@ -88,22 +88,22 @@ variable "encrypt_state" {
   default     = true
 }
 
-# 이 환경에서 리소스를 생성/변경하는 기본 AWS CLI 프로파일
+# 공유 AWS CLI 프로필 (모든 레이어에서 동일하게 사용)
 variable "aws_profile" {
-  description = "Database 레이어에서 사용하는 기본 AWS CLI 프로파일"
+  description = "공유 AWS CLI 프로필 (모든 레이어에서 동일하게 사용)"
   type        = string
-  default     = "petclinic-junje"
+  default     = "petclinic-dev"
 }
 
-# 원격 상태 접근 프로파일(크로스-프로파일 접근 분리)
+# 원격 상태 접근 프로파일 (공유 프로필 사용)
 variable "network_state_profile" {
-  description = "Network 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로파일"
+  description = "Network 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로필"
   type        = string
-  default     = "petclinic-yeonghyeon"
+  default     = "petclinic-dev"
 }
 
 variable "security_state_profile" {
-  description = "Security 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로파일"
+  description = "Security 레이어 원격 상태(S3) 접근을 위한 AWS CLI 프로필"
   type        = string
-  default     = "petclinic-hwigwon"
+  default     = "petclinic-dev"
 }
