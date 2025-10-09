@@ -37,3 +37,7 @@ GEMINI.md
 # terraform.tfstate (민감 정보 및 상태)
 *.tfstate
 *.tfstate.*
+
+# Terraform 변수 파일 (민감 정보 포함 가능성)
+# *.tfvars
+# *.auto.tfvars #DB민감정보 틀 전달을위한 주석처리 이후 해제 요망
