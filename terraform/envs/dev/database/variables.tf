@@ -1,36 +1,17 @@
-variable "aws_region" {
-  description = "리소스용 AWS 리전"
-  type        = string
-}
-
-variable "aws_profile" {
-  description = "인증용 AWS 프로필"
-  type        = string
-}
-
 variable "project_name" {
-  description = "Name of the project"
+  description = "프로젝트 이름 (리소스 태깅 및 이름에 사용)"
   type        = string
+  default     = "petclinic-dev"
 }
 
 variable "environment" {
-  description = "Deployment environment"
+  description = "배포 환경 (e.g., dev, stg, prod)"
   type        = string
+  default     = "dev"
 }
 
 variable "db_name" {
-  description = "Name of the main database"
+  description = "데이터베이스 이름"
   type        = string
-}
-
-variable "db_master_username" {
-  description = "Username for the master database user"
-  type        = string
-  default     = "admin"
-}
-
-variable "db_master_password" {
-  description = "Password for the master database user"
-  type        = string
-  sensitive   = true
+  default     = "petclinic"
 }
