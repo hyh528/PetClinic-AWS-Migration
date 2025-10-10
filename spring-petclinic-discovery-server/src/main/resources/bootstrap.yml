@@ -1,0 +1,7 @@
+spring:
+  cloud:
+    compatibility-verifier:
+      enabled: false
+  config:
+    import:
+      - "optional:aws-parameterstore:/petclinic-dev/dev/discovery-server/"
