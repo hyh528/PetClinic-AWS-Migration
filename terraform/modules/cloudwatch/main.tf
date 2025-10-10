@@ -132,10 +132,10 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
-          query   = "SOURCE '/ecs/petclinic-app' | fields @timestamp, @message | filter @message like /actuator/health/ | stats count() by bin(5m)"
-          region  = var.aws_region
-          title   = "Health Check Requests"
-          view    = "table"
+          query  = "SOURCE '/ecs/petclinic-app' | fields @timestamp, @message | filter @message like /actuator/health/ | stats count() by bin(5m)"
+          region = var.aws_region
+          title  = "Health Check Requests"
+          view   = "table"
         }
       }
     ]

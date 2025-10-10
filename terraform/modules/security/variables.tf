@@ -42,3 +42,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# IAM 정책용 추가 변수
+variable "aws_region" {
+  description = "AWS 리전 (IAM 정책 ARN 생성용)"
+  type        = string
+}

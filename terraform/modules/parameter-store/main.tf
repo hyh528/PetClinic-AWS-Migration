@@ -36,7 +36,7 @@ resource "aws_ssm_parameter" "environment_config" {
     Name        = each.key
     Environment = var.environment
     Type        = "environment-configuration"
-    Service     = split("/", each.key)[2]  # /petclinic/dev/service/key에서 service 추출
+    Service     = split("/", each.key)[2] # /petclinic/dev/service/key에서 service 추출
   })
 }
 
@@ -55,7 +55,7 @@ resource "aws_ssm_parameter" "secure_config" {
     Name        = each.key
     Environment = var.environment
     Type        = "secure-configuration"
-    Service     = split("/", each.key)[2]  # /petclinic/dev/service/key에서 service 추출
+    Service     = split("/", each.key)[2] # /petclinic/dev/service/key에서 service 추출
   })
 }
 

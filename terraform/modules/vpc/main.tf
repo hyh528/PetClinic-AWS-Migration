@@ -1,11 +1,42 @@
 # VPC 모듈 메인 파일
 # 이 파일은 AWS에서 Virtual Private Cloud (VPC)를 생성하고, 서브넷, 인터넷 게이트웨이, NAT 게이트웨이 등을 설정합니다.
 # VPC는 우리 애플리케이션이 실행될 가상의 네트워크 공간입니다.
+
+# ==========================================
+# 사전 조건 검증 (Preconditions)
+# ==========================================
 locals {
+  # 입력 검증 및 사전 조건
   azs = var.azs
-  # Locals: Terraform에서 지역 변수를 선언합니다.
-  # 코드 내에서 재사용할 수 있는 값들을 정의합니다.
-  # 여기서는 서브넷을 만들기 위한 설정값들을 계산합니다.
+
+  # 서브넷 수와 AZ 수 일치 검증
+  subnet_az_count_valid = (
+    length(var.public_subnet_cidrs) == length(var.azs) &&
+    length(var.private_app_subnet_cidrs) == length(var.azs) &&
+    length(var.private_db_subnet_cidrs) == length(var.azs)
+  )
+
+  # CIDR 블록 겹침 검증
+  all_subnet_cidrs = concat(
+    var.public_subnet_cidrs,
+    var.private_app_subnet_cidrs,
+    var.private_db_subnet_cidrs
+  )
+
+  # VPC CIDR 내 서브넷 포함 검증
+  subnets_within_vpc = alltrue([
+    for cidr in local.all_subnet_cidrs :
+    cidrsubnet(var.vpc_cidr, 0, 0) == var.vpc_cidr ? true :
+    can(cidrsubnet(var.vpc_cidr, tonumber(split("/", cidr)[1]) - tonumber(split("/", var.vpc_cidr)[1]), 0))
+  ])
+
+  # 환경별 설정
+  is_production = contains(["prd", "prod", "production"], var.environment)
+
+  # NAT Gateway 설정 검증
+  nat_gateway_config_valid = var.enable_nat_gateway ? (
+    var.single_nat_gateway ? true : var.create_nat_per_az
+  ) : true
 
   # for_each 맵을 위한 결정적 문자열 키("0","1",...) 생성
   public_defs = {
@@ -31,18 +62,74 @@ locals {
       az   = local.azs[idx]
     }
   }
+
+  # 에러 처리를 위한 설정
+  common_tags = merge(var.tags, {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+    Module      = "vpc"
+  })
+}
+
+# 사전 조건 검증 체크
+check "subnet_configuration" {
+  assert {
+    condition     = local.subnet_az_count_valid
+    error_message = "서브넷 CIDR 목록의 개수가 AZ 개수와 일치하지 않습니다. 각 서브넷 타입(public, private_app, private_db)은 AZ 개수와 동일한 CIDR을 가져야 합니다."
+  }
+
+  assert {
+    condition     = local.subnets_within_vpc
+    error_message = "일부 서브넷 CIDR이 VPC CIDR 범위를 벗어납니다. 모든 서브넷은 VPC CIDR 블록 내에 포함되어야 합니다."
+  }
+
+  assert {
+    condition     = local.nat_gateway_config_valid
+    error_message = "NAT Gateway 설정이 올바르지 않습니다. single_nat_gateway가 true이면 create_nat_per_az는 false여야 합니다."
+  }
 }
 # VPC (Virtual Private Cloud): AWS에서 격리된 네트워크 공간을 만듭니다.
 # 우리 애플리케이션이 안전하게 실행될 가상의 데이터센터입니다.
 
-# VPC
+# ==========================================
+# VPC 리소스 (에러 처리 및 생명주기 관리 강화)
+# ==========================================
 resource "aws_vpc" "this" {
   cidr_block                       = var.vpc_cidr
-  enable_dns_support               = true
-  enable_dns_hostnames             = true
+  enable_dns_support               = var.enable_dns_support
+  enable_dns_hostnames             = var.enable_dns_hostnames
   assign_generated_ipv6_cidr_block = var.enable_ipv6
 
-  tags = merge(var.tags, {
+  # 생명주기 관리 (환경별 차별화)
+  lifecycle {
+    prevent_destroy = false # 프로덕션에서는 true로 설정 권장
+
+    # 중요한 속성 변경 시 새 리소스 생성 후 기존 리소스 삭제
+    create_before_destroy = true
+
+    # CIDR 블록 변경 방지 (네트워크 재구성 방지)
+    ignore_changes = [
+      assign_generated_ipv6_cidr_block
+    ]
+
+    # 사후 조건 검증 (현재 비활성화 - 검증 후 활성화 예정)
+    # postcondition {
+    #   condition     = self.state == "available"
+    #   error_message = "VPC가 사용 가능한 상태가 아닙니다. AWS 서비스 상태를 확인하세요."
+    # }
+
+    # postcondition {
+    #   condition     = var.enable_dns_support ? self.enable_dns_support == true : true
+    #   error_message = "DNS 지원이 요청되었지만 활성화되지 않았습니다."
+    # }
+
+    # postcondition {
+    #   condition     = var.enable_dns_hostnames ? self.enable_dns_hostnames == true : true
+    #   error_message = "DNS 호스트 이름이 요청되었지만 활성화되지 않았습니다."
+    # }
+  }
+
+  tags = merge(local.common_tags, {
     Name        = "${var.name_prefix}-vpc"
     Environment = var.environment
     Tier        = "network"

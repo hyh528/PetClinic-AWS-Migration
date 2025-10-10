@@ -42,28 +42,48 @@ graph TB
 
 ### 전제 조건
 
-1. **AWS CLI 설정**
-   ```bash
-   aws configure --profile petclinic-yeonghyeon
-   aws sts get-caller-identity --profile petclinic-yeonghyeon
+1. **필수 도구 설치**
+   - Terraform >= 1.8.5
+   - Go >= 1.21 (테스트용)
+   - AWS CLI
+   - PowerShell (Windows)
+
+2. **AWS CLI 설정**
+   ```powershell
+   aws configure
+   aws sts get-caller-identity --region ap-northeast-1
    ```
 
-2. **Terraform 설치**
-   ```bash
-   terraform --version  # >= 1.12.0 필요
-   ```
+### 🎯 기존 테스트 시스템 활용 (권장)
 
-### 자동화 스크립트 사용 (권장)
+```powershell
+# 1. Plan만 실행 (비용 발생 없음)
+.\scripts\tokyo-region-test-integration.ps1 -Action plan
 
-```bash
-# 1. 전체 인프라 검증 (Plan만)
-./scripts/tokyo-region-test.sh plan
+# 2. 단위 테스트 실행 (실제 리소스 생성)
+.\scripts\tokyo-region-test-integration.ps1 -Action unit
 
-# 2. 실제 리소스 생성
-./scripts/tokyo-region-test.sh apply
+# 3. 통합 테스트 실행 (네트워크-보안 검증)
+.\scripts\tokyo-region-test-integration.ps1 -Action integration
 
-# 3. 테스트 완료 후 정리
-./scripts/tokyo-region-test.sh destroy
+# 4. 전체 테스트 실행 (Plan + Unit + Integration)
+.\scripts\tokyo-region-test-integration.ps1 -Action full
+
+# 5. 테스트 완료 후 정리
+.\scripts\tokyo-region-test-integration.ps1 -Action cleanup
+```
+
+### 🔧 기존 테스트 도구 직접 사용
+
+```powershell
+# 특정 모듈만 테스트
+.\scripts\run-terraform-tests.ps1 -TestType "unit" -Module "vpc" -AwsRegion "ap-northeast-1"
+
+# 모든 단위 테스트
+.\scripts\run-terraform-tests.ps1 -TestType "unit" -AwsRegion "ap-northeast-1"
+
+# 통합 테스트
+.\scripts\run-terraform-tests.ps1 -TestType "integration" -AwsRegion "ap-northeast-1"
 ```
 
 ### 수동 레이어별 실행

@@ -189,8 +189,8 @@ validate_environment_configs() {
                 fi
             done
             
-            # backend.tf 확인 (state-management 제외)
-            if [[ "$layer_name" != "state-management" && "$layer_name" != "aws-native" && "$layer_name" != "monitoring" ]]; then
+            # backend.tf 확인 (bootstrap 제외)
+            if [[ "$layer_name" != "bootstrap" && "$layer_name" != "aws-native" && "$layer_name" != "monitoring" ]]; then
                 if [[ -f "$env_layer/backend.tf" ]]; then
                     log_success "레이어 $layer_name: backend.tf 존재"
                     add_result "environment_config" "$layer_name" "backend_config" "PASS" "backend.tf exists" ""

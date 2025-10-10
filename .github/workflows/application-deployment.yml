@@ -1,0 +1,344 @@
+name: Spring Boot Application Deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "spring-petclinic-*/**"
+      - "pom.xml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "spring-petclinic-*/**"
+      - "pom.xml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      services:
+        description: 'Services to deploy (comma-separated or "all")'
+        required: true
+        default: "all"
+        type: string
+
+env:
+  JAVA_VERSION: "17"
+  AWS_REGION: "ap-northeast-1"  # 도쿄 리전으로 변경
+  REGISTRY_URL: "339713019108.dkr.ecr.ap-northeast-1.amazonaws.com"  # 도쿄 리전 ECR
+
+jobs:
+  # 애플리케이션 빌드 및 테스트
+  build-and-test:
+    name: Build and Test Applications
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.detect-changes.outputs.services }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+          cache: maven
+
+      - name: Generate Version
+        id: version
+        run: |
+          VERSION="$(date +%Y%m%d)-${GITHUB_SHA:0:7}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${VERSION}"
+
+      - name: Detect Changed Services
+        id: detect-changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.services }}" = "all" ]; then
+              SERVICES="api-gateway,customers-service,vets-service,visits-service,admin-server"
+            else
+              SERVICES="${{ github.event.inputs.services }}"
+            fi
+          else
+            # Git diff로 변경된 서비스 감지
+            CHANGED_SERVICES=""
+            
+            for service in api-gateway customers-service vets-service visits-service admin-server; do
+              if git diff --name-only HEAD~1 HEAD | grep -q "spring-petclinic-${service}/"; then
+                if [ -z "$CHANGED_SERVICES" ]; then
+                  CHANGED_SERVICES="$service"
+                else
+                  CHANGED_SERVICES="$CHANGED_SERVICES,$service"
+                fi
+              fi
+            done
+            
+            # pom.xml이 변경되면 모든 서비스 빌드
+            if git diff --name-only HEAD~1 HEAD | grep -q "pom.xml"; then
+              CHANGED_SERVICES="api-gateway,customers-service,vets-service,visits-service,admin-server"
+            fi
+            
+            SERVICES="${CHANGED_SERVICES:-api-gateway,customers-service,vets-service,visits-service,admin-server}"
+          fi
+
+          echo "services=${SERVICES}" >> $GITHUB_OUTPUT
+          echo "Detected services to build: ${SERVICES}"
+
+      - name: Build with Maven
+        run: |
+          echo "🔨 Building Spring Boot applications..."
+          mvn clean compile -B -DskipTests
+
+      - name: Run Tests
+        run: |
+          echo "🧪 Running unit tests..."
+          mvn test -B
+
+      - name: Build Docker Images
+        run: |
+          echo "🐳 Building Docker images..."
+          mvn clean package -B -DskipTests -PbuildDocker
+
+          # 빌드된 이미지 확인
+          docker images | grep springcommunity/spring-petclinic
+
+      - name: Save Docker Images
+        run: |
+          echo "💾 Saving Docker images as artifacts..."
+          mkdir -p docker-images
+
+          IFS=',' read -ra SERVICE_ARRAY <<< "${{ steps.detect-changes.outputs.services }}"
+          for service in "${SERVICE_ARRAY[@]}"; do
+            service=$(echo $service | xargs) # trim whitespace
+            IMAGE_NAME="springcommunity/spring-petclinic-${service}"
+            
+            if docker images --format "table {{.Repository}}" | grep -q "${IMAGE_NAME}"; then
+              echo "Saving ${IMAGE_NAME}:latest"
+              docker save "${IMAGE_NAME}:latest" | gzip > "docker-images/${service}.tar.gz"
+            else
+              echo "Warning: Image ${IMAGE_NAME} not found"
+            fi
+          done
+
+      - name: Upload Docker Images
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images-${{ steps.version.outputs.version }}
+          path: docker-images/
+          retention-days: 7
+
+  # ECR에 이미지 푸시 및 ECS 배포
+  deploy-to-ecs:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+      url: https://console.aws.amazon.com/ecs/
+
+    strategy:
+      matrix:
+        service: ${{ fromJson(format('["{0}"]', join(split(needs.build-and-test.outputs.services, ','), '","'))) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Docker Images
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images-${{ needs.build-and-test.outputs.version }}
+          path: docker-images/
+
+      - name: Load Docker Image
+        run: |
+          SERVICE="${{ matrix.service }}"
+          SERVICE=$(echo $SERVICE | xargs) # trim whitespace
+
+          if [ -f "docker-images/${SERVICE}.tar.gz" ]; then
+            echo "📥 Loading Docker image for ${SERVICE}"
+            docker load < "docker-images/${SERVICE}.tar.gz"
+          else
+            echo "❌ Docker image file not found for ${SERVICE}"
+            exit 1
+          fi
+
+      - name: Login to Amazon ECR
+        run: |
+          echo "🔐 Logging in to Amazon ECR..."
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+            docker login --username AWS --password-stdin ${{ env.REGISTRY_URL }}
+
+      - name: Tag and Push to ECR
+        run: |
+          SERVICE="${{ matrix.service }}"
+          SERVICE=$(echo $SERVICE | xargs)
+          ENVIRONMENT="${{ github.event.inputs.environment || 'dev' }}"
+          VERSION="${{ needs.build-and-test.outputs.version }}"
+
+          # ECR 리포지토리 이름 (하이픈 제거)
+          ECR_REPO_NAME=$(echo "petclinic-${SERVICE}" | sed 's/-service//')
+
+          SOURCE_IMAGE="springcommunity/spring-petclinic-${SERVICE}:latest"
+          TARGET_IMAGE="${{ env.REGISTRY_URL }}/${ECR_REPO_NAME}:${VERSION}"
+          LATEST_IMAGE="${{ env.REGISTRY_URL }}/${ECR_REPO_NAME}:latest"
+
+          echo "🏷️ Tagging image: ${SOURCE_IMAGE} -> ${TARGET_IMAGE}"
+          docker tag "${SOURCE_IMAGE}" "${TARGET_IMAGE}"
+          docker tag "${SOURCE_IMAGE}" "${LATEST_IMAGE}"
+
+          echo "📤 Pushing to ECR..."
+          docker push "${TARGET_IMAGE}"
+          docker push "${LATEST_IMAGE}"
+
+          echo "✅ Successfully pushed ${SERVICE} to ECR"
+          echo "ECR_IMAGE=${TARGET_IMAGE}" >> $GITHUB_ENV
+
+      - name: Update ECS Service
+        run: |
+          SERVICE="${{ matrix.service }}"
+          SERVICE=$(echo $SERVICE | xargs)
+          ENVIRONMENT="${{ github.event.inputs.environment || 'dev' }}"
+          VERSION="${{ needs.build-and-test.outputs.version }}"
+
+          # ECS 클러스터 및 서비스 이름
+          CLUSTER_NAME="petclinic-cluster-${ENVIRONMENT}"
+          SERVICE_NAME="petclinic-${SERVICE}-${ENVIRONMENT}"
+
+          # ECR 이미지 URI
+          ECR_REPO_NAME=$(echo "petclinic-${SERVICE}" | sed 's/-service//')
+          IMAGE_URI="${{ env.REGISTRY_URL }}/${ECR_REPO_NAME}:${VERSION}"
+
+          echo "🔄 Updating ECS service: ${SERVICE_NAME}"
+          echo "📦 New image: ${IMAGE_URI}"
+
+          # 현재 태스크 정의 가져오기
+          TASK_DEFINITION=$(aws ecs describe-task-definition \
+            --task-definition "${SERVICE_NAME}" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'taskDefinition')
+
+          # 새 태스크 정의 생성 (이미지 URI 업데이트)
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE_URI "$IMAGE_URI" \
+            '.containerDefinitions[0].image = $IMAGE_URI | 
+             del(.taskDefinitionArn) | 
+             del(.revision) | 
+             del(.status) | 
+             del(.requiresAttributes) | 
+             del(.placementConstraints) | 
+             del(.compatibilities) | 
+             del(.registeredAt) | 
+             del(.registeredBy)')
+
+          # 새 태스크 정의 등록
+          NEW_TASK_DEF_ARN=$(echo $NEW_TASK_DEFINITION | \
+            aws ecs register-task-definition \
+            --region ${{ env.AWS_REGION }} \
+            --cli-input-json file:///dev/stdin \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "📋 New task definition: ${NEW_TASK_DEF_ARN}"
+
+          # ECS 서비스 업데이트
+          aws ecs update-service \
+            --cluster "${CLUSTER_NAME}" \
+            --service "${SERVICE_NAME}" \
+            --task-definition "${NEW_TASK_DEF_ARN}" \
+            --region ${{ env.AWS_REGION }}
+
+          echo "⏳ Waiting for service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster "${CLUSTER_NAME}" \
+            --services "${SERVICE_NAME}" \
+            --region ${{ env.AWS_REGION }}
+
+          echo "✅ Service ${SERVICE_NAME} updated successfully!"
+
+      - name: Verify Deployment
+        run: |
+          SERVICE="${{ matrix.service }}"
+          SERVICE=$(echo $SERVICE | xargs)
+          ENVIRONMENT="${{ github.event.inputs.environment || 'dev' }}"
+
+          CLUSTER_NAME="petclinic-cluster-${ENVIRONMENT}"
+          SERVICE_NAME="petclinic-${SERVICE}-${ENVIRONMENT}"
+
+          echo "🔍 Verifying deployment for ${SERVICE_NAME}"
+
+          # 서비스 상태 확인
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster "${CLUSTER_NAME}" \
+            --services "${SERVICE_NAME}" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'services[0].status' \
+            --output text)
+
+          RUNNING_COUNT=$(aws ecs describe-services \
+            --cluster "${CLUSTER_NAME}" \
+            --services "${SERVICE_NAME}" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'services[0].runningCount' \
+            --output text)
+
+          DESIRED_COUNT=$(aws ecs describe-services \
+            --cluster "${CLUSTER_NAME}" \
+            --services "${SERVICE_NAME}" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'services[0].desiredCount' \
+            --output text)
+
+          echo "Service Status: ${SERVICE_STATUS}"
+          echo "Running Tasks: ${RUNNING_COUNT}/${DESIRED_COUNT}"
+
+          if [ "${SERVICE_STATUS}" = "ACTIVE" ] && [ "${RUNNING_COUNT}" = "${DESIRED_COUNT}" ]; then
+            echo "✅ Deployment verification successful!"
+          else
+            echo "❌ Deployment verification failed!"
+            exit 1
+          fi
+
+  # 배포 완료 알림
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-test, deploy-to-ecs]
+    if: always()
+
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Spring Boot Application Deployment Summary"
+          echo "=============================================="
+          echo "Environment: ${{ github.event.inputs.environment || 'dev' }}"
+          echo "Services: ${{ needs.build-and-test.outputs.services }}"
+          echo "Version: ${{ needs.build-and-test.outputs.version }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed at: $(date -u)"
+          echo ""
+
+          if [ "${{ needs.deploy-to-ecs.result }}" = "success" ]; then
+            echo "✅ All services deployed successfully!"
+          else
+            echo "❌ Some deployments failed. Check the logs above."
+          fi

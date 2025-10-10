@@ -47,3 +47,9 @@ output "reader_instance_id" {
   description = "Reader 인스턴스 ID"
   value       = aws_rds_cluster_instance.reader.id
 }
+
+output "master_username" {
+  description = "마스터 사용자 이름"
+  value       = aws_rds_cluster.this.master_username
+  sensitive   = true
+}

@@ -54,8 +54,9 @@ variable "tags" {
   description = "리소스 태그"
   type        = map(string)
   default     = {}
-}vari
-able "sns_topic_arn" {
+}
+
+variable "sns_topic_arn" {
   description = "알람 알림을 위한 SNS 토픽 ARN (선택사항)"
   type        = string
   default     = null

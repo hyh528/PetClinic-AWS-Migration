@@ -25,7 +25,6 @@ LAYERS=(
     "08-api-gateway"
     "09-monitoring"
     "10-aws-native"
-    "11-state-management"
 )
 
 ENV_DIR="$PROJECT_ROOT/envs/$ENVIRONMENT"

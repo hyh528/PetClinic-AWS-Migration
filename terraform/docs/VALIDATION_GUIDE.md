@@ -21,7 +21,7 @@ terraform/
 │   ├── application/             # ⚠️  ECS, ALB, ECR (검증 필요)
 │   ├── monitoring/              # ✅ CloudWatch, X-Ray
 │   ├── aws-native/              # ✅ API Gateway, Parameter Store 등
-│   └── state-management/        # 🆕 원격 상태 관리 (신규)
+
 └── modules/                     # 재사용 가능한 모듈들
 ```
 
@@ -98,10 +98,10 @@ done
 
 ## 🏗️ 3단계: 단계별 배포 (권장 순서)
 
-### 3.1 상태 관리 인프라 (최우선)
+### 3.1 Bootstrap 상태 관리 인프라 (최우선)
 
 ```bash
-cd terraform/envs/dev/state-management
+cd terraform/bootstrap
 
 # 1. 설정 파일 복사
 cp terraform.tfvars.example terraform.tfvars
@@ -228,7 +228,7 @@ terraform output
 ### 6.1 자동 마이그레이션 (권장)
 
 ```bash
-cd terraform/envs/dev/state-management
+cd terraform/bootstrap
 
 # 마이그레이션 스크립트 실행
 chmod +x scripts/migrate-to-remote-state.sh

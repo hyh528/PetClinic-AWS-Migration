@@ -8,29 +8,29 @@
 # ==========================================
 
 output "nacl_ids" {
-  description = "Map of NACL IDs by subnet type"
+  description = "서브넷 타입별 NACL ID 맵"
   value = {
     for key, nacl in aws_network_acl.this : key => nacl.id
   }
 }
 
 output "nacl_arns" {
-  description = "Map of NACL ARNs by subnet type"
+  description = "서브넷 타입별 NACL ARN 맵"
   value = {
     for key, nacl in aws_network_acl.this : key => nacl.arn
   }
 }
 
 output "nacl_details" {
-  description = "Detailed information about all NACLs"
+  description = "모든 NACL에 대한 상세 정보"
   value = {
     for key, nacl in aws_network_acl.this : key => {
-      id          = nacl.id
-      arn         = nacl.arn
-      vpc_id      = nacl.vpc_id
-      subnet_ids  = nacl.subnet_ids
-      owner_id    = nacl.owner_id
-      tags        = nacl.tags
+      id         = nacl.id
+      arn        = nacl.arn
+      vpc_id     = nacl.vpc_id
+      subnet_ids = nacl.subnet_ids
+      owner_id   = nacl.owner_id
+      tags       = nacl.tags
     }
   }
 }
@@ -40,14 +40,14 @@ output "nacl_details" {
 # ==========================================
 
 output "security_configuration" {
-  description = "Security configuration summary"
+  description = "보안 설정 요약"
   value = {
-    flow_logs_enabled        = var.enable_flow_logs
-    security_monitoring      = var.enable_security_monitoring
-    strict_mode             = var.enable_strict_mode
-    production_hardening    = var.production_hardening
-    ipv6_enabled           = var.enable_ipv6
-    
+    flow_logs_enabled    = var.enable_flow_logs
+    security_monitoring  = var.enable_security_monitoring
+    strict_mode          = var.enable_strict_mode
+    production_hardening = var.production_hardening
+    ipv6_enabled         = var.enable_ipv6
+
     # 보안 레벨 매핑
     security_levels = {
       for key, nacl in aws_network_acl.this : key => {
@@ -60,19 +60,19 @@ output "security_configuration" {
 }
 
 output "rule_counts" {
-  description = "Number of rules per NACL and direction"
+  description = "NACL 및 방향별 규칙 수"
   value = {
     for subnet_type in keys(local.subnet_types) : subnet_type => {
       inbound_rules = length([
-        for rule_key, rule in local.network_rules : rule_key 
+        for rule_key, rule in local.network_rules : rule_key
         if rule.subnet_type == subnet_type && rule.direction == "inbound"
       ])
       outbound_rules = length([
-        for rule_key, rule in local.network_rules : rule_key 
+        for rule_key, rule in local.network_rules : rule_key
         if rule.subnet_type == subnet_type && rule.direction == "outbound"
       ])
       total_rules = length([
-        for rule_key, rule in local.network_rules : rule_key 
+        for rule_key, rule in local.network_rules : rule_key
         if rule.subnet_type == subnet_type
       ])
     }
@@ -88,7 +88,7 @@ output "network_configuration" {
   value = {
     vpc_id   = var.vpc_id
     vpc_cidr = var.vpc_cidr
-    
+
     # 서브넷 매핑
     subnet_mappings = {
       for key, config in local.subnet_types : key => {
@@ -97,10 +97,10 @@ output "network_configuration" {
         nacl_id    = aws_network_acl.this[key].id
       }
     }
-    
+
     # 포트 범위 설정
     port_ranges = local.port_ranges
-    
+
     # 에페메랄 포트 설정
     ephemeral_ports = var.ephemeral_port_range
   }
@@ -117,16 +117,16 @@ output "monitoring_resources" {
       enabled     = true
       destination = var.flow_logs_destination
       role_arn    = var.flow_logs_role_arn
-    } : {
+      } : {
       enabled = false
     }
-    
+
     security_monitoring = var.enable_security_monitoring ? {
-      enabled           = true
-      alert_threshold   = var.security_alert_threshold
-      metric_filter     = var.enable_flow_logs ? aws_cloudwatch_log_metric_filter.nacl_denies[0].name : null
-      alarm_name        = aws_cloudwatch_metric_alarm.nacl_security_alert[0].alarm_name
-    } : {
+      enabled         = true
+      alert_threshold = var.security_alert_threshold
+      metric_filter   = var.enable_flow_logs ? aws_cloudwatch_log_metric_filter.nacl_denies[0].name : null
+      alarm_name      = aws_cloudwatch_metric_alarm.nacl_security_alert[0].alarm_name
+      } : {
       enabled = false
     }
   }
@@ -137,7 +137,7 @@ output "monitoring_resources" {
 # ==========================================
 
 output "rule_matrix" {
-  description = "Complete rule matrix for all NACLs"
+  description = "모든 NACL에 대한 완전한 규칙 매트릭스"
   value = {
     for rule_key, rule in local.network_rules : rule_key => {
       subnet_type = rule.subnet_type
@@ -157,45 +157,45 @@ output "rule_matrix" {
 # ==========================================
 
 output "well_architected_compliance" {
-  description = "AWS Well-Architected Framework compliance status"
+  description = "AWS Well-Architected Framework 준수 상태"
   value = {
     security = {
-      defense_in_depth     = true  # NACL + Security Groups
-      least_privilege      = true  # Minimal required rules
-      explicit_deny        = true  # Default deny rules
-      monitoring_enabled   = var.enable_security_monitoring
-      flow_logs_enabled    = var.enable_flow_logs
+      defense_in_depth   = true # NACL + Security Groups
+      least_privilege    = true # Minimal required rules
+      explicit_deny      = true # Default deny rules
+      monitoring_enabled = var.enable_security_monitoring
+      flow_logs_enabled  = var.enable_flow_logs
     }
-    
+
     reliability = {
-      predictable_behavior = true  # Consistent rule structure
-      multi_az_support    = length(var.public_subnet_ids) > 1
-      fault_isolation     = true  # Separate NACLs per tier
+      predictable_behavior = true # Consistent rule structure
+      multi_az_support     = length(var.public_subnet_ids) > 1
+      fault_isolation      = true # Separate NACLs per tier
     }
-    
+
     performance_efficiency = {
-      optimized_port_ranges = true  # AWS recommended ephemeral ports
-      minimal_rules        = true  # Only necessary rules
-      efficient_structure  = true  # Data-driven rule generation
+      optimized_port_ranges = true # AWS recommended ephemeral ports
+      minimal_rules         = true # Only necessary rules
+      efficient_structure   = true # Data-driven rule generation
     }
-    
+
     cost_optimization = {
-      resource_tagging     = true  # Comprehensive tagging
-      minimal_resources    = true  # Only required NACLs
-      automated_management = true  # Terraform managed
+      resource_tagging     = true # Comprehensive tagging
+      minimal_resources    = true # Only required NACLs
+      automated_management = true # Terraform managed
     }
-    
+
     operational_excellence = {
-      infrastructure_as_code = true  # Terraform managed
+      infrastructure_as_code = true # Terraform managed
       monitoring_enabled     = var.enable_security_monitoring
       automated_alerting     = var.enable_security_monitoring
-      documentation         = true  # Self-documenting rules
+      documentation          = true # Self-documenting rules
     }
-    
+
     sustainability = {
-      efficient_design      = true  # Minimal resource usage
-      automated_management  = true  # Reduced operational overhead
-      optimized_rules      = true  # Performance optimized
+      efficient_design     = true # Minimal resource usage
+      automated_management = true # Reduced operational overhead
+      optimized_rules      = true # Performance optimized
     }
   }
 }
@@ -205,27 +205,27 @@ output "well_architected_compliance" {
 # ==========================================
 
 output "usage_statistics" {
-  description = "NACL usage statistics and metrics"
+  description = "NACL 사용 통계 및 메트릭"
   value = {
     total_nacls = length(aws_network_acl.this)
     total_rules = length(local.network_rules)
-    
+
     # 서브넷 타입별 통계
     by_subnet_type = {
       for key in keys(local.subnet_types) : key => {
-        nacl_count = 1
+        nacl_count   = 1
         subnet_count = length(local.subnet_types[key].subnet_ids)
         inbound_rules = length([
-          for rule_key, rule in local.network_rules : rule_key 
+          for rule_key, rule in local.network_rules : rule_key
           if rule.subnet_type == key && rule.direction == "inbound"
         ])
         outbound_rules = length([
-          for rule_key, rule in local.network_rules : rule_key 
+          for rule_key, rule in local.network_rules : rule_key
           if rule.subnet_type == key && rule.direction == "outbound"
         ])
       }
     }
-    
+
     # 보안 레벨별 통계
     by_security_level = {
       high     = length([for k, v in aws_network_acl.this : k if v.tags["SecurityLevel"] == "high"])
@@ -240,23 +240,23 @@ output "usage_statistics" {
 # ==========================================
 
 output "debug_information" {
-  description = "Debug information for troubleshooting (dev environment only)"
+  description = "문제 해결을 위한 디버그 정보 (개발 환경 전용)"
   value = var.environment == "dev" ? {
     total_rules_count = length(local.network_rules)
     subnet_types      = local.subnet_types
     port_ranges       = local.port_ranges
-    
+
     # 규칙 키 목록
     rule_keys = keys(local.network_rules)
-    
+
     # 변수 검증 상태
     variable_validation = {
-      vpc_id_valid           = can(regex("^vpc-[a-z0-9]{8,17}$", var.vpc_id))
-      vpc_cidr_valid         = can(cidrhost(var.vpc_cidr, 0))
-      ephemeral_range_valid  = var.ephemeral_port_range.from < var.ephemeral_port_range.to
-      environment_valid      = contains(["dev", "staging", "prod"], var.environment)
+      vpc_id_valid          = can(regex("^vpc-[a-z0-9]{8,17}$", var.vpc_id))
+      vpc_cidr_valid        = can(cidrhost(var.vpc_cidr, 0))
+      ephemeral_range_valid = var.ephemeral_port_range.from < var.ephemeral_port_range.to
+      environment_valid     = contains(["dev", "staging", "prod"], var.environment)
     }
   } : null
-  
+
   sensitive = false
 }

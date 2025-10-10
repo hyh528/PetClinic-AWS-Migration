@@ -4,6 +4,66 @@
 # 현재 AWS 리전 정보
 data "aws_region" "current" {}
 
+# ==========================================
+# 로컬 변수 정의 (DRY 원칙 적용)
+# ==========================================
+locals {
+  # 서비스 정의 (중복 제거를 위한 단일 소스)
+  services = {
+    customers = {
+      path        = "customers"
+      parent_path = "api"
+      description = "고객 및 반려동물 관리 서비스"
+    }
+    vets = {
+      path        = "vets"
+      parent_path = "api"
+      description = "수의사 정보 관리 서비스"
+    }
+    visits = {
+      path        = "visits"
+      parent_path = "api"
+      description = "예약 및 방문 추적 서비스"
+    }
+    admin = {
+      path        = "admin"
+      parent_path = "root"
+      description = "관리자 서비스 (개발/디버깅용)"
+    }
+  }
+
+  # GenAI 서비스 정의 (조건부)
+  genai_service = var.enable_lambda_integration ? {
+    genai = {
+      path        = "genai"
+      parent_path = "api"
+      description = "AI 기반 기능 및 추천 서비스"
+    }
+  } : {}
+
+  # 모든 서비스 통합
+  all_services = merge(local.services, local.genai_service)
+
+  # ALB 통합 서비스 (Lambda 제외)
+  alb_services = { for k, v in local.all_services : k => v if k != "genai" }
+
+  # Lambda 통합 서비스
+  lambda_services = { for k, v in local.all_services : k => v if k == "genai" }
+
+  # 공통 설정
+  common_settings = {
+    timeout_ms        = var.integration_timeout_ms
+    lambda_timeout_ms = var.lambda_integration_timeout_ms
+  }
+
+  # 태그 표준화
+  common_tags = merge(var.tags, {
+    Environment = var.environment
+    Service     = "api-gateway"
+    ManagedBy   = "terraform"
+  })
+}
+
 # REST API 생성
 resource "aws_api_gateway_rest_api" "petclinic" {
   name        = "${var.name_prefix}-api"
@@ -16,71 +76,65 @@ resource "aws_api_gateway_rest_api" "petclinic" {
   # CORS 설정을 위한 바이너리 미디어 타입
   binary_media_types = ["*/*"]
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-gateway"
-    Environment = var.environment
-    Service     = "api-gateway"
-    ManagedBy   = "terraform"
+  # 고급 설정
+  minimum_compression_size     = var.minimum_compression_size
+  api_key_source               = var.api_key_source
+  disable_execute_api_endpoint = var.disable_execute_api_endpoint
+
+  # 리소스 정책 (선택사항)
+  policy = var.policy
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-api-gateway"
   })
 }
+
+# ==========================================
+# API Gateway 배포 (개선된 의존성 관리)
+# ==========================================
 
 # API Gateway 배포
 resource "aws_api_gateway_deployment" "petclinic" {
   depends_on = [
-    # 서비스별 메서드 및 통합
-    aws_api_gateway_method.customers_any,
-    aws_api_gateway_method.customers_proxy_any,
-    aws_api_gateway_integration.customers_integration,
-    aws_api_gateway_integration.customers_proxy_integration,
-    aws_api_gateway_method.vets_any,
-    aws_api_gateway_method.vets_proxy_any,
-    aws_api_gateway_integration.vets_integration,
-    aws_api_gateway_integration.vets_proxy_integration,
-    aws_api_gateway_method.visits_any,
-    aws_api_gateway_method.visits_proxy_any,
-    aws_api_gateway_integration.visits_integration,
-    aws_api_gateway_integration.visits_proxy_integration,
-    aws_api_gateway_method.admin_any,
-    aws_api_gateway_method.admin_proxy_any,
-    aws_api_gateway_integration.admin_integration,
-    aws_api_gateway_integration.admin_proxy_integration,
-    # GenAI Lambda 통합 (조건부)
-    aws_api_gateway_method.genai_any,
-    aws_api_gateway_method.genai_proxy_any,
-    aws_api_gateway_integration.genai_integration,
-    aws_api_gateway_integration.genai_proxy_integration,
-    # 기본 프록시 및 루트
-    aws_api_gateway_method.proxy_any,
-    aws_api_gateway_integration.alb_integration,
-    aws_api_gateway_method.root_any,
-    aws_api_gateway_integration.root_alb_integration
+    # 동적 리소스 의존성
+    aws_api_gateway_resource.api,
+    aws_api_gateway_resource.services,
+    aws_api_gateway_resource.service_proxies,
+    aws_api_gateway_resource.global_proxy,
+    # 동적 메서드 의존성
+    aws_api_gateway_method.service_methods,
+    aws_api_gateway_method.service_proxy_methods,
+    aws_api_gateway_method.global_proxy_method,
+    aws_api_gateway_method.root_method,
+    # 동적 통합 의존성
+    aws_api_gateway_integration.alb_service_integrations,
+    aws_api_gateway_integration.alb_service_proxy_integrations,
+    aws_api_gateway_integration.lambda_service_integrations,
+    aws_api_gateway_integration.lambda_service_proxy_integrations,
+    aws_api_gateway_integration.global_proxy_integration,
+    aws_api_gateway_integration.root_integration,
   ]
 
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
 
   triggers = {
-    # 설정 변경 시 재배포를 위한 트리거
-    redeployment = sha1(jsonencode([
-      # 서비스별 리소스
-      aws_api_gateway_resource.api.id,
-      aws_api_gateway_resource.customers.id,
-      aws_api_gateway_resource.customers_proxy.id,
-      aws_api_gateway_resource.vets.id,
-      aws_api_gateway_resource.vets_proxy.id,
-      aws_api_gateway_resource.visits.id,
-      aws_api_gateway_resource.visits_proxy.id,
-      aws_api_gateway_resource.admin.id,
-      aws_api_gateway_resource.admin_proxy.id,
-      # GenAI Lambda 리소스 (조건부)
-      var.enable_lambda_integration ? aws_api_gateway_resource.genai[0].id : "",
-      var.enable_lambda_integration ? aws_api_gateway_resource.genai_proxy[0].id : "",
-      var.enable_lambda_integration ? aws_api_gateway_method.genai_any[0].id : "",
-      var.enable_lambda_integration ? aws_api_gateway_integration.genai_integration[0].id : "",
-      # 기본 리소스
-      aws_api_gateway_resource.proxy.id,
-      aws_api_gateway_method.root_any.id,
-      aws_api_gateway_integration.root_alb_integration.id,
-    ]))
+    # 설정 변경 시 재배포를 위한 트리거 (개선된 해시)
+    redeployment = sha1(jsonencode({
+      # 서비스 설정
+      services = local.all_services
+      # 통합 설정
+      alb_dns_name        = var.alb_dns_name
+      lambda_integration  = var.enable_lambda_integration
+      lambda_function_arn = var.lambda_function_invoke_arn
+      # 타임아웃 설정
+      timeouts = local.common_settings
+      # API 설정
+      api_settings = {
+        compression_size = var.minimum_compression_size
+        api_key_source   = var.api_key_source
+        disable_endpoint = var.disable_execute_api_endpoint
+      }
+    }))
   }
 
   lifecycle {
@@ -88,52 +142,105 @@ resource "aws_api_gateway_deployment" "petclinic" {
   }
 }
 
+# ==========================================
+# API Gateway 스테이지 설정 (개선된 로깅)
+# ==========================================
+
 # API Gateway 스테이지
 resource "aws_api_gateway_stage" "petclinic" {
   deployment_id = aws_api_gateway_deployment.petclinic.id
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
   stage_name    = var.stage_name
 
-  # 스로틀링 설정은 별도 리소스로 관리
-  # throttle_settings는 aws_api_gateway_stage에서 지원되지 않음
-
-  # 액세스 로깅 설정
+  # 액세스 로깅 설정 (구조화된 JSON 로그)
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway.arn
     format = jsonencode({
-      requestId      = "$context.requestId"
-      ip             = "$context.identity.sourceIp"
-      caller         = "$context.identity.caller"
-      user           = "$context.identity.user"
-      requestTime    = "$context.requestTime"
-      httpMethod     = "$context.httpMethod"
-      resourcePath   = "$context.resourcePath"
+      # 요청 정보
+      requestId    = "$context.requestId"
+      requestTime  = "$context.requestTime"
+      httpMethod   = "$context.httpMethod"
+      resourcePath = "$context.resourcePath"
+      protocol     = "$context.protocol"
+
+      # 클라이언트 정보
+      sourceIp  = "$context.identity.sourceIp"
+      userAgent = "$context.identity.userAgent"
+      caller    = "$context.identity.caller"
+      user      = "$context.identity.user"
+
+      # 응답 정보
       status         = "$context.status"
-      protocol       = "$context.protocol"
       responseLength = "$context.responseLength"
       responseTime   = "$context.responseTime"
-      error          = "$context.error.message"
-      integrationError = "$context.integration.error"
+
+      # 에러 정보
+      error              = "$context.error.message"
+      integrationError   = "$context.integration.error"
+      integrationStatus  = "$context.integration.status"
+      integrationLatency = "$context.integration.latency"
+
+      # 추가 메타데이터
+      stage       = "$context.stage"
+      apiId       = "$context.apiId"
+      environment = var.environment
     })
   }
 
   # X-Ray 추적 활성화
   xray_tracing_enabled = var.enable_xray_tracing
-
-  # tags는 aws_api_gateway_stage에서 지원되지 않음
 }
+
+# API Gateway 메서드 설정 (실행 로깅)
+resource "aws_api_gateway_method_settings" "petclinic" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  stage_name  = aws_api_gateway_stage.petclinic.stage_name
+  method_path = "*/*"
+
+  settings {
+    # 로깅 설정
+    logging_level      = "INFO"
+    data_trace_enabled = true
+    metrics_enabled    = true
+
+    # 스로틀링 설정
+    throttling_rate_limit  = var.throttle_rate_limit
+    throttling_burst_limit = var.throttle_burst_limit
+
+    # 캐싱 설정 (선택사항)
+    caching_enabled = false
+  }
+}
+
+# ==========================================
+# CloudWatch 로깅 설정
+# ==========================================
 
 # CloudWatch 로그 그룹 (API Gateway 액세스 로그용)
 resource "aws_cloudwatch_log_group" "api_gateway" {
   name              = "/aws/apigateway/${var.name_prefix}-api"
   retention_in_days = var.log_retention_days
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-gateway-logs"
-    Environment = var.environment
-    Service     = "api-gateway"
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-api-gateway-logs"
+    Type = "logging"
   })
 }
+
+# CloudWatch 로그 그룹 (API Gateway 실행 로그용)
+resource "aws_cloudwatch_log_group" "api_gateway_execution" {
+  name              = "/aws/apigateway/${var.name_prefix}-api-execution"
+  retention_in_days = var.log_retention_days
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-api-gateway-execution-logs"
+    Type = "logging"
+  })
+}
+
+# ==========================================
+# API 리소스 생성 (DRY 원칙 적용)
+# ==========================================
 
 # API 루트 리소스 생성
 resource "aws_api_gateway_resource" "api" {
@@ -142,94 +249,51 @@ resource "aws_api_gateway_resource" "api" {
   path_part   = "api"
 }
 
-# 서비스별 리소스 생성
-resource "aws_api_gateway_resource" "customers" {
+# 서비스별 메인 리소스 생성 (동적)
+resource "aws_api_gateway_resource" "services" {
+  for_each = local.all_services
+
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.api.id
-  path_part   = "customers"
+  parent_id   = each.value.parent_path == "api" ? aws_api_gateway_resource.api.id : aws_api_gateway_rest_api.petclinic.root_resource_id
+  path_part   = each.value.path
 }
 
-resource "aws_api_gateway_resource" "customers_proxy" {
+# 서비스별 프록시 리소스 생성 (동적)
+resource "aws_api_gateway_resource" "service_proxies" {
+  for_each = local.all_services
+
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.customers.id
+  parent_id   = aws_api_gateway_resource.services[each.key].id
   path_part   = "{proxy+}"
 }
 
-resource "aws_api_gateway_resource" "vets" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.api.id
-  path_part   = "vets"
-}
-
-resource "aws_api_gateway_resource" "vets_proxy" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.vets.id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_resource" "visits" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.api.id
-  path_part   = "visits"
-}
-
-resource "aws_api_gateway_resource" "visits_proxy" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.visits.id
-  path_part   = "{proxy+}"
-}
-
-# Admin 서비스 리소스 (개발/디버깅용)
-resource "aws_api_gateway_resource" "admin" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_rest_api.petclinic.root_resource_id
-  path_part   = "admin"
-}
-
-resource "aws_api_gateway_resource" "admin_proxy" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.admin.id
-  path_part   = "{proxy+}"
-}
-
-# 프록시 리소스 생성 ({proxy+}) - 기타 모든 경로용
-resource "aws_api_gateway_resource" "proxy" {
+# 전역 프록시 리소스 (기타 모든 경로용)
+resource "aws_api_gateway_resource" "global_proxy" {
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
   parent_id   = aws_api_gateway_rest_api.petclinic.root_resource_id
   path_part   = "{proxy+}"
 }
 
-# 서비스별 메서드 정의
-# Customers 서비스
-resource "aws_api_gateway_method" "customers_any" {
+# ==========================================
+# API 메서드 생성 (DRY 원칙 적용)
+# ==========================================
+
+# 서비스별 메인 메서드 생성 (동적)
+resource "aws_api_gateway_method" "service_methods" {
+  for_each = local.all_services
+
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.customers.id
+  resource_id   = aws_api_gateway_resource.services[each.key].id
   http_method   = "ANY"
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_method" "customers_proxy_any" {
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.customers_proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
+# 서비스별 프록시 메서드 생성 (동적)
+resource "aws_api_gateway_method" "service_proxy_methods" {
+  for_each = local.all_services
 
-  request_parameters = {
-    "method.request.path.proxy" = true
-  }
-}
-
-# Vets 서비스
-resource "aws_api_gateway_method" "vets_any" {
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.vets.id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_method" "vets_proxy_any" {
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.vets_proxy.id
+  resource_id   = aws_api_gateway_resource.service_proxies[each.key].id
   http_method   = "ANY"
   authorization = "NONE"
 
@@ -238,17 +302,10 @@ resource "aws_api_gateway_method" "vets_proxy_any" {
   }
 }
 
-# Visits 서비스
-resource "aws_api_gateway_method" "visits_any" {
+# 전역 프록시 메서드 (기타 모든 경로)
+resource "aws_api_gateway_method" "global_proxy_method" {
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.visits.id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_method" "visits_proxy_any" {
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.visits_proxy.id
+  resource_id   = aws_api_gateway_resource.global_proxy.id
   http_method   = "ANY"
   authorization = "NONE"
 
@@ -257,100 +314,45 @@ resource "aws_api_gateway_method" "visits_proxy_any" {
   }
 }
 
-# Admin 서비스
-resource "aws_api_gateway_method" "admin_any" {
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.admin.id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_method" "admin_proxy_any" {
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.admin_proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
-
-  request_parameters = {
-    "method.request.path.proxy" = true
-  }
-}
-
-# 프록시 리소스에 대한 ANY 메서드 (기타 모든 경로)
-resource "aws_api_gateway_method" "proxy_any" {
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
-
-  request_parameters = {
-    "method.request.path.proxy" = true
-  }
-}
-
-# 루트 리소스에 대한 ANY 메서드
-resource "aws_api_gateway_method" "root_any" {
+# 루트 메서드
+resource "aws_api_gateway_method" "root_method" {
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
   resource_id   = aws_api_gateway_rest_api.petclinic.root_resource_id
   http_method   = "ANY"
   authorization = "NONE"
 }
 
-# 서비스별 ALB 통합 설정
-# Customers 서비스 통합
-resource "aws_api_gateway_integration" "customers_integration" {
+# ==========================================
+# API 통합 설정 (DRY 원칙 적용)
+# ==========================================
+
+# ALB 통합 - 서비스별 메인 경로
+resource "aws_api_gateway_integration" "alb_service_integrations" {
+  for_each = local.alb_services
+
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.customers.id
-  http_method = aws_api_gateway_method.customers_any.http_method
+  resource_id = aws_api_gateway_resource.services[each.key].id
+  http_method = aws_api_gateway_method.service_methods[each.key].http_method
 
   integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/api/customers"
+  type                    = "HTTP_PROXY"
+  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/api/${each.value.path}" : "http://${var.alb_dns_name}/${each.value.path}"
 
-  connection_type = "INTERNET"
-  timeout_milliseconds = var.integration_timeout_ms
+  connection_type      = "INTERNET"
+  timeout_milliseconds = local.common_settings.timeout_ms
 }
 
-resource "aws_api_gateway_integration" "customers_proxy_integration" {
+# ALB 통합 - 서비스별 프록시 경로
+resource "aws_api_gateway_integration" "alb_service_proxy_integrations" {
+  for_each = local.alb_services
+
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.customers_proxy.id
-  http_method = aws_api_gateway_method.customers_proxy_any.http_method
+  resource_id = aws_api_gateway_resource.service_proxies[each.key].id
+  http_method = aws_api_gateway_method.service_proxy_methods[each.key].http_method
 
   integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/api/customers/{proxy}"
-
-  connection_type = "INTERNET"
-
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
-
-  timeout_milliseconds = var.integration_timeout_ms
-}
-
-# Vets 서비스 통합
-resource "aws_api_gateway_integration" "vets_integration" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.vets.id
-  http_method = aws_api_gateway_method.vets_any.http_method
-
-  integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/api/vets"
-
-  connection_type = "INTERNET"
-  timeout_milliseconds = var.integration_timeout_ms
-}
-
-resource "aws_api_gateway_integration" "vets_proxy_integration" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.vets_proxy.id
-  http_method = aws_api_gateway_method.vets_proxy_any.http_method
-
-  integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/api/vets/{proxy}"
+  type                    = "HTTP_PROXY"
+  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/api/${each.value.path}/{proxy}" : "http://${var.alb_dns_name}/${each.value.path}/{proxy}"
 
   connection_type = "INTERNET"
 
@@ -358,215 +360,52 @@ resource "aws_api_gateway_integration" "vets_proxy_integration" {
     "integration.request.path.proxy" = "method.request.path.proxy"
   }
 
-  timeout_milliseconds = var.integration_timeout_ms
+  timeout_milliseconds = local.common_settings.timeout_ms
 }
 
-# Visits 서비스 통합
-resource "aws_api_gateway_integration" "visits_integration" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.visits.id
-  http_method = aws_api_gateway_method.visits_any.http_method
-
-  integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/api/visits"
-
-  connection_type = "INTERNET"
-  timeout_milliseconds = var.integration_timeout_ms
-}
-
-resource "aws_api_gateway_integration" "visits_proxy_integration" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.visits_proxy.id
-  http_method = aws_api_gateway_method.visits_proxy_any.http_method
-
-  integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/api/visits/{proxy}"
-
-  connection_type = "INTERNET"
-
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
-
-  timeout_milliseconds = var.integration_timeout_ms
-}
-
-# Admin 서비스 통합
-resource "aws_api_gateway_integration" "admin_integration" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.admin.id
-  http_method = aws_api_gateway_method.admin_any.http_method
-
-  integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/admin"
-
-  connection_type = "INTERNET"
-  timeout_milliseconds = var.integration_timeout_ms
-}
-
-resource "aws_api_gateway_integration" "admin_proxy_integration" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.admin_proxy.id
-  http_method = aws_api_gateway_method.admin_proxy_any.http_method
-
-  integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/admin/{proxy}"
-
-  connection_type = "INTERNET"
-
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
-
-  timeout_milliseconds = var.integration_timeout_ms
-}
-
-# GenAI Lambda 서비스 리소스 및 통합 (Lambda + Bedrock)
-resource "aws_api_gateway_resource" "genai" {
-  count = var.enable_lambda_integration ? 1 : 0
+# Lambda 통합 - GenAI 서비스 (조건부)
+resource "aws_api_gateway_integration" "lambda_service_integrations" {
+  for_each = local.lambda_services
 
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.api.id
-  path_part   = "genai"
-}
-
-resource "aws_api_gateway_resource" "genai_proxy" {
-  count = var.enable_lambda_integration ? 1 : 0
-
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  parent_id   = aws_api_gateway_resource.genai[0].id
-  path_part   = "{proxy+}"
-}
-
-# GenAI Lambda 서비스 메서드
-resource "aws_api_gateway_method" "genai_any" {
-  count = var.enable_lambda_integration ? 1 : 0
-
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.genai[0].id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_method" "genai_proxy_any" {
-  count = var.enable_lambda_integration ? 1 : 0
-
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.genai_proxy[0].id
-  http_method   = "ANY"
-  authorization = "NONE"
-
-  request_parameters = {
-    "method.request.path.proxy" = true
-  }
-}
-
-# GenAI Lambda 통합
-resource "aws_api_gateway_integration" "genai_integration" {
-  count = var.enable_lambda_integration ? 1 : 0
-
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.genai[0].id
-  http_method = aws_api_gateway_method.genai_any[0].http_method
+  resource_id = aws_api_gateway_resource.services[each.key].id
+  http_method = aws_api_gateway_method.service_methods[each.key].http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = var.lambda_function_invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_function_invoke_arn
 
-  timeout_milliseconds = var.lambda_integration_timeout_ms
+  timeout_milliseconds = local.common_settings.lambda_timeout_ms
 }
 
-resource "aws_api_gateway_integration" "genai_proxy_integration" {
-  count = var.enable_lambda_integration ? 1 : 0
+# Lambda 통합 - GenAI 프록시 경로 (조건부)
+resource "aws_api_gateway_integration" "lambda_service_proxy_integrations" {
+  for_each = local.lambda_services
 
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.genai_proxy[0].id
-  http_method = aws_api_gateway_method.genai_proxy_any[0].http_method
+  resource_id = aws_api_gateway_resource.service_proxies[each.key].id
+  http_method = aws_api_gateway_method.service_proxy_methods[each.key].http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = var.lambda_function_invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_function_invoke_arn
 
-  timeout_milliseconds = var.lambda_integration_timeout_ms
+  timeout_milliseconds = local.common_settings.lambda_timeout_ms
 }
 
-# GenAI Lambda CORS 설정
-resource "aws_api_gateway_method" "genai_options" {
-  count = var.enable_cors && var.enable_lambda_integration ? 1 : 0
+# ==========================================
+# 전역 통합 설정
+# ==========================================
 
-  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.genai[0].id
-  http_method   = "OPTIONS"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "genai_options" {
-  count = var.enable_cors && var.enable_lambda_integration ? 1 : 0
-
+# 전역 프록시 통합 (기타 모든 경로)
+resource "aws_api_gateway_integration" "global_proxy_integration" {
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.genai[0].id
-  http_method = aws_api_gateway_method.genai_options[0].http_method
-
-  type = "MOCK"
-
-  request_templates = {
-    "application/json" = jsonencode({
-      statusCode = 200
-    })
-  }
-}
-
-resource "aws_api_gateway_method_response" "genai_options" {
-  count = var.enable_cors && var.enable_lambda_integration ? 1 : 0
-
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.genai[0].id
-  http_method = aws_api_gateway_method.genai_options[0].http_method
-  status_code = "200"
-
-  response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = true
-    "method.response.header.Access-Control-Allow-Methods" = true
-    "method.response.header.Access-Control-Allow-Origin"  = true
-  }
-
-  response_models = {
-    "application/json" = "Empty"
-  }
-}
-
-resource "aws_api_gateway_integration_response" "genai_options" {
-  count = var.enable_cors && var.enable_lambda_integration ? 1 : 0
-
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.genai[0].id
-  http_method = aws_api_gateway_method.genai_options[0].http_method
-  status_code = aws_api_gateway_method_response.genai_options[0].status_code
-
-  response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = ""
-  }
-}
-
-# ALB 통합 설정 (프록시 리소스) - 기타 모든 경로
-resource "aws_api_gateway_integration" "alb_integration" {
-  rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy_any.http_method
+  resource_id = aws_api_gateway_resource.global_proxy.id
+  http_method = aws_api_gateway_method.global_proxy_method.http_method
 
   integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/{proxy}"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/{proxy}"
 
   connection_type = "INTERNET"
 
@@ -574,41 +413,61 @@ resource "aws_api_gateway_integration" "alb_integration" {
     "integration.request.path.proxy" = "method.request.path.proxy"
   }
 
-  timeout_milliseconds = var.integration_timeout_ms
+  timeout_milliseconds = local.common_settings.timeout_ms
 }
 
-# ALB 통합 설정 (루트 리소스)
-resource "aws_api_gateway_integration" "root_alb_integration" {
+# 루트 통합
+resource "aws_api_gateway_integration" "root_integration" {
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
   resource_id = aws_api_gateway_rest_api.petclinic.root_resource_id
-  http_method = aws_api_gateway_method.root_any.http_method
+  http_method = aws_api_gateway_method.root_method.http_method
 
   integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${var.alb_dns_name}/"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/"
 
-  connection_type = "INTERNET"
-
-  timeout_milliseconds = var.integration_timeout_ms
+  connection_type      = "INTERNET"
+  timeout_milliseconds = local.common_settings.timeout_ms
 }
 
-# CORS 설정을 위한 OPTIONS 메서드 (프록시 리소스)
-resource "aws_api_gateway_method" "proxy_options" {
-  count = var.enable_cors ? 1 : 0
+# ==========================================
+# CORS 설정 (DRY 원칙 적용)
+# ==========================================
+
+locals {
+  # CORS 설정이 필요한 리소스들
+  cors_resources = var.enable_cors ? {
+    global_proxy = {
+      resource_id = aws_api_gateway_resource.global_proxy.id
+      description = "전역 프록시 CORS"
+    }
+  } : {}
+
+  # CORS 헤더 설정
+  cors_headers = {
+    allow_headers = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    allow_methods = "'GET,OPTIONS,POST,PUT,DELETE'"
+    allow_origin  = "'*'"
+  }
+}
+
+# CORS OPTIONS 메서드 (동적 생성)
+resource "aws_api_gateway_method" "cors_options" {
+  for_each = local.cors_resources
 
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
-  resource_id   = aws_api_gateway_resource.proxy.id
+  resource_id   = each.value.resource_id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
 
-# CORS 통합 설정
-resource "aws_api_gateway_integration" "proxy_options" {
-  count = var.enable_cors ? 1 : 0
+# CORS 통합 설정 (동적 생성)
+resource "aws_api_gateway_integration" "cors_integrations" {
+  for_each = local.cors_resources
 
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy_options[0].http_method
+  resource_id = each.value.resource_id
+  http_method = aws_api_gateway_method.cors_options[each.key].http_method
 
   type = "MOCK"
 
@@ -619,13 +478,13 @@ resource "aws_api_gateway_integration" "proxy_options" {
   }
 }
 
-# CORS 응답 설정
-resource "aws_api_gateway_method_response" "proxy_options" {
-  count = var.enable_cors ? 1 : 0
+# CORS 메서드 응답 (동적 생성)
+resource "aws_api_gateway_method_response" "cors_method_responses" {
+  for_each = local.cors_resources
 
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy_options[0].http_method
+  resource_id = each.value.resource_id
+  http_method = aws_api_gateway_method.cors_options[each.key].http_method
   status_code = "200"
 
   response_parameters = {
@@ -639,36 +498,47 @@ resource "aws_api_gateway_method_response" "proxy_options" {
   }
 }
 
-# CORS 통합 응답 설정
-resource "aws_api_gateway_integration_response" "proxy_options" {
-  count = var.enable_cors ? 1 : 0
+# CORS 통합 응답 (동적 생성)
+resource "aws_api_gateway_integration_response" "cors_integration_responses" {
+  for_each = local.cors_resources
 
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy_options[0].http_method
-  status_code = aws_api_gateway_method_response.proxy_options[0].status_code
+  resource_id = each.value.resource_id
+  http_method = aws_api_gateway_method.cors_options[each.key].http_method
+  status_code = aws_api_gateway_method_response.cors_method_responses[each.key].status_code
 
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers.allow_headers
+    "method.response.header.Access-Control-Allow-Methods" = local.cors_headers.allow_methods
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_headers.allow_origin
   }
 
   response_templates = {
     "application/json" = ""
   }
 }
+
+# ==========================================
+# API Gateway 사용량 계획 (개선된 설정)
+# ==========================================
 
 # API Gateway 사용량 계획 (선택사항)
 resource "aws_api_gateway_usage_plan" "petclinic" {
   count = var.create_usage_plan ? 1 : 0
 
-  name         = "${var.name_prefix}-usage-plan"
-  description  = "PetClinic API 사용량 계획"
+  name        = "${var.name_prefix}-usage-plan"
+  description = "PetClinic API 사용량 계획 - ${var.environment} 환경"
 
   api_stages {
     api_id = aws_api_gateway_rest_api.petclinic.id
     stage  = aws_api_gateway_stage.petclinic.stage_name
+
+    # 스테이지별 스로틀링 설정 (선택사항)
+    throttle {
+      path        = "*/*"
+      rate_limit  = var.throttle_rate_limit
+      burst_limit = var.throttle_burst_limit
+    }
   }
 
   quota_settings {
@@ -681,119 +551,87 @@ resource "aws_api_gateway_usage_plan" "petclinic" {
     burst_limit = var.throttle_burst_limit
   }
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-usage-plan"
-    Environment = var.environment
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-api-usage-plan"
+    Type = "usage-plan"
   })
 }
 
-# CloudWatch 알람 - 4XX 에러율
-resource "aws_cloudwatch_metric_alarm" "api_4xx_error_rate" {
-  count = var.enable_monitoring ? 1 : 0
+# ==========================================
+# CloudWatch 알람 (DRY 원칙 적용)
+# ==========================================
 
-  alarm_name          = "${var.name_prefix}-api-4xx-error-rate"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "4XXError"
-  namespace           = "AWS/ApiGateway"
-  period              = "300"
-  statistic           = "Sum"
-  threshold           = var.error_4xx_threshold
-  alarm_description   = "API Gateway 4XX 에러율이 임계값을 초과했습니다"
+locals {
+  # 알람 설정 정의
+  alarms = var.enable_monitoring ? {
+    "4xx-error-rate" = {
+      metric_name         = "4XXError"
+      comparison_operator = "GreaterThanThreshold"
+      threshold           = var.error_4xx_threshold
+      statistic           = "Sum"
+      description         = "API Gateway 4XX 에러율이 임계값을 초과했습니다"
+    }
+    "5xx-error-rate" = {
+      metric_name         = "5XXError"
+      comparison_operator = "GreaterThanThreshold"
+      threshold           = var.error_5xx_threshold
+      statistic           = "Sum"
+      description         = "API Gateway 5XX 에러율이 임계값을 초과했습니다"
+    }
+    "latency" = {
+      metric_name         = "Latency"
+      comparison_operator = "GreaterThanThreshold"
+      threshold           = var.latency_threshold
+      statistic           = "Average"
+      description         = "API Gateway 평균 지연시간이 임계값을 초과했습니다"
+    }
+    "integration-latency" = {
+      metric_name         = "IntegrationLatency"
+      comparison_operator = "GreaterThanThreshold"
+      threshold           = var.integration_latency_threshold
+      statistic           = "Average"
+      description         = "API Gateway 통합 지연시간이 임계값을 초과했습니다"
+    }
+  } : {}
+
+  # 공통 알람 설정
+  alarm_common_settings = {
+    namespace          = "AWS/ApiGateway"
+    period             = "300"
+    evaluation_periods = "2"
+    dimensions = {
+      ApiName = aws_api_gateway_rest_api.petclinic.name
+      Stage   = aws_api_gateway_stage.petclinic.stage_name
+    }
+  }
+}
+
+# CloudWatch 알람 (동적 생성)
+resource "aws_cloudwatch_metric_alarm" "api_alarms" {
+  for_each = local.alarms
+
+  alarm_name          = "${var.name_prefix}-api-${each.key}"
+  comparison_operator = each.value.comparison_operator
+  evaluation_periods  = local.alarm_common_settings.evaluation_periods
+  metric_name         = each.value.metric_name
+  namespace           = local.alarm_common_settings.namespace
+  period              = local.alarm_common_settings.period
+  statistic           = each.value.statistic
+  threshold           = each.value.threshold
+  alarm_description   = each.value.description
   alarm_actions       = var.alarm_actions
 
-  dimensions = {
-    ApiName   = aws_api_gateway_rest_api.petclinic.name
-    Stage     = aws_api_gateway_stage.petclinic.stage_name
-  }
+  dimensions = local.alarm_common_settings.dimensions
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-4xx-alarm"
-    Environment = var.environment
-    Type        = "monitoring"
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-api-${each.key}-alarm"
+    Type = "monitoring"
   })
 }
 
-# CloudWatch 알람 - 5XX 에러율
-resource "aws_cloudwatch_metric_alarm" "api_5xx_error_rate" {
-  count = var.enable_monitoring ? 1 : 0
-
-  alarm_name          = "${var.name_prefix}-api-5xx-error-rate"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "5XXError"
-  namespace           = "AWS/ApiGateway"
-  period              = "300"
-  statistic           = "Sum"
-  threshold           = var.error_5xx_threshold
-  alarm_description   = "API Gateway 5XX 에러율이 임계값을 초과했습니다"
-  alarm_actions       = var.alarm_actions
-
-  dimensions = {
-    ApiName   = aws_api_gateway_rest_api.petclinic.name
-    Stage     = aws_api_gateway_stage.petclinic.stage_name
-  }
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-5xx-alarm"
-    Environment = var.environment
-    Type        = "monitoring"
-  })
-}
-
-# CloudWatch 알람 - 지연시간
-resource "aws_cloudwatch_metric_alarm" "api_latency" {
-  count = var.enable_monitoring ? 1 : 0
-
-  alarm_name          = "${var.name_prefix}-api-latency"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "Latency"
-  namespace           = "AWS/ApiGateway"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = var.latency_threshold
-  alarm_description   = "API Gateway 평균 지연시간이 임계값을 초과했습니다"
-  alarm_actions       = var.alarm_actions
-
-  dimensions = {
-    ApiName   = aws_api_gateway_rest_api.petclinic.name
-    Stage     = aws_api_gateway_stage.petclinic.stage_name
-  }
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-latency-alarm"
-    Environment = var.environment
-    Type        = "monitoring"
-  })
-}
-
-# CloudWatch 알람 - 통합 지연시간
-resource "aws_cloudwatch_metric_alarm" "api_integration_latency" {
-  count = var.enable_monitoring ? 1 : 0
-
-  alarm_name          = "${var.name_prefix}-api-integration-latency"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "IntegrationLatency"
-  namespace           = "AWS/ApiGateway"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = var.integration_latency_threshold
-  alarm_description   = "API Gateway 통합 지연시간이 임계값을 초과했습니다"
-  alarm_actions       = var.alarm_actions
-
-  dimensions = {
-    ApiName   = aws_api_gateway_rest_api.petclinic.name
-    Stage     = aws_api_gateway_stage.petclinic.stage_name
-  }
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-api-integration-latency-alarm"
-    Environment = var.environment
-    Type        = "monitoring"
-  })
-}
+# ==========================================
+# CloudWatch 대시보드 (개선된 시각화)
+# ==========================================
 
 # CloudWatch 대시보드
 resource "aws_cloudwatch_dashboard" "api_gateway" {
@@ -803,6 +641,7 @@ resource "aws_cloudwatch_dashboard" "api_gateway" {
 
   dashboard_body = jsonencode({
     widgets = [
+      # 요청 및 에러 메트릭
       {
         type   = "metric"
         x      = 0
@@ -812,16 +651,49 @@ resource "aws_cloudwatch_dashboard" "api_gateway" {
 
         properties = {
           metrics = [
-            ["AWS/ApiGateway", "Count", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name],
-            [".", "4XXError", ".", ".", ".", "."],
-            [".", "5XXError", ".", ".", ".", "."]
+            ["AWS/ApiGateway", "Count", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name, { "label" = "총 요청 수" }],
+            [".", "4XXError", ".", ".", ".", ".", { "label" = "4XX 에러" }],
+            [".", "5XXError", ".", ".", ".", ".", { "label" = "5XX 에러" }]
           ]
           view    = "timeSeries"
           stacked = false
           title   = "API Gateway 요청 및 에러"
           period  = 300
+          region  = data.aws_region.current.name
+          yAxis = {
+            left = {
+              min = 0
+            }
+          }
         }
       },
+      # 지연시간 메트릭
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGateway", "Latency", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name, { "label" = "전체 지연시간" }],
+            [".", "IntegrationLatency", ".", ".", ".", ".", { "label" = "통합 지연시간" }]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          title   = "API Gateway 지연시간"
+          period  = 300
+          region  = data.aws_region.current.name
+          yAxis = {
+            left = {
+              min   = 0
+              label = "밀리초"
+            }
+          }
+        }
+      },
+      # 에러율 메트릭 (백분율)
       {
         type   = "metric"
         x      = 0
@@ -831,40 +703,48 @@ resource "aws_cloudwatch_dashboard" "api_gateway" {
 
         properties = {
           metrics = [
-            ["AWS/ApiGateway", "Latency", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name],
-            [".", "IntegrationLatency", ".", ".", ".", "."]
+            ["AWS/ApiGateway", "4XXError", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name, { "id" = "e1" }],
+            [".", "5XXError", ".", ".", ".", ".", { "id" = "e2" }],
+            [".", "Count", ".", ".", ".", ".", { "id" = "total" }],
+            [{ "expression" = "(e1 + e2) / total * 100", "label" = "전체 에러율 (%)", "id" = "error_rate" }]
           ]
           view    = "timeSeries"
           stacked = false
-          title   = "API Gateway 지연시간"
+          title   = "API Gateway 에러율"
           period  = 300
+          region  = data.aws_region.current.name
           yAxis = {
             left = {
-              min = 0
+              min   = 0
+              max   = 100
+              label = "백분율 (%)"
             }
           }
         }
       },
+      # 서비스별 요청 분포 (가능한 경우)
       {
         type   = "metric"
-        x      = 0
-        y      = 12
+        x      = 12
+        y      = 6
         width  = 12
         height = 6
 
         properties = {
-          metrics = [
-            ["AWS/ApiGateway", "CacheHitCount", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name],
-            [".", "CacheMissCount", ".", ".", ".", "."]
-          ]
+          metrics = concat(
+            [["AWS/ApiGateway", "Count", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name, { "label" = "전체 요청" }]],
+            # 서비스별 메트릭 (Resource 차원이 있는 경우)
+            [for service_name in keys(local.all_services) :
+              ["AWS/ApiGateway", "Count", "ApiName", aws_api_gateway_rest_api.petclinic.name, "Stage", aws_api_gateway_stage.petclinic.stage_name, "Resource", "/${service_name}", { "label" = "${service_name} 서비스" }]
+            ]
+          )
           view    = "timeSeries"
-          stacked = false
-          title   = "API Gateway 캐시 성능"
+          stacked = true
+          title   = "서비스별 요청 분포"
           period  = 300
+          region  = data.aws_region.current.name
         }
       }
     ]
   })
-
-  # tags는 aws_cloudwatch_dashboard에서 지원되지 않음
 }

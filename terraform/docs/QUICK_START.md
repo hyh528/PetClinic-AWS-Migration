@@ -80,7 +80,7 @@ terraform fmt -recursive
 | 🚀 application | ⚠️ 검토 필요 | ECS 모듈 이슈 있음 |
 | 📊 monitoring | ✅ 안정 | CloudWatch, X-Ray |
 | ☁️ aws-native | ✅ 안정 | API Gateway, Parameter Store |
-| 💾 state-management | 🆕 신규 | 원격 상태 관리 |
+
 
 ## 🎯 우선순위별 작업 계획
 
@@ -97,7 +97,7 @@ terraform fmt -recursive
 ### 🟡 중요 (이번 주)
 2. **상태 관리 인프라 배포**
    ```bash
-   cd envs/dev/state-management
+
    cp terraform.tfvars.example terraform.tfvars
    # terraform.tfvars 수정 후
    terraform init && terraform apply

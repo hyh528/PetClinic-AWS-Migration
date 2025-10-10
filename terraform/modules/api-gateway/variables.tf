@@ -38,7 +38,7 @@ variable "lambda_integration_timeout_ms" {
   description = "Lambda 통합 타임아웃 (밀리초)"
   type        = number
   default     = 29000
-  
+
   validation {
     condition     = var.lambda_integration_timeout_ms >= 50 && var.lambda_integration_timeout_ms <= 29000
     error_message = "Lambda 통합 타임아웃은 50ms에서 29000ms 사이여야 합니다."
@@ -63,7 +63,7 @@ variable "integration_timeout_ms" {
   description = "ALB 통합 타임아웃 (밀리초)"
   type        = number
   default     = 29000
-  
+
   validation {
     condition     = var.integration_timeout_ms >= 50 && var.integration_timeout_ms <= 29000
     error_message = "통합 타임아웃은 50ms에서 29000ms 사이여야 합니다."
@@ -107,7 +107,7 @@ variable "quota_period" {
   description = "API 할당량 기간 (DAY, WEEK, MONTH)"
   type        = string
   default     = "DAY"
-  
+
   validation {
     condition     = contains(["DAY", "WEEK", "MONTH"], var.quota_period)
     error_message = "할당량 기간은 DAY, WEEK, MONTH 중 하나여야 합니다."
@@ -126,13 +126,18 @@ variable "minimum_compression_size" {
   description = "응답 압축을 위한 최소 크기 (바이트)"
   type        = number
   default     = 1024
+
+  validation {
+    condition     = var.minimum_compression_size >= 0 && var.minimum_compression_size <= 10485760
+    error_message = "압축 크기는 0에서 10MB(10485760 바이트) 사이여야 합니다."
+  }
 }
 
 variable "api_key_source" {
   description = "API 키 소스 (HEADER, AUTHORIZER)"
   type        = string
   default     = "HEADER"
-  
+
   validation {
     condition     = contains(["HEADER", "AUTHORIZER"], var.api_key_source)
     error_message = "API 키 소스는 HEADER 또는 AUTHORIZER여야 합니다."
@@ -150,6 +155,25 @@ variable "policy" {
   description = "API Gateway 리소스 정책 (JSON 문자열)"
   type        = string
   default     = null
+}
+
+# 서비스 설정 (확장 가능한 구조)
+variable "custom_services" {
+  description = "추가 사용자 정의 서비스 설정"
+  type = map(object({
+    path        = string
+    parent_path = string
+    description = string
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.custom_services :
+      contains(["api", "root"], v.parent_path)
+    ])
+    error_message = "parent_path는 'api' 또는 'root'여야 합니다."
+  }
 }
 
 # 모니터링 설정

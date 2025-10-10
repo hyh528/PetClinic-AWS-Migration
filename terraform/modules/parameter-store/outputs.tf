@@ -26,13 +26,13 @@ output "service_parameters" {
 output "parameter_summary" {
   description = "Parameter Store 파라미터 요약"
   value = {
-    total_parameters    = length(var.common_parameters) + length(var.environment_parameters) + length(var.secure_parameters) + length(var.service_specific_parameters)
-    common_count       = length(var.common_parameters)
-    environment_count  = length(var.environment_parameters)
-    secure_count       = length(var.secure_parameters)
-    service_count      = length(var.service_specific_parameters)
-    parameter_prefix   = var.parameter_prefix
-    environment        = var.environment
+    total_parameters  = length(var.common_parameters) + length(var.environment_parameters) + length(var.secure_parameters) + length(var.service_specific_parameters)
+    common_count      = length(var.common_parameters)
+    environment_count = length(var.environment_parameters)
+    secure_count      = length(var.secure_parameters)
+    service_count     = length(var.service_specific_parameters)
+    parameter_prefix  = var.parameter_prefix
+    environment       = var.environment
   }
 }
 
@@ -51,8 +51,8 @@ output "iam_policy_name" {
 output "encryption_info" {
   description = "암호화 설정 정보"
   value = {
-    kms_key_id  = var.kms_key_id
-    kms_key_arn = var.kms_key_arn
+    kms_key_id                  = var.kms_key_id
+    kms_key_arn                 = var.kms_key_arn
     secure_parameters_encrypted = length(var.secure_parameters) > 0
   }
 }
@@ -62,15 +62,15 @@ output "parameter_access_info" {
   description = "Parameter Store 접근 정보"
   value = {
     parameter_prefix = var.parameter_prefix
-    environment     = var.environment
-    region          = data.aws_region.current.name
-    
+    environment      = var.environment
+    region           = data.aws_region.current.name
+
     # Spring Cloud AWS 설정 예시
     spring_cloud_aws_config = {
-      "spring.cloud.aws.paramstore.enabled"         = "true"
-      "spring.cloud.aws.paramstore.prefix"          = var.parameter_prefix
+      "spring.cloud.aws.paramstore.enabled"           = "true"
+      "spring.cloud.aws.paramstore.prefix"            = var.parameter_prefix
       "spring.cloud.aws.paramstore.profile-separator" = "/"
-      "spring.cloud.aws.paramstore.fail-fast"       = "true"
+      "spring.cloud.aws.paramstore.fail-fast"         = "true"
     }
   }
 }
@@ -80,8 +80,8 @@ output "logging_info" {
   description = "로깅 설정 정보"
   value = {
     access_logging_enabled = var.enable_access_logging
-    log_group_name        = var.enable_access_logging ? aws_cloudwatch_log_group.parameter_store_access[0].name : null
-    log_retention_days    = var.log_retention_days
+    log_group_name         = var.enable_access_logging ? aws_cloudwatch_log_group.parameter_store_access[0].name : null
+    log_retention_days     = var.log_retention_days
   }
 }
 
@@ -100,7 +100,7 @@ output "migration_info" {
   value = {
     spring_cloud_config_replaced = true
     parameter_store_ready        = true
-    total_parameters            = length(var.common_parameters) + length(var.environment_parameters) + length(var.secure_parameters) + length(var.service_specific_parameters)
-    migration_date              = timestamp()
+    total_parameters             = length(var.common_parameters) + length(var.environment_parameters) + length(var.secure_parameters) + length(var.service_specific_parameters)
+    migration_date               = timestamp()
   }
 }

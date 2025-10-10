@@ -171,14 +171,14 @@ resource "aws_sns_topic" "alerts" {
 
 # 프로젝트 메타데이터
 resource "aws_ssm_parameter" "project_metadata" {
-  name  = "${local.naming_convention.parameter}/metadata/project"
-  type  = "String"
+  name = "${local.naming_convention.parameter}/metadata/project"
+  type = "String"
   value = jsonencode({
     project_name = var.project_name
     environment  = var.environment
-    region      = data.aws_region.current.id
-    account_id  = data.aws_caller_identity.current.account_id
-    created_at  = timestamp()
+    region       = data.aws_region.current.id
+    account_id   = data.aws_caller_identity.current.account_id
+    created_at   = timestamp()
   })
 
   tags = merge(local.common_tags, {
@@ -190,12 +190,12 @@ resource "aws_ssm_parameter" "project_metadata" {
 
 # 공통 설정
 resource "aws_ssm_parameter" "common_config" {
-  name  = "${local.naming_convention.parameter}/common/config"
-  type  = "String"
+  name = "${local.naming_convention.parameter}/common/config"
+  type = "String"
   value = jsonencode({
-    log_level           = var.default_log_level
-    monitoring_enabled  = var.monitoring_enabled
-    backup_required     = var.backup_required
+    log_level          = var.default_log_level
+    monitoring_enabled = var.monitoring_enabled
+    backup_required    = var.backup_required
     kms_key_id         = aws_kms_key.common.arn
     sns_alerts_topic   = aws_sns_topic.alerts.arn
   })
@@ -215,7 +215,7 @@ resource "aws_ssm_parameter" "common_config" {
 data "aws_iam_policy_document" "ecs_task_execution_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
-    
+
     principals {
       type        = "Service"
       identifiers = ["ecs-tasks.amazonaws.com"]
@@ -227,7 +227,7 @@ data "aws_iam_policy_document" "ecs_task_execution_assume_role" {
 data "aws_iam_policy_document" "lambda_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
-    
+
     principals {
       type        = "Service"
       identifiers = ["lambda.amazonaws.com"]
@@ -239,7 +239,7 @@ data "aws_iam_policy_document" "lambda_assume_role" {
 data "aws_iam_policy_document" "cloudtrail_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
-    
+
     principals {
       type        = "Service"
       identifiers = ["cloudtrail.amazonaws.com"]
@@ -263,7 +263,7 @@ locals {
       cidr_blocks = ["0.0.0.0/0"]
       description = "HTTP inbound"
     }
-    
+
     https_inbound = {
       type        = "ingress"
       from_port   = 443
@@ -272,7 +272,7 @@ locals {
       cidr_blocks = ["0.0.0.0/0"]
       description = "HTTPS inbound"
     }
-    
+
     # 애플리케이션 포트
     app_port_inbound = {
       type        = "ingress"
@@ -281,7 +281,7 @@ locals {
       protocol    = "tcp"
       description = "Application port inbound"
     }
-    
+
     # MySQL 포트
     mysql_inbound = {
       type        = "ingress"
@@ -290,7 +290,7 @@ locals {
       protocol    = "tcp"
       description = "MySQL inbound"
     }
-    
+
     # 모든 아웃바운드
     all_outbound = {
       type        = "egress"

@@ -185,13 +185,7 @@ terraform apply
 
 ---
 
-#### 11. State Management Layer (선택사항)
-```bash
-cd terraform/envs/dev/state-management
-terraform init
-terraform plan
-terraform apply
-```
+
 **이유**: 다른 레이어들의 상태 관리를 위한 유틸리티 레이어
 
 **생성 리소스**:
@@ -218,7 +212,6 @@ LAYERS=(
     "api-gateway"
     "monitoring"
     "aws-native"
-    "state-management"
 )
 
 BASE_DIR="terraform/envs/dev"
@@ -264,8 +257,7 @@ $Layers = @(
     "application",
     "api-gateway",
     "monitoring",
-    "aws-native",
-    "state-management"
+    "aws-native"
 )
 
 $BaseDir = "terraform\envs\dev"
@@ -313,7 +305,7 @@ foreach ($layer in $Layers) {
 **역순으로 실행해야 합니다**:
 ```bash
 # 정리 순서 (역순)
-state-management → aws-native → monitoring → api-gateway → 
+aws-native → monitoring → api-gateway → 
 application → lambda-genai → cloud-map → parameter-store → 
 database → security → network
 ```
@@ -354,7 +346,7 @@ terraform output
 | api-gateway | 2-3분 | API 배포 |
 | monitoring | 2-3분 | 대시보드 생성 |
 | aws-native | 1-2분 | 통합 설정 |
-| state-management | 1분 | 유틸리티 설정 |
+
 
 **총 예상 시간**: 30-45분
 

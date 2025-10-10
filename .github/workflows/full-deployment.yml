@@ -1,0 +1,332 @@
+name: Full System Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+      deployment_type:
+        description: 'Deployment type'
+        required: true
+        default: 'infrastructure_and_apps'
+        type: choice
+        options:
+        - infrastructure_only
+        - applications_only
+        - infrastructure_and_apps
+        - lambda_only
+      force_rebuild:
+        description: 'Force rebuild all components'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  AWS_REGION: 'ap-northeast-1'  # 도쿄 리전으로 변경
+
+jobs:
+  # 배포 계획 수립
+  deployment-plan:
+    name: Create Deployment Plan
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_infrastructure: ${{ steps.plan.outputs.deploy_infrastructure }}
+      deploy_lambda: ${{ steps.plan.outputs.deploy_lambda }}
+      deploy_applications: ${{ steps.plan.outputs.deploy_applications }}
+      environment: ${{ steps.plan.outputs.environment }}
+    
+    steps:
+      - name: Create Deployment Plan
+        id: plan
+        run: |
+          DEPLOYMENT_TYPE="${{ github.event.inputs.deployment_type }}"
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+          
+          echo "🎯 Creating deployment plan for: ${ENVIRONMENT}"
+          echo "📋 Deployment type: ${DEPLOYMENT_TYPE}"
+          
+          # 배포 플래그 설정
+          case "${DEPLOYMENT_TYPE}" in
+            "infrastructure_only")
+              echo "deploy_infrastructure=true" >> $GITHUB_OUTPUT
+              echo "deploy_lambda=false" >> $GITHUB_OUTPUT
+              echo "deploy_applications=false" >> $GITHUB_OUTPUT
+              ;;
+            "applications_only")
+              echo "deploy_infrastructure=false" >> $GITHUB_OUTPUT
+              echo "deploy_lambda=false" >> $GITHUB_OUTPUT
+              echo "deploy_applications=true" >> $GITHUB_OUTPUT
+              ;;
+            "lambda_only")
+              echo "deploy_infrastructure=false" >> $GITHUB_OUTPUT
+              echo "deploy_lambda=true" >> $GITHUB_OUTPUT
+              echo "deploy_applications=false" >> $GITHUB_OUTPUT
+              ;;
+            "infrastructure_and_apps")
+              echo "deploy_infrastructure=true" >> $GITHUB_OUTPUT
+              echo "deploy_lambda=true" >> $GITHUB_OUTPUT
+              echo "deploy_applications=true" >> $GITHUB_OUTPUT
+              ;;
+          esac
+          
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+          
+          echo "✅ Deployment plan created"
+
+  # 1단계: Terraform 인프라 배포
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    needs: deployment-plan
+    if: needs.deployment-plan.outputs.deploy_infrastructure == 'true'
+    uses: ./.github/workflows/terraform-infrastructure.yml
+    with:
+      environment: ${{ needs.deployment-plan.outputs.environment }}
+      action: apply
+    secrets: inherit
+
+  # 2단계: Lambda 함수 배포
+  deploy-lambda:
+    name: Deploy Lambda Functions
+    needs: [deployment-plan, deploy-infrastructure]
+    if: always() && needs.deployment-plan.outputs.deploy_lambda == 'true' && (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped')
+    uses: ./.github/workflows/lambda-deployment.yml
+    with:
+      environment: ${{ needs.deployment-plan.outputs.environment }}
+    secrets: inherit
+
+  # 3단계: Spring Boot 애플리케이션 배포
+  deploy-applications:
+    name: Deploy Applications
+    needs: [deployment-plan, deploy-infrastructure, deploy-lambda]
+    if: always() && needs.deployment-plan.outputs.deploy_applications == 'true' && (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped')
+    uses: ./.github/workflows/application-deployment.yml
+    with:
+      environment: ${{ needs.deployment-plan.outputs.environment }}
+      services: 'all'
+    secrets: inherit
+
+  # 4단계: 배포 후 검증
+  post-deployment-verification:
+    name: Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: [deployment-plan, deploy-infrastructure, deploy-lambda, deploy-applications]
+    if: always()
+    environment: 
+      name: ${{ needs.deployment-plan.outputs.environment }}
+      url: https://console.aws.amazon.com/
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify Infrastructure
+        if: needs.deployment-plan.outputs.deploy_infrastructure == 'true'
+        run: |
+          ENVIRONMENT="${{ needs.deployment-plan.outputs.environment }}"
+          
+          echo "🔍 Verifying infrastructure components..."
+          
+          # VPC 확인
+          VPC_ID=$(aws ec2 describe-vpcs \
+            --filters "Name=tag:Name,Values=petclinic-vpc-${ENVIRONMENT}" \
+            --query 'Vpcs[0].VpcId' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          
+          if [ "${VPC_ID}" != "None" ] && [ "${VPC_ID}" != "" ]; then
+            echo "✅ VPC found: ${VPC_ID}"
+          else
+            echo "❌ VPC not found"
+            exit 1
+          fi
+          
+          # ECS 클러스터 확인
+          CLUSTER_STATUS=$(aws ecs describe-clusters \
+            --clusters "petclinic-cluster-${ENVIRONMENT}" \
+            --query 'clusters[0].status' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          
+          if [ "${CLUSTER_STATUS}" = "ACTIVE" ]; then
+            echo "✅ ECS Cluster is active"
+          else
+            echo "❌ ECS Cluster not active: ${CLUSTER_STATUS}"
+            exit 1
+          fi
+          
+          # Aurora 클러스터 확인
+          DB_STATUS=$(aws rds describe-db-clusters \
+            --db-cluster-identifier "petclinic-aurora-${ENVIRONMENT}" \
+            --query 'DBClusters[0].Status' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          
+          if [ "${DB_STATUS}" = "available" ]; then
+            echo "✅ Aurora cluster is available"
+          else
+            echo "⚠️ Aurora cluster status: ${DB_STATUS}"
+          fi
+
+      - name: Verify Lambda Functions
+        if: needs.deployment-plan.outputs.deploy_lambda == 'true'
+        run: |
+          ENVIRONMENT="${{ needs.deployment-plan.outputs.environment }}"
+          FUNCTION_NAME="petclinic-genai-service-${ENVIRONMENT}"
+          
+          echo "🔍 Verifying Lambda function: ${FUNCTION_NAME}"
+          
+          # Lambda 함수 상태 확인
+          FUNCTION_STATE=$(aws lambda get-function \
+            --function-name "${FUNCTION_NAME}" \
+            --query 'Configuration.State' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          
+          if [ "${FUNCTION_STATE}" = "Active" ]; then
+            echo "✅ Lambda function is active"
+            
+            # 간단한 테스트 호출
+            TEST_PAYLOAD='{"httpMethod":"GET","path":"/health"}'
+            aws lambda invoke \
+              --function-name "${FUNCTION_NAME}:LIVE" \
+              --payload "${TEST_PAYLOAD}" \
+              --region ${{ env.AWS_REGION }} \
+              response.json
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Lambda function test successful"
+            else
+              echo "⚠️ Lambda function test failed"
+            fi
+          else
+            echo "❌ Lambda function not active: ${FUNCTION_STATE}"
+            exit 1
+          fi
+
+      - name: Verify ECS Services
+        if: needs.deployment-plan.outputs.deploy_applications == 'true'
+        run: |
+          ENVIRONMENT="${{ needs.deployment-plan.outputs.environment }}"
+          CLUSTER_NAME="petclinic-cluster-${ENVIRONMENT}"
+          
+          echo "🔍 Verifying ECS services..."
+          
+          SERVICES=("customers" "vets" "visits" "admin" "api-gateway")
+          
+          for service in "${SERVICES[@]}"; do
+            SERVICE_NAME="petclinic-${service}-${ENVIRONMENT}"
+            
+            SERVICE_STATUS=$(aws ecs describe-services \
+              --cluster "${CLUSTER_NAME}" \
+              --services "${SERVICE_NAME}" \
+              --query 'services[0].status' \
+              --output text \
+              --region ${{ env.AWS_REGION }} 2>/dev/null)
+            
+            RUNNING_COUNT=$(aws ecs describe-services \
+              --cluster "${CLUSTER_NAME}" \
+              --services "${SERVICE_NAME}" \
+              --query 'services[0].runningCount' \
+              --output text \
+              --region ${{ env.AWS_REGION }} 2>/dev/null)
+            
+            DESIRED_COUNT=$(aws ecs describe-services \
+              --cluster "${CLUSTER_NAME}" \
+              --services "${SERVICE_NAME}" \
+              --query 'services[0].desiredCount' \
+              --output text \
+              --region ${{ env.AWS_REGION }} 2>/dev/null)
+            
+            if [ "${SERVICE_STATUS}" = "ACTIVE" ] && [ "${RUNNING_COUNT}" = "${DESIRED_COUNT}" ]; then
+              echo "✅ ${service} service: ${RUNNING_COUNT}/${DESIRED_COUNT} tasks running"
+            else
+              echo "⚠️ ${service} service: Status=${SERVICE_STATUS}, Tasks=${RUNNING_COUNT}/${DESIRED_COUNT}"
+            fi
+          done
+
+      - name: Test API Gateway
+        run: |
+          ENVIRONMENT="${{ needs.deployment-plan.outputs.environment }}"
+          
+          echo "🔍 Testing API Gateway endpoints..."
+          
+          # API Gateway URL 가져오기
+          API_ID=$(aws apigateway get-rest-apis \
+            --query "items[?name=='petclinic-api-${ENVIRONMENT}'].id" \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          
+          if [ "${API_ID}" != "" ] && [ "${API_ID}" != "None" ]; then
+            API_URL="https://${API_ID}.execute-api.${{ env.AWS_REGION }}.amazonaws.com/dev"
+            echo "✅ API Gateway found: ${API_URL}"
+            
+            # 헬스체크 엔드포인트 테스트
+            echo "Testing health endpoints..."
+            
+            ENDPOINTS=("/api/customers/actuator/health" "/api/vets/actuator/health" "/api/visits/actuator/health")
+            
+            for endpoint in "${ENDPOINTS[@]}"; do
+              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}${endpoint}" || echo "000")
+              
+              if [ "${HTTP_STATUS}" = "200" ]; then
+                echo "✅ ${endpoint}: HTTP ${HTTP_STATUS}"
+              else
+                echo "⚠️ ${endpoint}: HTTP ${HTTP_STATUS}"
+              fi
+            done
+          else
+            echo "⚠️ API Gateway not found"
+          fi
+
+      - name: Generate Deployment Report
+        run: |
+          echo "📊 Full System Deployment Report"
+          echo "================================="
+          echo "Environment: ${{ needs.deployment-plan.outputs.environment }}"
+          echo "Deployment Type: ${{ github.event.inputs.deployment_type }}"
+          echo "Timestamp: $(date -u)"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          echo "Component Status:"
+          echo "- Infrastructure: ${{ needs.deploy-infrastructure.result || 'skipped' }}"
+          echo "- Lambda Functions: ${{ needs.deploy-lambda.result || 'skipped' }}"
+          echo "- Applications: ${{ needs.deploy-applications.result || 'skipped' }}"
+          echo ""
+          
+          # 전체 배포 성공 여부 판단
+          OVERALL_SUCCESS=true
+          
+          if [ "${{ needs.deployment-plan.outputs.deploy_infrastructure }}" = "true" ] && [ "${{ needs.deploy-infrastructure.result }}" != "success" ]; then
+            OVERALL_SUCCESS=false
+          fi
+          
+          if [ "${{ needs.deployment-plan.outputs.deploy_lambda }}" = "true" ] && [ "${{ needs.deploy-lambda.result }}" != "success" ]; then
+            OVERALL_SUCCESS=false
+          fi
+          
+          if [ "${{ needs.deployment-plan.outputs.deploy_applications }}" = "true" ] && [ "${{ needs.deploy-applications.result }}" != "success" ]; then
+            OVERALL_SUCCESS=false
+          fi
+          
+          if [ "${OVERALL_SUCCESS}" = "true" ]; then
+            echo "🎉 Overall Status: SUCCESS"
+            echo "All requested components deployed successfully!"
+          else
+            echo "❌ Overall Status: FAILED"
+            echo "Some components failed to deploy. Check the logs above."
+            exit 1
+          fi

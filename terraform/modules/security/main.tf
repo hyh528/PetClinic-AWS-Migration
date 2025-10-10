@@ -89,3 +89,129 @@ resource "aws_vpc_security_group_egress_rule" "ecs_out_to_rds" {
   to_port                      = var.rds_port
   ip_protocol                  = "tcp"
 }
+
+# =============================================================================
+# IAM 정책들 (애플리케이션별 세분화된 권한)
+# =============================================================================
+
+# RDS 시크릿 접근 정책
+resource "aws_iam_policy" "rds_secret_access" {
+  name        = "${var.name_prefix}-rds-secret-access"
+  description = "RDS 관리형 데이터베이스 시크릿 접근 정책"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "GetRDSSecrets"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:${var.aws_region}:*:secret:rds-db-credentials/*",
+          "arn:aws:secretsmanager:${var.aws_region}:*:secret:${var.name_prefix}-*"
+        ]
+      },
+      {
+        Sid    = "DecryptSecrets"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = "arn:aws:kms:${var.aws_region}:*:key/*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "secretsmanager.${var.aws_region}.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Name      = "${var.name_prefix}-rds-secret-access"
+    Component = "iam-policy"
+    Purpose   = "rds-secret-access"
+  })
+}
+
+# Parameter Store 접근 정책
+resource "aws_iam_policy" "parameter_store_access" {
+  name        = "${var.name_prefix}-parameter-store-access"
+  description = "Parameter Store 설정 정보 접근 정책"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "GetParameters"
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.name_prefix}/*",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/petclinic/*"
+        ]
+      },
+      {
+        Sid    = "DecryptParameters"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = "arn:aws:kms:${var.aws_region}:*:key/*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "ssm.${var.aws_region}.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Name      = "${var.name_prefix}-parameter-store-access"
+    Component = "iam-policy"
+    Purpose   = "parameter-store-access"
+  })
+}
+
+# CloudWatch Logs 접근 정책
+resource "aws_iam_policy" "cloudwatch_logs_access" {
+  name        = "${var.name_prefix}-cloudwatch-logs-access"
+  description = "CloudWatch Logs 접근 정책"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "CloudWatchLogsAccess"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:*:log-group:/ecs/${var.name_prefix}*",
+          "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/${var.name_prefix}*"
+        ]
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Name      = "${var.name_prefix}-cloudwatch-logs-access"
+    Component = "iam-policy"
+    Purpose   = "cloudwatch-logs"
+  })
+}

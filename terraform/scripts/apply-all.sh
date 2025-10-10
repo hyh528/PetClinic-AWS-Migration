@@ -51,33 +51,64 @@ log_error() {
 }
 
 # =============================================================================
-# 의존성 정의 (AWS Well-Architected: 올바른 배포 순서)
+# 의존성 정의 (dependencies.tf에서 동적으로 가져오기)
 # =============================================================================
 
-# 레이어 실행 순서 정의 (의존성 기반)
-readonly LAYERS=(
-    "01-network"        # 기본 네트워크 인프라 (VPC, 서브넷, 게이트웨이)
-    "02-security"       # 보안 설정 (보안 그룹, IAM, VPC 엔드포인트)
-    "03-database"       # 데이터베이스 (Aurora 클러스터)
-    "07-application"    # 애플리케이션 인프라 (ECS, ALB, ECR)
-    "04-parameter-store" # Parameter Store (Spring Cloud Config 대체)
-    "05-cloud-map"      # Cloud Map (Eureka 대체)
-    "06-lambda-genai"   # Lambda GenAI (서버리스 AI 서비스)
-    "08-api-gateway"    # API Gateway (Spring Cloud Gateway 대체)
-    "09-monitoring"     # 모니터링 (CloudWatch 통합)
+get_layer_execution_order() {
+    log "dependencies.tf에서 레이어 실행 순서 가져오는 중..."
+    
+    cd "$PROJECT_ROOT"
+    
+    # Terraform 초기화 (dependencies.tf 읽기 위해)
+    if ! terraform init -input=false &>/dev/null; then
+        log_warning "dependencies.tf 초기화 실패, 기본 순서 사용"
+        return 1
+    fi
+    
+    # 레이어 실행 순서 가져오기
+    local execution_sequence
+    execution_sequence=$(terraform output -json layer_execution_order 2>/dev/null | jq -r '.execution_sequence[]' 2>/dev/null)
+    
+    if [[ -n "$execution_sequence" ]]; then
+        # 동적으로 가져온 순서를 배열로 변환
+        readarray -t LAYERS <<< "$execution_sequence"
+        log_success "dependencies.tf에서 레이어 순서 로드 완료: ${#LAYERS[@]}개 레이어"
+        return 0
+    else
+        log_warning "dependencies.tf에서 순서를 가져올 수 없음, 기본 순서 사용"
+        return 1
+    fi
+}
+
+# 기본 레이어 순서 (dependencies.tf를 읽을 수 없을 때 사용)
+readonly DEFAULT_LAYERS=(
+    "01-network"
+    "02-security"
+    "03-database"
+    "04-parameter-store"
+    "05-cloud-map"
+    "06-lambda-genai"
+    "07-application"
+    "08-api-gateway"
+    "09-monitoring"
+    "10-aws-native"
 )
 
-# 레이어 설명 (문서화)
+# 레이어 배열 초기화
+LAYERS=()
+
+# 레이어 설명 (기본값)
 declare -A LAYER_DESCRIPTIONS=(
     ["01-network"]="기본 네트워크 인프라 (VPC, 서브넷, 게이트웨이)"
     ["02-security"]="보안 설정 (보안 그룹, IAM, VPC 엔드포인트)"
     ["03-database"]="데이터베이스 (Aurora 클러스터)"
-    ["07-application"]="애플리케이션 인프라 (ECS, ALB, ECR)"
     ["04-parameter-store"]="Parameter Store (Spring Cloud Config 대체)"
     ["05-cloud-map"]="Cloud Map (Eureka 대체)"
     ["06-lambda-genai"]="Lambda GenAI (서버리스 AI 서비스)"
+    ["07-application"]="애플리케이션 인프라 (ECS, ALB, ECR)"
     ["08-api-gateway"]="API Gateway (Spring Cloud Gateway 대체)"
     ["09-monitoring"]="모니터링 (CloudWatch 통합)"
+    ["10-aws-native"]="AWS 네이티브 서비스 통합"
 )
 
 # =============================================================================
@@ -229,6 +260,12 @@ deploy_layer() {
 deploy_all_layers() {
     local failed_layers=()
     local deployed_layers=()
+    
+    # 레이어 실행 순서 결정
+    if ! get_layer_execution_order; then
+        log "기본 레이어 순서 사용"
+        LAYERS=("${DEFAULT_LAYERS[@]}")
+    fi
     
     log "전체 레이어 배포 시작 - 환경: $ENVIRONMENT"
     log "배포할 레이어 수: ${#LAYERS[@]}"

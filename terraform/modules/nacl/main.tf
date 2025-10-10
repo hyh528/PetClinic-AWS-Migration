@@ -263,8 +263,8 @@ resource "aws_network_acl" "this" {
     Tier        = each.value.tier
     Purpose     = each.value.purpose
     # Well-Architected: Cost Optimization
-    CostCenter  = var.cost_center
-    Owner       = var.owner
+    CostCenter = var.cost_center
+    Owner      = var.owner
     # Well-Architected: Security
     SecurityLevel = each.key == "private_db" ? "high" : each.key == "private_app" ? "medium" : "standard"
     # Well-Architected: Operational Excellence
@@ -308,8 +308,8 @@ resource "aws_network_acl_rule" "default_deny_inbound" {
   for_each = local.subnet_types
 
   network_acl_id = aws_network_acl.this[each.key].id
-  rule_number    = 32767  # 최대 규칙 번호 (마지막 규칙)
-  protocol       = "-1"   # 모든 프로토콜
+  rule_number    = 32767 # 최대 규칙 번호 (마지막 규칙)
+  protocol       = "-1"  # 모든 프로토콜
   rule_action    = "deny"
   cidr_block     = "0.0.0.0/0"
   egress         = false
@@ -323,8 +323,8 @@ resource "aws_network_acl_rule" "default_deny_outbound" {
   for_each = local.subnet_types
 
   network_acl_id = aws_network_acl.this[each.key].id
-  rule_number    = 32767  # 최대 규칙 번호 (마지막 규칙)
-  protocol       = "-1"   # 모든 프로토콜
+  rule_number    = 32767 # 최대 규칙 번호 (마지막 규칙)
+  protocol       = "-1"  # 모든 프로토콜
   rule_action    = "deny"
   cidr_block     = "0.0.0.0/0"
   egress         = true

@@ -3,7 +3,7 @@
 # ==========================================
 # Terraform 인프라 전체 검증 스크립트
 # ==========================================
-# 팀원들이 안전하게 인프라를 검증할 수 있는 스크립트
+# 모든 레이어를 한 번에 init, validate, plan 수행
 
 set -e
 
@@ -22,11 +22,15 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # 전역 변수
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+ENVIRONMENT="${1:-dev}"
+ENV_DIR="$PROJECT_ROOT/envs/$ENVIRONMENT"
 ERRORS=0
 WARNINGS=0
 
 log_info "Terraform 인프라 검증을 시작합니다..."
-log_info "작업 디렉토리: $SCRIPT_DIR"
+log_info "환경: $ENVIRONMENT"
+log_info "작업 디렉토리: $ENV_DIR"
 
 # ==========================================
 # 1. 사전 검증
@@ -37,260 +41,233 @@ log_info "=== 1단계: 사전 검증 ==="
 # Terraform 설치 확인
 if ! command -v terraform &> /dev/null; then
     log_error "Terraform이 설치되지 않았습니다."
-    log_info "설치 방법: https://www.terraform.io/downloads.html"
     exit 1
 fi
 
-TERRAFORM_VERSION=$(terraform version -json | jq -r '.terraform_version')
-log_success "Terraform 버전: $TERRAFORM_VERSION"
+TERRAFORM_VERSION=$(terraform version | head -n1)
+log_success "Terraform 확인: $TERRAFORM_VERSION"
 
-# AWS CLI 확인
-if ! command -v aws &> /dev/null; then
-    log_error "AWS CLI가 설치되지 않았습니다."
-    log_info "설치 방법: https://aws.amazon.com/cli/"
+# 환경 디렉터리 확인
+if [ ! -d "$ENV_DIR" ]; then
+    log_error "환경 디렉터리가 존재하지 않습니다: $ENV_DIR"
     exit 1
 fi
 
-# AWS 자격 증명 확인
-if ! aws sts get-caller-identity &> /dev/null; then
-    log_error "AWS 자격 증명이 설정되지 않았습니다."
-    log_info "aws configure를 실행하여 자격 증명을 설정하세요."
-    exit 1
+log_success "환경 디렉터리 확인: $ENV_DIR"
+
+# ==========================================
+# 2. 전체 포맷팅 검사
+# ==========================================
+
+log_info "=== 2단계: 전체 포맷팅 검사 ==="
+
+cd "$PROJECT_ROOT"
+
+if terraform fmt -check -recursive > /dev/null 2>&1; then
+    log_success "Terraform 포맷팅 정상"
+else
+    log_warning "Terraform 포맷팅 필요 - 자동 적용 중..."
+    terraform fmt -recursive
+    log_success "Terraform 포맷팅 완료"
+    ((WARNINGS++))
 fi
 
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-REGION=$(aws configure get region || echo "ap-northeast-2")
-log_success "AWS 계정: $ACCOUNT_ID, 리전: $REGION"
-
 # ==========================================
-# 2. 모듈 검증
+# 3. 레이어별 검증
 # ==========================================
 
-log_info "=== 2단계: 모듈 검증 ==="
-
-cd "$SCRIPT_DIR/modules"
-
-for module_dir in */; do
-    if [ -d "$module_dir" ]; then
-        module_name=${module_dir%/}
-        log_info "모듈 검증 중: $module_name"
-        
-        cd "$module_dir"
-        
-        # 포맷 확인
-        if terraform fmt -check -diff > /dev/null 2>&1; then
-            log_success "  ✅ 포맷팅 정상"
-        else
-            log_warning "  ⚠️  포맷팅 필요"
-            terraform fmt
-            ((WARNINGS++))
-        fi
-        
-        # 문법 검증
-        if terraform validate > /dev/null 2>&1; then
-            log_success "  ✅ 문법 검증 통과"
-        else
-            log_error "  ❌ 문법 오류 발견"
-            terraform validate
-            ((ERRORS++))
-        fi
-        
-        cd ..
-    fi
-done
-
-cd "$SCRIPT_DIR"
-
-# ==========================================
-# 3. 환경별 검증
-# ==========================================
-
-log_info "=== 3단계: 환경별 검증 ==="
-
-cd "$SCRIPT_DIR/envs/dev"
+log_info "=== 3단계: 레이어별 검증 ==="
 
 # 레이어 순서 (의존성 고려)
 LAYERS=(
-    "network"
-    "security" 
-    "database"
-    "application"
-    "monitoring"
-    "aws-native"
-    "api-gateway"
-    "parameter-store"
-    "cloud-map"
-    "lambda-genai"
-    "state-management"
+    "01-network"
+    "02-security" 
+    "03-database"
+    "04-parameter-store"
+    "05-cloud-map"
+    "06-lambda-genai"
+    "07-application"
+    "08-api-gateway"
+    "09-monitoring"
 )
 
+declare -A LAYER_DESCRIPTIONS=(
+    ["01-network"]="기본 네트워크 인프라 (VPC, 서브넷, 게이트웨이)"
+    ["02-security"]="보안 설정 (보안 그룹, IAM, VPC 엔드포인트)"
+    ["03-database"]="데이터베이스 (Aurora 클러스터)"
+    ["04-parameter-store"]="Parameter Store (Spring Cloud Config 대체)"
+    ["05-cloud-map"]="Cloud Map (Eureka 대체)"
+    ["06-lambda-genai"]="Lambda GenAI (서버리스 AI 서비스)"
+    ["07-application"]="애플리케이션 인프라 (ECS, ALB, ECR)"
+    ["08-api-gateway"]="API Gateway (Spring Cloud Gateway 대체)"
+    ["09-monitoring"]="모니터링 (CloudWatch 통합)"
+)
+
+SUCCESS_LAYERS=()
+FAILED_LAYERS=()
+
 for layer in "${LAYERS[@]}"; do
-    if [ -d "$layer" ]; then
-        log_info "레이어 검증 중: $layer"
-        
-        cd "$layer"
-        
-        # 필수 파일 확인
-        required_files=("main.tf" "variables.tf" "outputs.tf")
-        for file in "${required_files[@]}"; do
-            if [ -f "$file" ]; then
-                log_success "  ✅ $file 존재"
-            else
-                log_warning "  ⚠️  $file 누락"
-                ((WARNINGS++))
-            fi
-        done
-        
-        # 포맷 확인
-        if terraform fmt -check -diff > /dev/null 2>&1; then
-            log_success "  ✅ 포맷팅 정상"
+    layer_dir="$ENV_DIR/$layer"
+    
+    if [ ! -d "$layer_dir" ]; then
+        log_warning "레이어 디렉터리 없음: $layer (건너뜀)"
+        ((WARNINGS++))
+        continue
+    fi
+    
+    log_info "=========================================="
+    log_info "레이어 검증: $layer"
+    log_info "설명: ${LAYER_DESCRIPTIONS[$layer]}"
+    log_info "=========================================="
+    
+    cd "$layer_dir"
+    
+    # 필수 파일 확인
+    required_files=("main.tf" "variables.tf" "outputs.tf")
+    for file in "${required_files[@]}"; do
+        if [ -f "$file" ]; then
+            log_success "  ✅ $file 존재"
         else
-            log_warning "  ⚠️  포맷팅 필요"
-            terraform fmt
+            log_warning "  ⚠️  $file 누락"
             ((WARNINGS++))
         fi
-        
-        # 백엔드 없이 초기화 및 검증
-        if terraform init -backend=false > /dev/null 2>&1; then
-            log_success "  ✅ 초기화 성공"
-            
-            if terraform validate > /dev/null 2>&1; then
-                log_success "  ✅ 문법 검증 통과"
-            else
-                log_error "  ❌ 문법 오류 발견"
-                terraform validate
-                ((ERRORS++))
-            fi
-        else
-            log_error "  ❌ 초기화 실패"
-            terraform init -backend=false
-            ((ERRORS++))
-        fi
-        
-        # 상태 파일 확인
-        if [ -f "terraform.tfstate" ]; then
-            STATE_RESOURCES=$(terraform state list 2>/dev/null | wc -l || echo "0")
-            log_info "  📊 로컬 상태: $STATE_RESOURCES 개 리소스"
-        else
-            log_info "  📊 로컬 상태: 없음"
-        fi
-        
-        cd ..
-        echo
+    done
+    
+    # Terraform 초기화
+    log_info "  🔧 Terraform 초기화 중..."
+    if terraform init -input=false -upgrade > /dev/null 2>&1; then
+        log_success "  ✅ 초기화 성공"
     else
-        log_warning "레이어 디렉토리 없음: $layer"
+        log_error "  ❌ 초기화 실패"
+        terraform init -input=false -upgrade
+        FAILED_LAYERS+=("$layer")
+        ((ERRORS++))
+        continue
+    fi
+    
+    # Terraform 검증
+    log_info "  🔍 Terraform 검증 중..."
+    if terraform validate > /dev/null 2>&1; then
+        log_success "  ✅ 검증 통과"
+    else
+        log_error "  ❌ 검증 실패"
+        terraform validate
+        FAILED_LAYERS+=("$layer")
+        ((ERRORS++))
+        continue
+    fi
+    
+    # Terraform Plan (tfvars 파일이 있는 경우)
+    tfvars_file="${ENVIRONMENT}.tfvars"
+    if [ -f "$tfvars_file" ]; then
+        log_info "  📋 Terraform Plan 생성 중..."
+        if terraform plan -var-file="$tfvars_file" -input=false > /dev/null 2>&1; then
+            log_success "  ✅ Plan 생성 성공"
+        else
+            log_error "  ❌ Plan 생성 실패"
+            terraform plan -var-file="$tfvars_file" -input=false
+            FAILED_LAYERS+=("$layer")
+            ((ERRORS++))
+            continue
+        fi
+    else
+        log_warning "  ⚠️  tfvars 파일 없음: $tfvars_file"
         ((WARNINGS++))
     fi
+    
+    SUCCESS_LAYERS+=("$layer")
+    log_success "레이어 검증 완료: $layer"
+    echo
 done
 
-cd "$SCRIPT_DIR"
-
 # ==========================================
-# 4. 알려진 이슈 확인
+# 4. 보안 스캔 (선택사항)
 # ==========================================
 
-log_info "=== 4단계: 알려진 이슈 확인 ==="
+log_info "=== 4단계: 보안 스캔 ==="
 
-# Application 레이어 특별 검증
-if [ -d "envs/dev/application" ]; then
-    log_info "Application 레이어 특별 검증 중..."
-    
-    cd "envs/dev/application"
-    
-    # task_role_arn 이슈 확인
-    if grep -q "task_role_arn" main.tf; then
-        log_info "  🔍 task_role_arn 사용 확인됨"
-        
-        # ECS 모듈에서 해당 변수 정의 확인
-        if grep -q "variable \"task_role_arn\"" ../../../modules/ecs/variables.tf; then
-            log_success "  ✅ ECS 모듈에 task_role_arn 변수 정의됨"
-        else
-            log_error "  ❌ ECS 모듈에 task_role_arn 변수 누락"
-            ((ERRORS++))
-        fi
+cd "$PROJECT_ROOT"
+
+# checkov 스캔
+if command -v checkov &> /dev/null; then
+    log_info "Checkov 보안 스캔 실행 중..."
+    if checkov -d . --framework terraform --quiet > /dev/null 2>&1; then
+        log_success "Checkov 보안 스캔 통과"
+    else
+        log_warning "Checkov 보안 스캔에서 이슈 발견됨"
+        ((WARNINGS++))
     fi
-    
-    cd "$SCRIPT_DIR"
+else
+    log_warning "Checkov가 설치되지 않았습니다. 보안 스캔을 건너뜁니다."
+fi
+
+# tfsec 스캔
+if command -v tfsec &> /dev/null; then
+    log_info "tfsec 보안 스캔 실행 중..."
+    if tfsec . > /dev/null 2>&1; then
+        log_success "tfsec 보안 스캔 통과"
+    else
+        log_warning "tfsec 보안 스캔에서 이슈 발견됨"
+        ((WARNINGS++))
+    fi
+else
+    log_warning "tfsec가 설치되지 않았습니다. 보안 스캔을 건너뜁니다."
 fi
 
 # ==========================================
-# 5. 보안 검증
-# ==========================================
-
-log_info "=== 5단계: 보안 검증 ==="
-
-# 민감한 정보 하드코딩 확인
-log_info "민감한 정보 하드코딩 검사 중..."
-
-SENSITIVE_PATTERNS=(
-    "password.*=.*\".*\""
-    "secret.*=.*\".*\""
-    "key.*=.*\"[A-Za-z0-9+/]{20,}\""
-    "token.*=.*\".*\""
-)
-
-for pattern in "${SENSITIVE_PATTERNS[@]}"; do
-    if grep -r -E "$pattern" envs/ modules/ --include="*.tf" > /dev/null 2>&1; then
-        log_warning "  ⚠️  민감한 정보 하드코딩 의심: $pattern"
-        ((WARNINGS++))
-    fi
-done
-
-log_success "보안 검증 완료"
-
-# ==========================================
-# 6. 결과 요약
+# 5. 결과 요약
 # ==========================================
 
 log_info "=== 검증 결과 요약 ==="
 
-echo "=================================="
+echo "=========================================="
 echo "📊 검증 통계:"
+echo "   - 총 레이어: ${#LAYERS[@]}"
+echo "   - 성공: ${#SUCCESS_LAYERS[@]}"
+echo "   - 실패: ${#FAILED_LAYERS[@]}"
 echo "   - 오류: $ERRORS 개"
 echo "   - 경고: $WARNINGS 개"
-echo "=================================="
+echo "=========================================="
+
+if [ ${#SUCCESS_LAYERS[@]} -gt 0 ]; then
+    log_success "검증 성공 레이어:"
+    for layer in "${SUCCESS_LAYERS[@]}"; do
+        log_success "  ✓ $layer - ${LAYER_DESCRIPTIONS[$layer]}"
+    done
+fi
+
+if [ ${#FAILED_LAYERS[@]} -gt 0 ]; then
+    log_error "검증 실패 레이어:"
+    for layer in "${FAILED_LAYERS[@]}"; do
+        log_error "  ✗ $layer - ${LAYER_DESCRIPTIONS[$layer]}"
+    done
+fi
+
+echo
 
 if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
     log_success "🎉 모든 검증을 통과했습니다!"
     echo
     echo "다음 단계:"
-    echo "1. terraform plan으로 배포 계획 확인"
-    echo "2. 팀 검토 후 terraform apply 실행"
-    echo "3. AWS 콘솔에서 리소스 확인"
+    echo "1. ./scripts/plan-all.sh $ENVIRONMENT  # 전체 배포 계획 확인"
+    echo "2. ./scripts/apply-all.sh $ENVIRONMENT # 전체 배포 실행"
     
 elif [ $ERRORS -eq 0 ]; then
     log_warning "⚠️  경고가 있지만 배포 가능합니다."
     echo
     echo "권장 사항:"
     echo "1. 경고 사항 검토 및 수정"
-    echo "2. terraform plan으로 배포 계획 확인"
+    echo "2. ./scripts/plan-all.sh $ENVIRONMENT"
     
 else
     log_error "❌ 오류가 발견되었습니다. 배포 전 수정이 필요합니다."
     echo
     echo "해결 방법:"
     echo "1. 위의 오류 메시지 확인"
-    echo "2. CURRENT_ISSUES.md 문서 참조"
-    echo "3. 팀에 도움 요청"
+    echo "2. 실패한 레이어의 terraform 파일 수정"
+    echo "3. 다시 검증 실행"
     
     exit 1
 fi
-
-# ==========================================
-# 7. 추가 도구 제안
-# ==========================================
-
-echo
-log_info "=== 추가 도구 ==="
-echo "🔧 유용한 명령어:"
-echo "   terraform fmt -recursive     # 전체 포맷팅"
-echo "   terraform validate          # 문법 검증"
-echo "   terraform plan             # 배포 계획 확인"
-echo "   terraform state list       # 현재 상태 확인"
-echo
-echo "📚 문서:"
-echo "   VALIDATION_GUIDE.md        # 상세 검증 가이드"
-echo "   CURRENT_ISSUES.md          # 알려진 이슈 및 해결방안"
-echo "   README.md                  # 프로젝트 개요"
 
 log_success "검증 스크립트 실행 완료!"

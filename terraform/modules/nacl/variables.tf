@@ -10,20 +10,20 @@
 variable "vpc_id" {
   description = "VPC ID where NACLs will be created"
   type        = string
-  
+
   validation {
     condition     = can(regex("^vpc-[a-z0-9]{8,17}$", var.vpc_id))
-    error_message = "VPC ID must be a valid AWS VPC identifier."
+    error_message = "VPC ID는 유효한 AWS VPC 식별자여야 합니다."
   }
 }
 
 variable "vpc_cidr" {
   description = "VPC CIDR block for internal traffic rules"
   type        = string
-  
+
   validation {
     condition     = can(cidrhost(var.vpc_cidr, 0))
-    error_message = "VPC CIDR must be a valid CIDR block."
+    error_message = "VPC CIDR은 유효한 CIDR 블록이어야 합니다."
   }
 }
 
@@ -35,7 +35,7 @@ variable "public_subnet_ids" {
   description = "List of public subnet IDs for ALB and NAT Gateway"
   type        = list(string)
   default     = []
-  
+
   validation {
     condition = alltrue([
       for subnet_id in var.public_subnet_ids : can(regex("^subnet-[a-z0-9]{8,17}$", subnet_id))
@@ -48,7 +48,7 @@ variable "private_app_subnet_ids" {
   description = "List of private application subnet IDs for ECS services"
   type        = list(string)
   default     = []
-  
+
   validation {
     condition = alltrue([
       for subnet_id in var.private_app_subnet_ids : can(regex("^subnet-[a-z0-9]{8,17}$", subnet_id))
@@ -61,7 +61,7 @@ variable "private_db_subnet_ids" {
   description = "List of private database subnet IDs for Aurora cluster"
   type        = list(string)
   default     = []
-  
+
   validation {
     condition = alltrue([
       for subnet_id in var.private_db_subnet_ids : can(regex("^subnet-[a-z0-9]{8,17}$", subnet_id))
@@ -77,7 +77,7 @@ variable "private_db_subnet_ids" {
 variable "name_prefix" {
   description = "Name prefix for all NACL resources"
   type        = string
-  
+
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.name_prefix))
     error_message = "Name prefix must contain only lowercase letters, numbers, and hyphens."
@@ -87,7 +87,7 @@ variable "name_prefix" {
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
-  
+
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
     error_message = "Environment must be one of: dev, staging, prod."
@@ -154,7 +154,7 @@ variable "security_alert_threshold" {
   description = "Threshold for NACL denied connections alert"
   type        = number
   default     = 100
-  
+
   validation {
     condition     = var.security_alert_threshold > 0
     error_message = "Security alert threshold must be greater than 0."
@@ -175,7 +175,7 @@ variable "allowed_cidr_blocks" {
   description = "Additional CIDR blocks allowed for specific rules"
   type        = map(list(string))
   default     = {}
-  
+
   validation {
     condition = alltrue(flatten([
       for key, cidrs in var.allowed_cidr_blocks : [
@@ -194,7 +194,7 @@ variable "custom_ports" {
     description = string
   }))
   default = {}
-  
+
   validation {
     condition = alltrue([
       for key, config in var.custom_ports : (
@@ -220,10 +220,10 @@ variable "ipv6_cidr_block" {
   description = "IPv6 CIDR block for the VPC"
   type        = string
   default     = ""
-  
+
   validation {
-    condition = var.ipv6_cidr_block == "" || can(regex("^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}/[0-9]{1,3}$", var.ipv6_cidr_block))
-    error_message = "IPv6 CIDR block must be a valid IPv6 CIDR notation or empty string."
+    condition     = var.ipv6_cidr_block == "" || can(regex("^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}/[0-9]{1,3}$", var.ipv6_cidr_block))
+    error_message = "IPv6 CIDR 블록은 유효한 IPv6 CIDR 표기법이거나 빈 문자열이어야 합니다."
   }
 }
 
@@ -253,7 +253,7 @@ variable "ephemeral_port_range" {
     from = 32768
     to   = 65535
   }
-  
+
   validation {
     condition = (
       var.ephemeral_port_range.from >= 1024 &&
@@ -290,9 +290,9 @@ variable "enable_debug_rules" {
   description = "Enable debug rules for troubleshooting (dev environment only)"
   type        = bool
   default     = false
-  
+
   validation {
-    condition = !var.enable_debug_rules || var.environment == "dev"
+    condition     = !var.enable_debug_rules || var.environment == "dev"
     error_message = "Debug rules can only be enabled in dev environment."
   }
 }

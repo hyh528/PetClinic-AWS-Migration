@@ -87,7 +87,7 @@ variable "parameter_tier" {
   description = "Parameter Store 티어 (Standard, Advanced, Intelligent-Tiering)"
   type        = string
   default     = "Standard"
-  
+
   validation {
     condition     = contains(["Standard", "Advanced", "Intelligent-Tiering"], var.parameter_tier)
     error_message = "Parameter 티어는 Standard, Advanced, Intelligent-Tiering 중 하나여야 합니다."
@@ -104,7 +104,7 @@ variable "data_type" {
   description = "파라미터 데이터 타입"
   type        = string
   default     = "text"
-  
+
   validation {
     condition     = contains(["text", "aws:ec2:image"], var.data_type)
     error_message = "데이터 타입은 text 또는 aws:ec2:image여야 합니다."

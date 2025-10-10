@@ -1,91 +1,169 @@
-# ==========================================
-# Database 모듈: Aurora MySQL 클러스터
-# ==========================================
-# 재사용 가능한 Aurora Database 모듈
+# =============================================================================
+# Database Module - Aurora MySQL 클러스터
+# =============================================================================
+# 목적: 재사용 가능한 Aurora MySQL 클러스터 모듈
 
+# 로컬 변수
+locals {
+  # 환경별 설정
+  is_production = contains(["prd", "prod", "production"], var.environment)
 
-# ==========================================
-# 2. DB 서브넷 그룹 생성
-# ==========================================
+  # 모니터링 설정
+  enhanced_monitoring_enabled = var.monitoring_interval > 0
+
+  # 공통 태그
+  common_tags = merge(var.tags, {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+    Module      = "database"
+    Engine      = "aurora-mysql"
+  })
+}
+
+# =============================================================================
+# DB 서브넷 그룹
+# =============================================================================
+
 resource "aws_db_subnet_group" "this" {
   name       = "${var.name_prefix}-aurora-subnet-group"
   subnet_ids = var.private_db_subnet_ids
 
-  tags = merge(var.tags, {
+  tags = merge(local.common_tags, {
     Name = "${var.name_prefix}-aurora-subnet-group"
+    Type = "db-subnet-group"
   })
 }
 
-# ==========================================
-# 2. Aurora MySQL 클러스터 생성
-# ==========================================
+# =============================================================================
+# Aurora MySQL 클러스터
+# =============================================================================
+
 resource "aws_rds_cluster" "this" {
   cluster_identifier = "${var.name_prefix}-aurora-cluster"
 
-  # 데이터베이스 엔진 설정
+  # 엔진 설정
   engine         = "aurora-mysql"
   engine_version = var.engine_version
 
-  # 데이터베이스 접속 정보
+  # 데이터베이스 설정
   database_name   = var.db_name
   master_username = var.db_username
   port            = var.db_port
 
-  # RDS가 Secrets Manager에서 비밀번호 관리
-  manage_master_user_password = true
+  # AWS 관리형 비밀번호
+  manage_master_user_password = var.manage_master_user_password
 
   # 네트워크 설정
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = var.vpc_security_group_ids
 
-  # 백업 및 유지보수 설정
+  # 백업 설정
   backup_retention_period      = var.backup_retention_period
-  preferred_backup_window      = "03:00-04:00"
-  preferred_maintenance_window = "sun:04:00-sun:05:00"
+  preferred_backup_window      = var.backup_window
+  preferred_maintenance_window = var.maintenance_window
 
   # 삭제 보호 설정
-  skip_final_snapshot       = true
-  final_snapshot_identifier = "${var.name_prefix}-aurora-cluster-final"
+  deletion_protection       = var.deletion_protection
+  skip_final_snapshot       = var.skip_final_snapshot
+  final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.name_prefix}-aurora-final-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
 
-  # Aurora Serverless v2 설정 (비용 최적화)
+  # Aurora Serverless v2 설정
   serverlessv2_scaling_configuration {
-    min_capacity = 0.5 # 최소 용량: 0.5 ACU
-    max_capacity = 1.0 # 최대 용량: 1.0 ACU
+    min_capacity = local.is_production ? 1.0 : 0.5
+    max_capacity = local.is_production ? 4.0 : 1.0
   }
 
-  tags = merge(var.tags, {
+  # 암호화 설정
+  storage_encrypted = var.storage_encrypted
+  kms_key_id        = var.kms_key_id
+
+  tags = merge(local.common_tags, {
     Name = "${var.name_prefix}-aurora-cluster"
+    Type = "aurora-cluster"
   })
 }
 
-# ==========================================
-# 3. Writer 인스턴스 생성
-# ==========================================
+# =============================================================================
+# Aurora 클러스터 인스턴스들
+# =============================================================================
+
+# Writer 인스턴스
 resource "aws_rds_cluster_instance" "writer" {
-  identifier           = "${var.name_prefix}-aurora-writer"
-  cluster_identifier   = aws_rds_cluster.this.id
-  instance_class       = var.instance_class
-  engine               = aws_rds_cluster.this.engine
-  engine_version       = aws_rds_cluster.this.engine_version
-  db_subnet_group_name = aws_db_subnet_group.this.name
+  identifier         = "${var.name_prefix}-aurora-writer"
+  cluster_identifier = aws_rds_cluster.this.id
+  instance_class     = var.instance_class
+  engine             = aws_rds_cluster.this.engine
+  engine_version     = aws_rds_cluster.this.engine_version
 
-  tags = merge(var.tags, {
+  # 모니터링 설정
+  monitoring_interval = var.monitoring_interval
+  monitoring_role_arn = local.enhanced_monitoring_enabled ? aws_iam_role.enhanced_monitoring[0].arn : null
+
+  # Performance Insights 설정
+  performance_insights_enabled          = var.performance_insights_enabled
+  performance_insights_retention_period = var.performance_insights_enabled ? var.performance_insights_retention_period : null
+
+  tags = merge(local.common_tags, {
     Name = "${var.name_prefix}-aurora-writer"
+    Type = "aurora-writer"
+    Role = "primary"
   })
 }
 
-# ==========================================
-# 4. Reader 인스턴스 생성 (읽기 확장용)
-# ==========================================
+# Reader 인스턴스
 resource "aws_rds_cluster_instance" "reader" {
-  identifier           = "${var.name_prefix}-aurora-reader"
-  cluster_identifier   = aws_rds_cluster.this.id
-  instance_class       = var.instance_class
-  engine               = aws_rds_cluster.this.engine
-  engine_version       = aws_rds_cluster.this.engine_version
-  db_subnet_group_name = aws_db_subnet_group.this.name
+  identifier         = "${var.name_prefix}-aurora-reader"
+  cluster_identifier = aws_rds_cluster.this.id
+  instance_class     = var.instance_class
+  engine             = aws_rds_cluster.this.engine
+  engine_version     = aws_rds_cluster.this.engine_version
 
-  tags = merge(var.tags, {
+  # 모니터링 설정
+  monitoring_interval = var.monitoring_interval
+  monitoring_role_arn = local.enhanced_monitoring_enabled ? aws_iam_role.enhanced_monitoring[0].arn : null
+
+  # Performance Insights 설정
+  performance_insights_enabled          = var.performance_insights_enabled
+  performance_insights_retention_period = var.performance_insights_enabled ? var.performance_insights_retention_period : null
+
+  tags = merge(local.common_tags, {
     Name = "${var.name_prefix}-aurora-reader"
+    Type = "aurora-reader"
+    Role = "replica"
   })
+}
+
+# =============================================================================
+# Enhanced Monitoring IAM 역할 (조건부)
+# =============================================================================
+
+resource "aws_iam_role" "enhanced_monitoring" {
+  count = local.enhanced_monitoring_enabled ? 1 : 0
+
+  name = "${var.name_prefix}-aurora-enhanced-monitoring-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "monitoring.rds.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-aurora-enhanced-monitoring-role"
+    Type = "iam-role"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "enhanced_monitoring" {
+  count = local.enhanced_monitoring_enabled ? 1 : 0
+
+  role       = aws_iam_role.enhanced_monitoring[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
 }

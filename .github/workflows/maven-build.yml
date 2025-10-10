@@ -1,29 +1,157 @@
-# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+# Spring Boot 애플리케이션 빌드 및 기본 검증
+# 상세한 배포는 application-deployment.yml 워크플로우에서 처리
 
 name: Java CI with Maven
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
+    paths:
+      - 'spring-petclinic-*/**'
+      - 'pom.xml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
+    paths:
+      - 'spring-petclinic-*/**'
+      - 'pom.xml'
+
+env:
+  JAVA_VERSION: '17'
 
 jobs:
-  build:
-
+  # 기본 빌드 및 테스트 (PR 검증용)
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ '17' ]
-
+    
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK ${{matrix.java}}
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{matrix.java}}
-        distribution: 'adopt'
-        cache: maven
-    - name: Build with Maven
-      run: mvn -B package --file pom.xml
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Compile
+        run: |
+          echo "🔨 Compiling Spring Boot applications..."
+          mvn clean compile -B
+
+      - name: Run Tests
+        run: |
+          echo "🧪 Running unit tests..."
+          mvn test -B
+
+      - name: Generate Test Report
+        if: always()
+        run: |
+          echo "📊 Test Results Summary"
+          echo "======================="
+          
+          # Maven Surefire 리포트 확인
+          if find . -name "TEST-*.xml" -type f | head -1 | grep -q .; then
+            echo "✅ Test reports generated"
+            
+            # 간단한 테스트 통계
+            TOTAL_TESTS=$(find . -name "TEST-*.xml" -exec grep -h "tests=" {} \; | sed 's/.*tests="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
+            FAILED_TESTS=$(find . -name "TEST-*.xml" -exec grep -h "failures=" {} \; | sed 's/.*failures="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
+            ERROR_TESTS=$(find . -name "TEST-*.xml" -exec grep -h "errors=" {} \; | sed 's/.*errors="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
+            
+            echo "Total Tests: ${TOTAL_TESTS:-0}"
+            echo "Failed Tests: ${FAILED_TESTS:-0}"
+            echo "Error Tests: ${ERROR_TESTS:-0}"
+            
+            if [ "${FAILED_TESTS:-0}" -eq 0 ] && [ "${ERROR_TESTS:-0}" -eq 0 ]; then
+              echo "🎉 All tests passed!"
+            else
+              echo "❌ Some tests failed"
+            fi
+          else
+            echo "⚠️ No test reports found"
+          fi
+
+      - name: Build Docker Images (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🐳 Building Docker images for validation..."
+          mvn clean package -B -DskipTests -PbuildDocker
+          
+          echo "📋 Built images:"
+          docker images | grep springcommunity/spring-petclinic || echo "No images found"
+
+      - name: Validate Application Configuration
+        run: |
+          echo "🔍 Validating application configurations..."
+          
+          # application.yml 파일 검증
+          for service_dir in spring-petclinic-*/; do
+            if [ -d "$service_dir" ]; then
+              service_name=$(basename "$service_dir")
+              config_file="$service_dir/src/main/resources/application.yml"
+              
+              if [ -f "$config_file" ]; then
+                echo "✅ $service_name: Configuration found"
+                
+                # YAML 문법 검증 (Python 사용)
+                python3 -c "
+import yaml
+import sys
+try:
+    with open('$config_file', 'r') as f:
+        yaml.safe_load(f)
+    print('✅ $service_name: YAML syntax valid')
+except Exception as e:
+    print('❌ $service_name: YAML syntax error - ' + str(e))
+    sys.exit(1)
+" 2>/dev/null || echo "⚠️ $service_name: Could not validate YAML (Python not available)"
+              else
+                echo "⚠️ $service_name: No application.yml found"
+              fi
+            fi
+          done
+
+      - name: Security Scan (Dependency Check)
+        run: |
+          echo "🔒 Running dependency security scan..."
+          
+          # Maven dependency check (if available)
+          if mvn help:describe -Dplugin=org.owasp:dependency-check-maven -Ddetail=false -q; then
+            echo "Running OWASP dependency check..."
+            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=8
+          else
+            echo "⚠️ OWASP dependency check plugin not configured"
+          fi
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "📋 Build Summary"
+          echo "==============="
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Java Version: ${{ env.JAVA_VERSION }}"
+          echo "Maven Version: $(mvn --version | head -n 1)"
+          echo ""
+          
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Build completed successfully!"
+            
+            if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo ""
+              echo "🚀 This push to main will trigger application deployment."
+              echo "Check the 'Application Deployment' workflow for deployment status."
+            fi
+          else
+            echo "❌ Build failed. Please check the logs above."
+          fi

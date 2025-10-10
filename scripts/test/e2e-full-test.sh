@@ -124,7 +124,7 @@ phase_terraform_validation() {
     run_test "terraform_fmt_check" "find terraform -name '*.tf' -exec terraform fmt -check {} \\;" "Terraform 코드 포맷팅 확인"
 
     # 3.2 각 레이어 초기화 및 검증
-    local layers=("state-management" "network" "security" "database" "application" "parameter-store" "cloud-map" "monitoring")
+    local layers=("network" "security" "database" "application" "parameter-store" "cloud-map" "monitoring")
 
     for layer in "${layers[@]}"; do
         if [ -d "terraform/envs/dev/$layer" ]; then
