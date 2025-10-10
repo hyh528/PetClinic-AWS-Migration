@@ -1,0 +1,30 @@
+formatter: markdown table
+
+sections:
+  show:
+    - header
+    - inputs
+    - outputs
+    - providers
+    - requirements
+    - resources
+
+settings:
+  anchor: true
+  color: true
+  default: true
+  description: false
+  escape: true
+  hide-empty: false
+  html: false
+  indent: 2
+  lockfile: true
+  read-comments: true
+  required: true
+  sensitive: true
+  type: true
+
+output:
+  file: README.md
+  format: markdown table
+  mode: inject

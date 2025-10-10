@@ -1,0 +1,57 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'terraform/**'
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, staging]
+        layer: [01-network, 02-security, 03-database, 04-parameter-store, 05-cloud-map, 06-lambda-genai, 07-application, 08-api-gateway, 09-monitoring, 10-aws-native, 11-state-management]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - name: Terraform Init
+        working-directory: terraform/envs/${{ matrix.environment }}/${{ matrix.layer }}
+        run: terraform init -upgrade
+
+      - name: Terraform Validate
+        working-directory: terraform/envs/${{ matrix.environment }}/${{ matrix.layer }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: terraform/envs/${{ matrix.environment }}/${{ matrix.layer }}
+        run: |
+          terraform plan -var-file=../../../${{ matrix.environment }}.tfvars -out=tfplan -no-color > plan.txt
+
+      - name: Update Pull Request
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "Terraform Plan - ${{ matrix.environment }}/${{ matrix.layer }}"
+          message: |
+            ## Terraform Plan Result: ${{ matrix.environment }}/${{ matrix.layer }}
+
+            \`\`\`
+            $(cat terraform/envs/${{ matrix.environment }}/${{ matrix.layer }}/plan.txt)
+            \`\`\`
+
+            *This plan was generated for environment: ${{ matrix.environment }}, layer: ${{ matrix.layer }}*

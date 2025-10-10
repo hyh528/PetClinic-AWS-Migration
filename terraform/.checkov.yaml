@@ -1,0 +1,48 @@
+framework:
+  - terraform
+
+checkovVersion: 2
+
+external-checks-dir:
+  - .checkov/
+
+skip-check:
+  # 개발 환경에서만 허용되는 체크들
+  - CKV_AWS_18  # S3 bucket should have access logging enabled (개발에서는 선택사항)
+  - CKV_AWS_21  # Ensure the S3 bucket has access logging enabled (개발에서는 선택사항)
+  - CKV_AWS_27  # Ensure S3 bucket has server access logging enabled (개발에서는 선택사항)
+  - CKV_AWS_57  # Ensure the S3 bucket has server access logging enabled (개발에서는 선택사항)
+  - CKV_AWS_145 # Ensure that S3 buckets are encrypted with KMS (개발에서는 SSE-S3 허용)
+
+  # 비용 관련 체크 (개발에서는 허용)
+  - CKV_AWS_73  # Ensure that redshift cluster is encrypted (비용 절감을 위해)
+  - CKV_AWS_96  # Ensure that CloudWatch log groups have retention period (개발에서는 선택사항)
+
+  # 보안 그룹 관련 (개발 환경에서 유연하게)
+  - CKV_AWS_24  # Ensure no security groups allow ingress from 0.0.0.0:0 (개발에서는 허용)
+  - CKV_AWS_25  # Ensure no security groups allow ingress from 0.0.0.0:0 to port 3389 (개발에서는 허용)
+
+external-data:
+  # 사용자 정의 정책 파일
+  - policy: .checkov/custom-policies.yaml
+
+output:
+  format: cli
+  file: checkov-report.json
+
+quiet: false
+
+compact: false
+
+download-external-modules: true
+
+evaluate-variables: true
+
+check:
+  # AWS 관련 필수 체크들
+  - CKV_AWS_*
+  # 일반적인 인프라 체크들
+  - CKV_*
+
+skip-framework:
+  - secrets

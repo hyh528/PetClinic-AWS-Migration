@@ -1,0 +1,143 @@
+name: Terraform Security Scan
+
+on:
+  pull_request:
+    branches: [ main, develop, staging ]
+    paths:
+      - 'terraform/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+  schedule:
+    # 매주 월요일 새벽에 전체 보안 스캔
+    - cron: '0 15 * * 1'  # UTC 기준 (KST 월요일 00:00)
+
+jobs:
+  tfsec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: terraform/
+          format: sarif
+          output: tfsec-results.sarif
+
+      - name: Upload tfsec results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: tfsec-results.sarif
+          category: tfsec
+
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+          check: CKV_AWS_*
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, staging, prod]
+        layer: [01-network, 02-security, 03-database, 04-parameter-store, 05-cloud-map, 06-lambda-genai, 07-application, 08-api-gateway, 09-monitoring, 10-aws-native, 11-state-management]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Format Check
+        working-directory: terraform/envs/${{ matrix.environment }}/${{ matrix.layer }}
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        working-directory: terraform/envs/${{ matrix.environment }}/${{ matrix.layer }}
+        run: terraform validate
+
+  cost-estimation:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - name: Terraform Cost Estimation
+        uses: terraform-compliance/action@v1
+        with:
+          terraform_working_directory: terraform/envs/dev/01-network
+          terraform_plan_file: tfplan
+          infracost_api_key: ${{ secrets.INFRACOST_API_KEY }}
+
+  summary:
+    runs-on: ubuntu-latest
+    needs: [tfsec, checkov, terraform-validate, cost-estimation]
+    if: always()
+    steps:
+      - name: Security Scan Summary
+        run: |
+          echo "## 🔒 Security Scan Results" >> security-summary.md
+          echo "" >> security-summary.md
+          echo "| Tool | Status | Details |" >> security-summary.md
+          echo "|------|--------|---------|" >> security-summary.md
+          echo "| tfsec | ${{ needs.tfsec.result }} | Terraform security scanner |" >> security-summary.md
+          echo "| Checkov | ${{ needs.checkov.result }} | Infrastructure as Code scanner |" >> security-summary.md
+          echo "| Terraform Validate | ${{ needs.terraform-validate.result }} | Syntax and structure validation |" >> security-summary.md
+          echo "| Cost Estimation | ${{ needs.cost-estimation.result }} | Infrastructure cost analysis |" >> security-summary.md
+          echo "" >> security-summary.md
+
+          if [ "${{ needs.tfsec.result }}" = "failure" ] || [ "${{ needs.checkov.result }}" = "failure" ]; then
+            echo "❌ Security issues found! Please review the scan results." >> security-summary.md
+          else
+            echo "✅ All security checks passed!" >> security-summary.md
+          fi
+
+          cat security-summary.md
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "Security Scan Summary"
+          message: "$(cat security-summary.md)"
+
+      - name: Upload Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-summary
+          path: security-summary.md

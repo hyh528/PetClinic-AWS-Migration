@@ -1,5 +1,0 @@
-=== Terraform 모듈 간단 검증 리포트 ===
-검증 시간: Sat Oct  4 21:17:00 KST 2025
-프로젝트: Spring PetClinic AWS Migration
-
-1. 모듈 구조 검증 결과:
