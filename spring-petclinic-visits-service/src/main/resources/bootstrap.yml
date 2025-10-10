@@ -1,0 +1,13 @@
+spring:
+  cloud:
+    compatibility-verifier:
+      enabled: false
+  config:
+    import:
+      - "optional:aws-parameterstore:/petclinic-dev/dev/visits-service/"
+      - "optional:aws-secretsmanager:/petclinic-dev/database/credentials"
+
+# Eureka 클라이언트 활성화
+eureka:
+  client:
+    enabled: true
