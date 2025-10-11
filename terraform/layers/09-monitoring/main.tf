@@ -51,7 +51,7 @@ data "terraform_remote_state" "aws_native" {
 
 # CloudWatch 모니터링 모듈 호출
 module "cloudwatch" {
-  source = "../../../modules/cloudwatch"
+  source = "../../modules/cloudwatch"
 
   dashboard_name = "PetClinic-Dev-Dashboard"
   aws_region     = "ap-northeast-2"
@@ -258,7 +258,7 @@ resource "random_id" "bucket_suffix" {
 
 # CloudTrail 감사 로그 모듈 호출
 module "cloudtrail" {
-  source = "../../../modules/cloudtrail"
+  source = "../../modules/cloudtrail"
 
   cloudtrail_name        = "petclinic-dev-audit-trail"
   cloudtrail_bucket_name = "petclinic-dev-cloudtrail-logs-${random_id.bucket_suffix.hex}"
