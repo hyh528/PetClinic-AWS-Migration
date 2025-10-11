@@ -128,11 +128,12 @@ pre-commit install
 
 ### 보안 스캔
 ```bash
-# tfsec 실행
-tfsec .
+# 보안 스캔은 GitHub Actions에서 자동으로 실행됩니다
+# PR 생성 시 자동으로 checkov와 tflint가 실행됨
 
-# Checkov 실행
-checkov -f .
+# 로컬에서 기본 검증만 실행
+terraform fmt -check -recursive
+terraform validate
 ```
 
 ## 📊 모니터링 및 운영

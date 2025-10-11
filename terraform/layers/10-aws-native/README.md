@@ -1,246 +1,171 @@
-# AWS Native Services 통합 레이어
+# 10-AWS Native Services Layer
 
-## 🏗️ 클린 아키텍처 원칙 적용
+## 개요
 
-### **Single Responsibility Principle (SRP)**
-- **단일 책임**: 오직 AWS 네이티브 서비스들 간의 **통합과 오케스트레이션**만 담당
-- **기존 문제**: 여러 서비스를 직접 생성하여 책임이 분산됨
-- **해결 방안**: 각 서비스는 개별 레이어에서 관리하고, 이 레이어는 통합만 담당
+AWS 네이티브 서비스들 간의 기본 통합만 제공하는 대폭 단순화된 레이어입니다. 불필요한 고급 기능(WAF, Route53, 통합 대시보드)을 제거하고 핵심적인 Lambda-API Gateway 통합만 유지합니다.
 
-### **Open/Closed Principle (OCP)**
-- **확장에 열려있음**: 새로운 AWS 서비스 통합 시 기존 코드 수정 없이 추가 가능
-- **수정에 닫혀있음**: 기존 통합 로직은 변경하지 않고 새로운 통합만 추가
-- **구현**: Feature Flag 패턴 사용 (`enable_genai_integration` 등)
+## 아키텍처
 
-### **Liskov Substitution Principle (LSP)**
-- **인터페이스 일관성**: 모든 AWS 서비스 통합이 동일한 패턴을 따름
-- **구현**: 표준화된 data source 패턴과 output 구조
-
-### **Interface Segregation Principle (ISP)**
-- **인터페이스 분리**: 각 서비스별로 필요한 정보만 참조
-- **구현**: 개별 `terraform_remote_state` data source 사용
-
-### **Dependency Inversion Principle (DIP)**
-- **추상화 의존**: 구체적인 구현이 아닌 추상화된 인터페이스에 의존
-- **구현**: Remote State를 통한 느슨한 결합
-
-## 🏛️ AWS Well-Architected Framework 6가지 기둥
-
-### 1. **Operational Excellence (운영 우수성)**
-```hcl
-# 자동화된 모니터링
-resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
-  # 자동 알람 설정
-}
-
-# 통합 대시보드
-resource "aws_cloudwatch_dashboard" "aws_native_integration" {
-  # 모든 서비스 통합 모니터링
-}
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   API Gateway   │    │   Lambda        │    │   Integration   │
+│                 │    │                 │    │                 │
+│ - REST API      │───▶│ - GenAI 함수    │───▶│ - 권한 설정     │
+│ - 라우팅        │    │ - Bedrock 통합  │    │ - 기본 연결     │
+│ - 엔드포인트    │    │ - 서버리스      │    │ - 단순화됨      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### 2. **Security (보안)**
-```hcl
-# WAF 보호
-resource "aws_wafv2_web_acl" "api_gateway_protection" {
-  # Rate limiting 및 보안 규칙
-}
+## 주요 기능
 
-# 최소 권한 원칙
-resource "aws_lambda_permission" "api_gateway_invoke" {
-  # 특정 API Gateway에서만 Lambda 호출 허용
-}
-```
+### 기본 통합만 유지
+- **Lambda 권한 설정**: API Gateway에서 Lambda 호출 허용
+- **기본 연결**: 최소한의 서비스 간 통합
+- **단순화된 구조**: 복잡한 기능 제거
 
-### 3. **Reliability (안정성)**
-```hcl
-# 헬스체크
-resource "aws_route53_health_check" "api_gateway_health" {
-  # 서비스 상태 모니터링
-}
+### 제거된 복잡성
+- ❌ WAF 보호 기능
+- ❌ Route53 헬스체크
+- ❌ 통합 대시보드
+- ❌ 복잡한 모니터링 알람
+- ❌ 고급 보안 기능
+- ❌ 커스텀 도메인 설정
 
-# 다중 서비스 통합으로 단일 장애점 제거
-```
+## 의존성
 
-### 4. **Performance Efficiency (성능 효율성)**
-```hcl
-variable "genai_integration_timeout_ms" {
-  # 최적화된 타임아웃 설정
-  validation {
-    condition = var.genai_integration_timeout_ms <= 29000
-  }
-}
-```
+이 레이어는 다음 레이어들에 의존합니다:
 
-### 5. **Cost Optimization (비용 최적화)**
-```hcl
-locals {
-  common_tags = {
-    # 비용 추적을 위한 상세 태그
-    CostCenter     = var.cost_center
-    AutoShutdown   = var.auto_shutdown_enabled ? "true" : "false"
-  }
-}
-```
+1. **06-lambda-genai**: Lambda 함수 정보
+2. **08-api-gateway**: API Gateway 정보
 
-### 6. **Sustainability (지속 가능성)**
-```hcl
-variable "preferred_instance_types" {
-  # 에너지 효율적인 인스턴스 타입 우선
-  default = ["t4g.micro", "t4g.small"] # ARM 기반 Graviton
-}
+## 사용법
 
-variable "enable_spot_instances" {
-  # 스팟 인스턴스로 탄소 발자국 절약
-}
-```
-
-## 📋 레이어 역할 및 책임
-
-### **이 레이어가 하는 일** ✅
-1. **서비스 간 통합**: API Gateway ↔ Lambda GenAI 연결
-2. **통합 모니터링**: 모든 AWS 네이티브 서비스의 통합 대시보드
-3. **보안 오케스트레이션**: WAF, 헬스체크 등 보안 기능 통합
-4. **비용 추적**: 통합된 태깅 및 비용 최적화 정책
-
-### **이 레이어가 하지 않는 일** ❌
-1. **개별 서비스 생성**: API Gateway, Lambda 등은 각각의 전용 레이어에서 생성
-2. **인프라 관리**: VPC, 보안 그룹 등은 기반 레이어에서 관리
-3. **애플리케이션 로직**: 비즈니스 로직은 애플리케이션 레이어에서 관리
-
-## 🔄 의존성 관계
-
-```mermaid
-graph TD
-    A[Network Layer] --> E[AWS Native Integration]
-    B[Security Layer] --> E
-    C[Database Layer] --> E
-    D[API Gateway Layer] --> E
-    F[Parameter Store Layer] --> E
-    G[Cloud Map Layer] --> E
-    H[Lambda GenAI Layer] --> E
-    I[Application Layer] --> E
-    
-    E --> J[Monitoring Layer]
-```
-
-## 🚀 사용 방법
-
-### 1. **기본 배포**
+### 1. 초기화
 ```bash
-cd terraform/envs/dev/aws-native
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/10-aws-native
+terraform init -backend-config="../../envs/dev/backend.hcl"
 ```
 
-### 2. **GenAI 통합 비활성화**
+### 2. 계획 확인
 ```bash
-terraform apply -var="enable_genai_integration=false"
+terraform plan -var-file="../../envs/dev/terraform.tfvars"
 ```
 
-### 3. **WAF 보호 활성화**
+### 3. 배포
 ```bash
-terraform apply -var="enable_waf_protection=true"
+terraform apply -var-file="../../envs/dev/terraform.tfvars"
 ```
 
-### 4. **프로덕션 환경 설정**
-```bash
-terraform apply \
-  -var="environment=prod" \
-  -var="enable_waf_protection=true" \
-  -var="enable_health_checks=true" \
-  -var="auto_shutdown_enabled=false"
-```
+## 주요 변수
 
-## 📊 모니터링 및 알람
+| 변수명 | 설명 | 기본값 | 필수 |
+|--------|------|--------|------|
+| `name_prefix` | 리소스 이름 접두사 | - | ✅ |
+| `environment` | 배포 환경 | - | ✅ |
+| `enable_lambda_integration` | Lambda 통합 활성화 | `true` | ❌ |
 
-### **생성되는 모니터링 리소스**
-- **CloudWatch 대시보드**: 모든 AWS 네이티브 서비스 통합 뷰
-- **CloudWatch 알람**: API Gateway 4xx/5xx 에러, Lambda 에러
-- **Route 53 헬스체크**: API Gateway 엔드포인트 상태 모니터링
+## 출력값
 
-### **알람 임계값 (기본값)**
-- API Gateway 4xx 에러: 10개/5분
-- Lambda 에러: 5개/5분
-- WAF 속도 제한: 2000 요청/5분
+### 통합 상태
+- `integration_status`: Lambda-API Gateway 통합 상태
+- `service_endpoints`: 서비스 엔드포인트 정보
+- `integration_summary`: 통합 설정 요약
 
-## 🔒 보안 기능
+## 개선사항
 
-### **WAF 보호** (선택사항)
-- Rate limiting: IP당 5분간 2000 요청 제한
-- 지역별 차단 규칙 (필요시 추가 가능)
-- SQL Injection, XSS 보호 (필요시 추가 가능)
+### ✅ 완료된 개선사항
+1. **대폭 단순화**: 불필요한 고급 기능 모두 제거
+2. **공유 변수 시스템 적용**: 하드코딩 제거
+3. **개인 경로 상태 참조 제거**: 표준화된 상태 참조
+4. **기본 통합만 유지**: Lambda-API Gateway 권한 설정만
+5. **복잡성 제거**: WAF, Route53, 대시보드 등 제거
 
-### **API 보안**
-- API 키 요구 (선택사항)
-- Lambda 함수 호출 권한 최소화
-- VPC 내부 통신 보안
+### 🔄 향후 개선 계획
+1. **선택적 기능 추가**: 필요시 고급 기능 선택적 활성화
+2. **모니터링 통합**: 기본 모니터링 기능 추가
+3. **보안 강화**: 필요시 보안 기능 추가
 
-## 💰 비용 최적화
+## 통합 기능
 
-### **비용 추적 태그**
+### Lambda 권한 설정
 ```hcl
-tags = {
-  Project     = "petclinic"
-  Environment = "dev"
-  CostCenter  = "training"
-  Service     = "integration"
-  Component   = "orchestration"
+리소스: aws_lambda_permission
+목적: API Gateway에서 Lambda 함수 호출 허용
+조건: enable_lambda_integration = true
+```
+
+### 기본 연결
+- API Gateway와 Lambda GenAI 함수 간 기본 연결
+- 최소 권한 원칙 적용
+- 단순한 권한 설정만
+
+## 제거된 기능
+
+### 고급 기능들
+- **WAF 보호**: 웹 애플리케이션 방화벽
+- **Route53 헬스체크**: DNS 기반 헬스체크
+- **통합 대시보드**: CloudWatch 대시보드
+- **복잡한 알람**: 다양한 메트릭 알람
+- **보안 강화**: 고급 보안 설정
+- **커스텀 도메인**: 사용자 정의 도메인
+
+### 복잡한 설정들
+- **다중 통합**: 여러 서비스 간 복잡한 통합
+- **고급 모니터링**: 상세한 메트릭 및 알람
+- **비용 최적화**: 복잡한 비용 추적
+- **컴플라이언스**: 규정 준수 설정
+
+## 문제 해결
+
+### 일반적인 문제
+1. **Lambda 호출 실패**: 권한 설정 확인
+2. **통합 상태 확인**: 출력값 확인
+3. **상태 참조 오류**: 의존성 레이어 배포 확인
+
+### 디버깅 명령어
+```bash
+# Lambda 권한 확인
+aws lambda get-policy --function-name {function_name}
+
+# API Gateway 상태 확인
+aws apigateway get-rest-api --rest-api-id {api_id}
+
+# 통합 상태 확인
+terraform output integration_status
+```
+
+## 비용 최적화
+
+### 예상 월간 비용
+```
+Lambda 권한: $0 (무료)
+기본 통합: $0 (무료)
+총계: $0 per month
+```
+
+### 비용 절감 효과
+- **고급 기능 제거**: WAF, Route53 등 비용 절약
+- **단순화**: 복잡한 리소스 제거로 비용 절감
+- **최소 권한**: 필요한 권한만 설정
+
+## 태그 전략
+
+모든 리소스에는 다음 태그가 자동으로 적용됩니다:
+
+```hcl
+{
+  Environment = var.environment
+  Layer       = "10-aws-native"
+  Component   = "aws-native-integration"
+  ManagedBy   = "terraform"
+  # + 사용자 정의 태그 (var.tags)
 }
 ```
 
-### **자동 비용 절약**
-- 개발 환경 자동 종료 설정
-- 스팟 인스턴스 사용 (선택사항)
-- 불필요한 백업 비활성화
+## 마이그레이션 가이드
 
-## 🌱 지속 가능성
-
-### **에너지 효율성**
-- ARM 기반 Graviton 인스턴스 우선 사용
-- 서버리스 아키텍처로 유휴 리소스 최소화
-- 관리형 서비스 활용으로 운영 효율성 극대화
-
-## 🔧 설정 옵션
-
-### **주요 변수**
-| 변수 | 기본값 | 설명 |
-|------|--------|------|
-| `enable_genai_integration` | `true` | GenAI 서비스 통합 활성화 |
-| `enable_monitoring` | `true` | 모니터링 활성화 |
-| `enable_waf_protection` | `false` | WAF 보호 활성화 |
-| `enable_health_checks` | `false` | Route 53 헬스체크 활성화 |
-| `auto_shutdown_enabled` | `true` | 개발 환경 자동 종료 |
-
-### **환경별 권장 설정**
-
-#### **개발 환경 (dev)**
-```hcl
-enable_genai_integration = true
-enable_monitoring = true
-enable_waf_protection = false
-enable_health_checks = false
-auto_shutdown_enabled = true
-```
-
-#### **프로덕션 환경 (prod)**
-```hcl
-enable_genai_integration = true
-enable_monitoring = true
-enable_waf_protection = true
-enable_health_checks = true
-auto_shutdown_enabled = false
-```
-
-## 🎯 결론
-
-이 레이어는 **클린 아키텍처**와 **AWS Well-Architected Framework**의 모든 원칙을 준수하여:
-
-1. **단일 책임**: 오직 서비스 통합만 담당
-2. **확장성**: 새로운 서비스 추가 시 기존 코드 수정 없음
-3. **보안**: 다층 보안 및 최소 권한 원칙
-4. **비용 효율성**: 상세한 비용 추적 및 최적화
-5. **지속 가능성**: 에너지 효율적인 아키텍처
-
-**AWS 네이티브 서비스들의 진정한 통합과 오케스트레이션**을 제공합니다! 🚀
+### 기존 복잡한 설정에서 단순화된 설정으로
+1. **기존 리소스 백업**: 중요한 설정 백업
+2. **단계적 제거**: 불필요한 리소스 단계적 제거
+3. **기본 통합 유지**: 핵심 Lambda-API Gateway 통합만 유지
+4. **검증**: 기본 기능 정상 작동 확인

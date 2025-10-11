@@ -151,7 +151,7 @@ jobs:
 
     strategy:
       matrix:
-        service: ${{ fromJson(format('["{0}"]', join(split(needs.build-and-test.outputs.services, ','), '","'))) }}
+        service: [api-gateway, customers-service, vets-service, visits-service, admin-server]
 
     steps:
       - name: Checkout

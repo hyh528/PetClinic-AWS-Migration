@@ -6,42 +6,19 @@
 
 # 공통 로컬 변수
 locals {
-  common_tags = merge(var.tags, {
-    Environment = var.environment
-    Layer       = "07-application"
-    Component   = "application-infrastructure"
-  })
+  # Network 레이어에서 필요한 정보
+  vpc_id = data.terraform_remote_state.network.outputs.vpc_id
+  public_subnet_ids = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
+  private_app_subnet_ids = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
 
-  # 기본 컨테이너 정의
-  default_container_definitions = jsonencode([
-    {
-      name  = var.container_name
-      image = "${var.name_prefix}-app:latest"
-      
-      portMappings = [
-        {
-          containerPort = var.container_port
-          protocol      = "tcp"
-        }
-      ]
-      
-      environment = [
-        {
-          name  = "SPRING_PROFILES_ACTIVE"
-          value = "mysql,aws"
-        }
-      ]
-      
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = "/ecs/${var.name_prefix}-app"
-          "awslogs-region"        = var.aws_region
-          "awslogs-stream-prefix" = "ecs"
-        }
-      }
-    }
-  ])
+  # Security 레이어에서 필요한 정보
+  ecs_task_execution_role_arn = data.terraform_remote_state.security.outputs.ecs_task_execution_role_arn
+  ecs_security_group_id = data.terraform_remote_state.security.outputs.ecs_security_group_id
+
+  common_tags = merge(var.shared_config.common_tags, {
+    Layer     = "07-application"
+    Component = "application-infrastructure"
+  })
 }
 
 # =============================================================================
@@ -51,7 +28,7 @@ locals {
 module "ecr" {
   source = "../../modules/ecr"
 
-  repository_name = var.repository_name != null ? var.repository_name : "${var.name_prefix}-app"
+  repository_name = var.repository_name != null ? var.repository_name : "${var.shared_config.name_prefix}-app"
   tags            = local.common_tags
 }
 
@@ -62,11 +39,11 @@ module "ecr" {
 module "alb" {
   source = "../../modules/alb"
 
-  name_prefix = var.name_prefix
-  environment = var.environment
+  name_prefix = var.shared_config.name_prefix
+  environment = var.shared_config.environment
 
-  vpc_id            = data.terraform_remote_state.network.outputs.vpc_id
-  public_subnet_ids = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
+  vpc_id            = local.vpc_id
+  public_subnet_ids = local.public_subnet_ids
 
   tags = local.common_tags
 }
@@ -78,15 +55,15 @@ module "alb" {
 module "ecs" {
   source = "../../modules/ecs"
 
-  cluster_name       = var.cluster_name != null ? var.cluster_name : "${var.name_prefix}-cluster"
-  task_family        = var.task_family != null ? var.task_family : "${var.name_prefix}-app"
-  execution_role_arn = data.terraform_remote_state.security.outputs.ecs_task_execution_role_arn
+  cluster_name       = var.cluster_name != null ? var.cluster_name : "${var.shared_config.name_prefix}-cluster"
+  task_family        = var.task_family != null ? var.task_family : "${var.shared_config.name_prefix}-app"
+  execution_role_arn = local.ecs_task_execution_role_arn
 
-  container_definitions = var.container_definitions != null ? var.container_definitions : local.default_container_definitions
+  container_definitions = var.container_definitions
 
   # 네트워크 설정
-  subnets         = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
-  security_groups = [data.terraform_remote_state.security.outputs.ecs_security_group_id]
+  subnets         = local.private_app_subnet_ids
+  security_groups = [local.ecs_security_group_id]
 
   # ALB 통합
   target_group_arn = module.alb.default_target_group_arn

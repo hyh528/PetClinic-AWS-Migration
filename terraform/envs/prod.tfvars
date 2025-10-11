@@ -19,7 +19,7 @@ vpc_cidr    = "10.2.0.0/16"
 azs = [
   "ap-northeast-1a",
   "ap-northeast-1c",
-  "ap-northeast-1d"  # Production은 3개 AZ 사용
+  "ap-northeast-1d" # Production은 3개 AZ 사용
 ]
 
 public_subnet_cidrs      = ["10.2.1.0/24", "10.2.2.0/24", "10.2.3.0/24"]
@@ -29,7 +29,7 @@ private_db_subnet_cidrs  = ["10.2.7.0/24", "10.2.8.0/24", "10.2.9.0/24"]
 # VPC 엔드포인트 서비스
 vpc_endpoint_services = [
   "ecr.api",
-  "ecr.dkr", 
+  "ecr.dkr",
   "logs",
   "xray",
   "ssm",

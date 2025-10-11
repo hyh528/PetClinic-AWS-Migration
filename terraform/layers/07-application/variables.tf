@@ -1,39 +1,7 @@
 # =============================================================================
-# Application Layer Variables - 모듈 관련 변수만
+# Application Layer Variables - 공유 변수 사용
 # =============================================================================
-
-# 기본 프로젝트 정보
-variable "name_prefix" {
-  description = "모든 리소스 이름의 접두사"
-  type        = string
-}
-
-variable "environment" {
-  description = "배포 환경 (dev, staging, prod)"
-  type        = string
-}
-
-variable "aws_region" {
-  description = "AWS 리전"
-  type        = string
-}
-
-variable "aws_profile" {
-  description = "AWS CLI 프로파일"
-  type        = string
-}
-
-# 공통 태그
-variable "tags" {
-  description = "모든 리소스에 적용할 공통 태그"
-  type        = map(string)
-}
-
-# Terraform 상태 관리
-variable "tfstate_bucket_name" {
-  description = "Terraform 상태 파일을 저장하는 S3 버킷 이름"
-  type        = string
-}
+# 설명: shared-variables.tf에서 정의된 공유 변수를 사용하여 중복 제거
 
 # =============================================================================
 # ECR 관련 변수

@@ -18,16 +18,6 @@ locals {
 # 네트워크 레이어 상태 참조 (표준화된 경로)
 # =============================================================================
 
-data "terraform_remote_state" "network" {
-  backend = "s3"
-  config = {
-    bucket  = var.state_config.bucket_name
-    key     = "dev/01-network/terraform.tfstate"
-    region  = var.state_config.region
-    profile = var.state_config.profile
-  }
-}
-
 # =============================================================================
 # Cloud Map 모듈 (단순화됨)
 # =============================================================================

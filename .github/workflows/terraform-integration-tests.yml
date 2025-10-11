@@ -1,0 +1,323 @@
+name: Terraform Integration Tests
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Target environment for integration tests'
+      skip-deployment:
+        required: false
+        type: boolean
+        default: false
+        description: 'Skip deployment and run tests on existing infrastructure'
+      test-suite:
+        required: false
+        type: string
+        default: 'all'
+        description: 'Specific test suite to run (all, network, service, database, security, endpoints)'
+    outputs:
+      test-results:
+        description: 'Integration test results summary'
+        value: ${{ jobs.integration-tests.outputs.test-results }}
+      success:
+        description: 'Whether all tests passed'
+        value: ${{ jobs.integration-tests.outputs.success }}
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      test-suite:
+        description: 'Test suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - network_connectivity
+          - service_health
+          - database_health
+          - security_compliance
+          - application_endpoints
+      skip-deployment:
+        description: 'Skip deployment and test existing infrastructure'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  AWS_REGION: ap-northeast-1
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  integration-tests:
+    name: Integration Tests (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://console.aws.amazon.com/
+    outputs:
+      test-results: ${{ steps.run-tests.outputs.results }}
+      success: ${{ steps.run-tests.outputs.success }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Python dependencies
+        run: |
+          echo "📦 Installing Python dependencies..."
+          pip install --upgrade pip
+          pip install -r terraform/scripts/requirements.txt
+          echo "✅ Dependencies installed"
+
+      - name: Verify AWS connectivity
+        run: |
+          echo "🔍 Verifying AWS connectivity..."
+          aws sts get-caller-identity
+          aws ec2 describe-regions --region ${{ env.AWS_REGION }} --output table
+          echo "✅ AWS connectivity verified"
+
+      - name: Wait for infrastructure stability
+        if: inputs.skip-deployment == false
+        run: |
+          echo "⏳ Waiting for infrastructure to stabilize after deployment..."
+          echo "Environment: ${{ inputs.environment }}"
+          
+          # 배포 직후에는 리소스가 완전히 준비되지 않을 수 있으므로 대기
+          sleep 120
+          
+          echo "✅ Stability wait completed"
+
+      - name: Prepare test configuration
+        id: prepare-config
+        run: |
+          echo "🔧 Preparing test configuration..."
+          
+          CONFIG_FILE="terraform/scripts/integration-test-enhanced.yaml"
+          
+          # 특정 테스트 스위트만 실행하는 경우 설정 수정
+          if [ "${{ inputs.test-suite }}" != "all" ]; then
+            echo "🎯 Filtering tests for suite: ${{ inputs.test-suite }}"
+            
+            # 임시 설정 파일 생성 (특정 스위트만 포함)
+            python3 -c "
+import yaml
+import sys
+
+with open('$CONFIG_FILE', 'r') as f:
+    config = yaml.safe_load(f)
+
+target_suite = '${{ inputs.test-suite }}'
+filtered_suites = [suite for suite in config['test_suites'] if suite['name'] == target_suite]
+
+if not filtered_suites:
+    print(f'Test suite {target_suite} not found')
+    sys.exit(1)
+
+config['test_suites'] = filtered_suites
+
+with open('terraform/scripts/integration-test-filtered.yaml', 'w') as f:
+    yaml.dump(config, f, default_flow_style=False)
+"
+            CONFIG_FILE="terraform/scripts/integration-test-filtered.yaml"
+          fi
+          
+          echo "config-file=$CONFIG_FILE" >> $GITHUB_OUTPUT
+          echo "✅ Test configuration prepared"
+
+      - name: Run integration tests
+        id: run-tests
+        run: |
+          echo "🧪 Running integration tests..."
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Test Suite: ${{ inputs.test-suite }}"
+          echo "Config File: ${{ steps.prepare-config.outputs.config-file }}"
+          
+          cd terraform/scripts
+          
+          # 결과 파일 경로
+          RESULTS_FILE="integration-test-results-${{ inputs.environment }}-$(date +%Y%m%d-%H%M%S).json"
+          
+          # 테스트 실행
+          if python3 integration_test_runner.py \
+            "${{ steps.prepare-config.outputs.config-file }}" \
+            "${{ inputs.environment }}" \
+            --region "${{ env.AWS_REGION }}" \
+            --output "$RESULTS_FILE" \
+            --verbose; then
+            
+            echo "✅ Integration tests completed successfully"
+            echo "success=true" >> $GITHUB_OUTPUT
+            
+          else
+            echo "❌ Integration tests failed"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # 결과 파일이 생성되었는지 확인
+          if [ -f "$RESULTS_FILE" ]; then
+            echo "results-file=$RESULTS_FILE" >> $GITHUB_OUTPUT
+            
+            # 결과 요약 추출
+            SUMMARY=$(python3 -c "
+import json
+with open('$RESULTS_FILE', 'r') as f:
+    data = json.load(f)
+    summary = data['summary']
+    print(f\"{summary['passed']}/{summary['total_tests']} tests passed ({summary['success_rate']})\")
+")
+            echo "results=$SUMMARY" >> $GITHUB_OUTPUT
+            
+          else
+            echo "⚠️ Results file not found"
+            echo "results=No results available" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate detailed report
+        if: always()
+        run: |
+          echo "📊 Generating detailed test report..."
+          
+          cd terraform/scripts
+          RESULTS_FILE="${{ steps.run-tests.outputs.results-file }}"
+          
+          if [ -f "$RESULTS_FILE" ]; then
+            echo "# 🧪 Integration Test Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Suite:** ${{ inputs.test-suite }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Python으로 결과 파싱하여 마크다운 생성
+            python3 -c "
+import json
+import sys
+
+try:
+    with open('$RESULTS_FILE', 'r') as f:
+        data = json.load(f)
+    
+    summary = data['summary']
+    results = data['results']
+    
+    print('## 📊 Summary')
+    print(f'- **Total Tests:** {summary[\"total_tests\"]}')
+    print(f'- **Passed:** {summary[\"passed\"]} ✅')
+    print(f'- **Failed:** {summary[\"failed\"]} ❌')
+    print(f'- **Errors:** {summary[\"errors\"]} 💥')
+    print(f'- **Success Rate:** {summary[\"success_rate\"]}')
+    print(f'- **Duration:** {summary[\"total_duration_seconds\"]:.2f} seconds')
+    print()
+    
+    # 성공한 테스트
+    passed_tests = [r for r in results if r['status'] == 'PASS']
+    if passed_tests:
+        print('## ✅ Passed Tests')
+        for test in passed_tests:
+            duration = f\"{test['duration']:.2f}s\"
+            print(f'- **{test[\"name\"]}**: {test[\"message\"]} ({duration})')
+        print()
+    
+    # 실패한 테스트
+    failed_tests = [r for r in results if r['status'] in ['FAIL', 'ERROR']]
+    if failed_tests:
+        print('## ❌ Failed Tests')
+        for test in failed_tests:
+            duration = f\"{test['duration']:.2f}s\"
+            print(f'- **{test[\"name\"]}**: {test[\"message\"]} ({duration})')
+            
+            # 상세 정보가 있으면 표시
+            if test.get('details'):
+                print(f'  <details><summary>Details</summary>')
+                print(f'  ')
+                print(f'  \`\`\`json')
+                print(json.dumps(test['details'], indent=2))
+                print(f'  \`\`\`')
+                print(f'  </details>')
+        print()
+    
+    # 전체 상태
+    if summary['overall_status'] == 'PASS':
+        print('## 🎉 Overall Status: SUCCESS')
+        print('All integration tests passed successfully!')
+    else:
+        print('## ❌ Overall Status: FAILED')
+        print('Some integration tests failed. Please review the details above.')
+
+except Exception as e:
+    print(f'Error parsing results: {e}')
+    sys.exit(1)
+" >> $GITHUB_STEP_SUMMARY
+            
+          else
+            echo "## ⚠️ No Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "Integration test results file was not generated." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ inputs.environment }}-${{ github.run_number }}
+          path: |
+            terraform/scripts/integration-test-results-*.json
+            terraform/scripts/integration-test-filtered.yaml
+          retention-days: 30
+
+      - name: Post test cleanup
+        if: always()
+        run: |
+          echo "🧹 Performing post-test cleanup..."
+          
+          # 임시 파일 정리
+          rm -f terraform/scripts/integration-test-filtered.yaml
+          
+          # 테스트 실패 시 추가 정보 수집
+          if [ "${{ steps.run-tests.outputs.success }}" != "true" ]; then
+            echo "📋 Collecting additional diagnostic information..."
+            
+            # AWS 리소스 상태 확인
+            echo "ECS Clusters:"
+            aws ecs list-clusters --region ${{ env.AWS_REGION }} || true
+            
+            echo "RDS Clusters:"
+            aws rds describe-db-clusters --region ${{ env.AWS_REGION }} --query 'DBClusters[].{ID:DBClusterIdentifier,Status:Status}' --output table || true
+            
+            echo "Load Balancers:"
+            aws elbv2 describe-load-balancers --region ${{ env.AWS_REGION }} --query 'LoadBalancers[].{Name:LoadBalancerName,State:State.Code}' --output table || true
+          fi
+          
+          echo "✅ Cleanup completed"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Integration tests failed for environment: ${{ inputs.environment }}"
+          echo "Please check the test results and infrastructure status."
+          echo "Test suite: ${{ inputs.test-suite }}"
+          echo "Results: ${{ steps.run-tests.outputs.results }}"

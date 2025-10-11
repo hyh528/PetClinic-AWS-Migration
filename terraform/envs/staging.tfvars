@@ -28,7 +28,7 @@ private_db_subnet_cidrs  = ["10.1.5.0/24", "10.1.6.0/24"]
 # VPC 엔드포인트 서비스
 vpc_endpoint_services = [
   "ecr.api",
-  "ecr.dkr", 
+  "ecr.dkr",
   "logs",
   "xray",
   "ssm",

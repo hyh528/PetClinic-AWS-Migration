@@ -1,0 +1,99 @@
+# Terraform 통합 테스트 설정 (Enhanced Python Runner용)
+# 환경별 인프라 컴포넌트의 상태와 연결성을 검증
+
+test_suites:
+  - name: "network_connectivity"
+    description: "네트워크 연결성 검증"
+    tests:
+      - name: "vpc_internet_connectivity"
+        type: "network"
+        target: "public_subnets"
+        expected: "internet_accessible"
+        timeout: 60
+        
+      - name: "private_subnet_isolation"
+        type: "network"
+        target: "private_subnets"
+        expected: "no_direct_internet"
+        timeout: 60
+        
+      - name: "vpc_endpoints_connectivity"
+        type: "network"
+        target: "vpc_endpoints"
+        expected: "endpoints_accessible"
+        timeout: 120
+
+  - name: "service_health"
+    description: "서비스 상태 검증"
+    tests:
+      - name: "ecs_services_running"
+        type: "service"
+        target: "ecs_cluster"
+        expected: "all_services_healthy"
+        timeout: 180
+        
+      - name: "lambda_functions_active"
+        type: "service"
+        target: "lambda_functions"
+        expected: "functions_active"
+        timeout: 60
+
+  - name: "database_health"
+    description: "데이터베이스 상태 검증"
+    tests:
+      - name: "aurora_cluster_available"
+        type: "database"
+        target: "aurora_cluster"
+        expected: "cluster_available"
+        timeout: 120
+
+  - name: "security_compliance"
+    description: "보안 설정 검증"
+    tests:
+      - name: "security_groups_compliance"
+        type: "security"
+        target: "security_groups"
+        expected: "no_open_ports"
+        timeout: 60
+        
+      - name: "iam_least_privilege"
+        type: "security"
+        target: "iam_roles"
+        expected: "minimal_permissions"
+        timeout: 60
+
+  - name: "application_endpoints"
+    description: "애플리케이션 엔드포인트 검증"
+    tests:
+      - name: "alb_health_check"
+        type: "http"
+        target: "application_load_balancer"
+        expected: "200_response"
+        timeout: 30
+        
+      - name: "api_gateway_endpoints"
+        type: "http"
+        target: "api_gateway"
+        expected: "all_endpoints_responsive"
+        timeout: 60
+
+# 테스트 실행 설정
+execution_config:
+  parallel_execution: true
+  max_workers: 5
+  retry_failed_tests: 1
+  cleanup_on_failure: true
+  
+# 환경별 설정
+environments:
+  dev:
+    timeout_multiplier: 1.0
+    skip_tests: []
+    
+  staging:
+    timeout_multiplier: 1.5
+    skip_tests: []
+    
+  prod:
+    timeout_multiplier: 2.0
+    skip_tests: ["security_groups_compliance"]  # 프로덕션에서는 일부 보안 테스트 스킵

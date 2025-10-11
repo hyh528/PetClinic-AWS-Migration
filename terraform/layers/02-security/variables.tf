@@ -1,7 +1,7 @@
+﻿# =============================================================================
+# Security Layer Variables - 공유 변수 서비스 적용
 # =============================================================================
-# Security Layer Variables - 공유 변수 시스템 적용
-# =============================================================================
-# 목적: shared-variables.tf에서 정의된 공통 변수를 사용하여 일관성 확보
+# 목적: shared-variables.tf에서 정의된 공통 변수를 사용하여 중복 정보 제거
 
 # 공유 설정 (shared-variables.tf에서 전달)
 variable "shared_config" {
@@ -27,7 +27,7 @@ variable "state_config" {
 }
 
 # =============================================================================
-# Security Layer 특화 변수
+# Security Layer 전용 변수
 # =============================================================================
 
 variable "enable_vpc_flow_logs" {
@@ -61,7 +61,7 @@ variable "team_members" {
 }
 
 variable "enable_role_based_policies" {
-  description = "역할 기반 세분화된 정책 활성화 (Phase 1: false, Phase 2: true)"
+  description = "역할 기반 세분화된 정책 생성여부(Phase 1: false, Phase 2: true)"
   type        = bool
   default     = false
 }

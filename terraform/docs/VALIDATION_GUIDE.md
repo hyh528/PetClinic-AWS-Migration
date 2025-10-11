@@ -258,12 +258,4 @@ terraform init  # 백엔드 마이그레이션 프롬프트에서 'yes'
 3. **현재 작업 디렉토리 확인**
 4. **팀 채널에 공유**
 
-## 📚 추가 자료
-
-- [Terraform 공식 문서](https://www.terraform.io/docs)
-- [AWS Provider 문서](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [팀 내부 Terraform 가이드](./README.md)
-
----
-
 **⚠️ 주의**: 이 가이드는 개발 환경 기준입니다. 운영 환경 배포 시에는 별도 승인 절차가 필요합니다.

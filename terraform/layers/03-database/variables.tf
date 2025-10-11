@@ -1,7 +1,7 @@
+﻿# =============================================================================
+# Database Layer Variables - 공유 변수 서비스 적용
 # =============================================================================
-# Database Layer Variables - 공유 변수 시스템 적용
-# =============================================================================
-# 목적: shared-variables.tf에서 정의된 공통 변수를 사용하여 일관성 확보
+# 목적: shared-variables.tf에서 정의된 공통 변수를 사용하여 중복 정보 제거
 
 # 공유 설정 (shared-variables.tf에서 전달)
 variable "shared_config" {
@@ -27,7 +27,7 @@ variable "state_config" {
 }
 
 # =============================================================================
-# Database Layer 특화 변수
+# Database Layer 전용 변수
 # =============================================================================
 
 # Aurora 클러스터 설정
@@ -70,13 +70,13 @@ variable "backup_retention_period" {
 }
 
 variable "backup_window" {
-  description = "백업 윈도우 (UTC)"
+  description = "백업 시간대(UTC)"
   type        = string
   default     = "03:00-04:00"
 }
 
 variable "maintenance_window" {
-  description = "유지보수 윈도우 (UTC)"
+  description = "유지보수 시간대(UTC)"
   type        = string
   default     = "sun:04:00-sun:05:00"
 }

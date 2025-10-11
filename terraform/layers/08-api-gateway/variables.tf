@@ -1,7 +1,34 @@
-# API Gateway 레이어 변수
+# =============================================================================
+# API Gateway Layer Variables - 공유 변수 서비스 적용
+# =============================================================================
+# 목적: shared-variables.tf에서 정의된 공통 변수를 사용하여 중복 제거
 
-# 공유 변수 사용 (shared-variables.tf에서 정의됨)
-# 이 레이어에서는 레이어별 특화 변수만 정의
+# 공유 설정 (shared-variables.tf에서 전달)
+variable "shared_config" {
+  description = "공유 설정 정보 (shared-variables.tf에서 전달)"
+  type = object({
+    name_prefix = string
+    environment = string
+    aws_region  = string
+    aws_profile = string
+    common_name = string
+    common_tags = map(string)
+  })
+}
+
+# 상태 관리 설정 (shared-variables.tf에서 전달)
+variable "state_config" {
+  description = "Terraform 상태 관리 설정 (shared-variables.tf에서 전달)"
+  type = object({
+    bucket_name = string
+    region      = string
+    profile     = string
+  })
+}
+
+# =============================================================================
+# API Gateway Layer 전용 변수
+# =============================================================================
 
 # API Gateway 전용 설정
 variable "stage_name" {
@@ -114,18 +141,3 @@ variable "integration_latency_threshold" {
   type        = number
   default     = 1500
 }
-
-# 태그
-variable "tags" {
-  description = "모든 리소스에 적용할 공통 태그"
-  type        = map(string)
-  default = {
-    Project    = "petclinic"
-    ManagedBy  = "terraform"
-    Layer      = "api-gateway"
-    Owner      = "team-petclinic"
-    CostCenter = "training"
-  }
-}
-
-# 상태 프로파일들은 공통 변수에서 관리됨

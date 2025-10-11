@@ -107,7 +107,7 @@ output "layer_execution_order" {
   description = "레이어별 실행 순서 및 의존성 정보 (apply-all.sh, Makefile에서 활용)"
   value = {
     layers = local.ordered_layers
-    
+
     # 순서별 레이어 이름만 추출 (스크립트에서 사용)
     execution_sequence = [
       for layer in sort([
@@ -130,7 +130,7 @@ output "dependency_validation" {
   value = {
     total_layers = length(local.layer_dependencies)
     max_order    = max([for config in local.layer_dependencies : config.order])
-    
+
     # 각 레이어가 의존하는 레이어 목록
     dependency_map = {
       for layer_name, config in local.layer_dependencies : layer_name => config.dependencies

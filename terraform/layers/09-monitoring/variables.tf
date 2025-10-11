@@ -35,3 +35,9 @@ variable "alert_email" {
   type        = string
   default     = "admin@petclinic.local"
 }
+
+variable "sns_topic_arn" {
+  description = "알람 알림용 SNS 토픽 ARN"
+  type        = string
+  default     = ""
+}

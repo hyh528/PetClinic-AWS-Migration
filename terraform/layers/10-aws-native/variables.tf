@@ -1,63 +1,36 @@
-# ==========================================
-# AWS Native Services 통합 레이어 변수 정의
-# ==========================================
-# 클린 아키텍처 원칙: 의존성 역전 및 설정 외부화
+# =============================================================================
+# AWS Native Services Layer Variables - 공유 변수 서비스 적용
+# =============================================================================
+# 목적: shared-variables.tf에서 정의된 공통 변수를 사용하여 중복 제거
 
-# ==========================================
-# 기본 설정 변수 (Foundation)
-# ==========================================
-
-variable "project_name" {
-  description = "프로젝트 이름"
-  type        = string
-  default     = "petclinic"
-
-  validation {
-    condition     = can(regex("^[a-z0-9-]+$", var.project_name))
-    error_message = "프로젝트 이름은 소문자, 숫자, 하이픈만 포함할 수 있습니다."
-  }
+# 공유 설정 (shared-variables.tf에서 전달)
+variable "shared_config" {
+  description = "공유 설정 정보 (shared-variables.tf에서 전달)"
+  type = object({
+    name_prefix = string
+    environment = string
+    aws_region  = string
+    aws_profile = string
+    common_name = string
+    common_tags = map(string)
+  })
 }
 
-variable "environment" {
-  description = "환경 (dev, staging, prod)"
-  type        = string
-  default     = "dev"
-
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "환경은 dev, staging, prod 중 하나여야 합니다."
-  }
+# 상태 관리 설정 (shared-variables.tf에서 전달)
+variable "state_config" {
+  description = "Terraform 상태 관리 설정 (shared-variables.tf에서 전달)"
+  type = object({
+    bucket_name = string
+    region      = string
+    profile     = string
+  })
 }
 
-variable "name_prefix" {
-  description = "리소스 이름 접두사"
-  type        = string
-  default     = "petclinic-dev"
-}
+# =============================================================================
+# AWS Native Services Layer 전용 변수
+# =============================================================================
 
-variable "aws_region" {
-  description = "AWS 리전"
-  type        = string
-  default     = "ap-northeast-2"
-}
-
-variable "owner" {
-  description = "리소스 소유자"
-  type        = string
-  default     = "team-petclinic"
-}
-
-variable "cost_center" {
-  description = "비용 센터"
-  type        = string
-  default     = "training"
-}
-
-# ==========================================
 # 통합 기능 제어 변수 (Feature Flags)
-# ==========================================
-# Open/Closed Principle: 기능 추가 시 기존 코드 수정 없이 확장
-
 variable "enable_genai_integration" {
   description = "GenAI 서비스 통합 활성화 여부"
   type        = bool
@@ -88,10 +61,7 @@ variable "create_integration_dashboard" {
   default     = true
 }
 
-# ==========================================
-# API Gateway 통합 설정 (Performance Efficiency)
-# ==========================================
-
+# API Gateway 통합 설정
 variable "genai_integration_timeout_ms" {
   description = "GenAI 통합 타임아웃 (밀리초)"
   type        = number
@@ -109,10 +79,7 @@ variable "require_api_key" {
   default     = false
 }
 
-# ==========================================
-# 모니터링 및 알람 설정 (Operational Excellence)
-# ==========================================
-
+# 모니터링 및 알람 설정
 variable "api_gateway_4xx_threshold" {
   description = "API Gateway 4xx 에러 임계값"
   type        = number
@@ -131,10 +98,7 @@ variable "alarm_actions" {
   default     = []
 }
 
-# ==========================================
-# 보안 설정 (Security)
-# ==========================================
-
+# 보안 설정
 variable "data_classification" {
   description = "데이터 분류 (public, internal, confidential, restricted)"
   type        = string
@@ -163,10 +127,7 @@ variable "waf_rate_limit" {
   }
 }
 
-# ==========================================
-# 비용 최적화 설정 (Cost Optimization)
-# ==========================================
-
+# 비용 최적화 설정
 variable "auto_shutdown_enabled" {
   description = "자동 종료 활성화 여부 (개발 환경용)"
   type        = bool
@@ -179,74 +140,7 @@ variable "backup_required" {
   default     = false
 }
 
-# ==========================================
-# 지속 가능성 설정 (Sustainability)
-# ==========================================
-
-variable "preferred_instance_types" {
-  description = "선호하는 인스턴스 타입 (에너지 효율적인 타입 우선)"
-  type        = list(string)
-  default     = ["t3.micro", "t3.small", "t4g.micro", "t4g.small"]
-}
-
-variable "enable_spot_instances" {
-  description = "스팟 인스턴스 사용 활성화 (비용 및 탄소 발자국 절약)"
-  type        = bool
-  default     = false
-}
-
-# ==========================================
-# 태그 설정 (Well-Architected Framework 전반)
-# ==========================================
-
-variable "additional_tags" {
-  description = "추가 태그"
-  type        = map(string)
-  default     = {}
-}
-
-# ==========================================
-# 고급 설정 (Advanced Configuration)
-# ==========================================
-
-variable "custom_domain_enabled" {
-  description = "커스텀 도메인 사용 여부"
-  type        = bool
-  default     = false
-}
-
-variable "custom_domain_name" {
-  description = "커스텀 도메인 이름"
-  type        = string
-  default     = ""
-}
-
-variable "certificate_arn" {
-  description = "SSL 인증서 ARN"
-  type        = string
-  default     = ""
-}
-
-# ==========================================
-# 네트워크 설정 (Reliability)
-# ==========================================
-
-variable "enable_vpc_endpoints" {
-  description = "VPC 엔드포인트 사용 여부"
-  type        = bool
-  default     = true
-}
-
-variable "enable_private_dns" {
-  description = "프라이빗 DNS 사용 여부"
-  type        = bool
-  default     = true
-}
-
-# ==========================================
-# 로깅 및 추적 설정 (Operational Excellence)
-# ==========================================
-
+# 로깅 및 추적 설정
 variable "log_retention_days" {
   description = "로그 보관 기간 (일)"
   type        = number

@@ -1,0 +1,455 @@
+name: Terraform Unit Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/modules/**'
+      - 'terraform/test/**'
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: 'Specific modules to test (comma-separated, or "all")'
+        required: false
+        default: 'all'
+        type: string
+
+env:
+  AWS_REGION: ap-northeast-1
+  GO_VERSION: '1.21'
+  TF_VERSION: '1.8.5'
+
+jobs:
+  detect-changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.changes.outputs.modules }}
+      has-changes: ${{ steps.changes.outputs.has-changes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed modules
+        id: changes
+        run: |
+          echo "🔍 Detecting changed Terraform modules..."
+          
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # 수동 실행 시
+            if [ "${{ github.event.inputs.modules }}" = "all" ]; then
+              modules=$(find terraform/modules -name "test" -type d | sed 's|terraform/modules/||' | sed 's|/test||' | sort)
+            else
+              modules=$(echo "${{ github.event.inputs.modules }}" | tr ',' '\n')
+            fi
+          else
+            # PR 시 변경된 모듈 감지
+            changed_files=$(git diff --name-only origin/main...HEAD)
+            modules=()
+            
+            for file in $changed_files; do
+              if [[ $file == terraform/modules/*/main.tf ]] || [[ $file == terraform/modules/*/variables.tf ]] || [[ $file == terraform/modules/*/outputs.tf ]] || [[ $file == terraform/modules/*/test/* ]]; then
+                module=$(echo $file | cut -d'/' -f3)
+                if [[ -d "terraform/modules/$module/test" ]] && [[ ! " ${modules[@]} " =~ " $module " ]]; then
+                  modules+=("$module")
+                fi
+              fi
+            done
+            
+            # 공통 테스트 프레임워크가 변경된 경우 모든 모듈 테스트
+            if echo "$changed_files" | grep -q "terraform/test/common/"; then
+              echo "🔄 Common test framework changed, testing all modules"
+              all_modules=$(find terraform/modules -name "test" -type d | sed 's|terraform/modules/||' | sed 's|/test||' | sort)
+              modules=($all_modules)
+            fi
+          fi
+          
+          if [ ${#modules[@]} -eq 0 ]; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "modules=[]" >> $GITHUB_OUTPUT
+            echo "ℹ️ No modules to test"
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            printf -v modules_json '%s\n' "${modules[@]}" | jq -R . | jq -s .
+            echo "modules=$modules_json" >> $GITHUB_OUTPUT
+            echo "📋 Modules to test: ${modules[*]}"
+          fi
+
+  unit-tests:
+    name: Unit Test (${{ matrix.module }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.detect-changes.outputs.modules) }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('terraform/modules/${{ matrix.module }}/test/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Verify module structure
+        run: |
+          MODULE_DIR="terraform/modules/${{ matrix.module }}"
+          TEST_DIR="$MODULE_DIR/test"
+          
+          echo "🔍 Verifying module structure for: ${{ matrix.module }}"
+          
+          if [ ! -d "$MODULE_DIR" ]; then
+            echo "❌ Module directory not found: $MODULE_DIR"
+            exit 1
+          fi
+          
+          if [ ! -d "$TEST_DIR" ]; then
+            echo "❌ Test directory not found: $TEST_DIR"
+            exit 1
+          fi
+          
+          if [ ! -f "$TEST_DIR/go.mod" ]; then
+            echo "❌ go.mod not found in test directory"
+            exit 1
+          fi
+          
+          echo "✅ Module structure verified"
+
+      - name: Initialize test dependencies
+        working-directory: terraform/modules/${{ matrix.module }}/test
+        run: |
+          echo "📦 Installing Go dependencies for ${{ matrix.module }}"
+          
+          # 공통 테스트 모듈 초기화
+          cd ../../../test/common
+          go mod tidy
+          go mod download
+          
+          # 모듈별 테스트 초기화
+          cd ../../modules/${{ matrix.module }}/test
+          go mod tidy
+          go mod download
+          
+          echo "✅ Dependencies installed"
+
+      - name: Run unit tests
+        working-directory: terraform/modules/${{ matrix.module }}/test
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.number }}
+          TF_VAR_test_id: "pr-${{ github.event.number || 'manual' }}-${{ matrix.module }}-${{ github.run_number }}"
+          TF_VAR_environment: "test"
+          AWS_PROFILE: ""  # GitHub Actions에서는 프로파일 사용 안함
+        run: |
+          echo "🧪 Running unit tests for module: ${{ matrix.module }}"
+          echo "Test ID: $TF_VAR_test_id"
+          
+          # 테스트 실행 (상세 로그와 함께)
+          go test -v -timeout 25m -run TestUnit 2>&1 | tee test-output.log
+          
+          # 테스트 결과 확인
+          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            echo "✅ Unit tests passed for ${{ matrix.module }}"
+          else
+            echo "❌ Unit tests failed for ${{ matrix.module }}"
+            exit 1
+          fi
+
+      - name: Run integration tests (if available)
+        working-directory: terraform/modules/${{ matrix.module }}/test
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.number }}
+          TF_VAR_test_id: "pr-${{ github.event.number || 'manual' }}-${{ matrix.module }}-integration-${{ github.run_number }}"
+          TF_VAR_environment: "test"
+          AWS_PROFILE: ""
+        run: |
+          echo "🔗 Checking for integration tests for module: ${{ matrix.module }}"
+          
+          # 통합 테스트가 있는지 확인
+          if grep -q "TestIntegration\|TestConnectivity" *.go 2>/dev/null; then
+            echo "🧪 Running integration tests for module: ${{ matrix.module }}"
+            go test -v -timeout 25m -run "TestIntegration|TestConnectivity" 2>&1 | tee integration-test-output.log
+            
+            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+              echo "✅ Integration tests passed for ${{ matrix.module }}"
+            else
+              echo "❌ Integration tests failed for ${{ matrix.module }}"
+              exit 1
+            fi
+          else
+            echo "ℹ️ No integration tests found for ${{ matrix.module }}"
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.module }}
+          path: |
+            terraform/modules/${{ matrix.module }}/test/test-output.log
+            terraform/modules/${{ matrix.module }}/test/integration-test-output.log
+          retention-days: 7
+
+      - name: Cleanup on failure
+        if: failure()
+        working-directory: terraform/modules/${{ matrix.module }}/test
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.number }}
+          TF_VAR_test_id: "pr-${{ github.event.number || 'manual' }}-${{ matrix.module }}-${{ github.run_number }}"
+          AWS_PROFILE: ""
+        run: |
+          echo "🧹 Cleaning up failed test resources for ${{ matrix.module }}..."
+          
+          # 강제 정리 시도
+          go test -v -timeout 10m -run TestCleanup 2>&1 || true
+          
+          # Terraform 상태 기반 정리 시도
+          if [ -f "../terraform.tfstate" ]; then
+            cd ..
+            terraform destroy -auto-approve -var="test_id=$TF_VAR_test_id" || true
+          fi
+          
+          echo "🧹 Cleanup completed (best effort)"
+
+  unit-test-summary:
+    name: Unit Test Summary
+    needs: [detect-changes, unit-tests]
+    if: always() && needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: test-results
+          merge-multiple: true
+
+      - name: Generate test summary
+        run: |
+          echo "# 🧪 Terraform Unit Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR:** #${{ github.event.number || 'Manual Run' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          total_modules=0
+          passed_modules=0
+          failed_modules=0
+          
+          # 테스트 결과 분석
+          for result_dir in test-results/test-results-*; do
+            if [ -d "$result_dir" ]; then
+              module=$(basename "$result_dir" | sed 's/test-results-//')
+              total_modules=$((total_modules + 1))
+              
+              if [ -f "$result_dir/test-output.log" ]; then
+                if grep -q "PASS" "$result_dir/test-output.log" && ! grep -q "FAIL" "$result_dir/test-output.log"; then
+                  echo "✅ **$module**: PASSED" >> $GITHUB_STEP_SUMMARY
+                  passed_modules=$((passed_modules + 1))
+                else
+                  echo "❌ **$module**: FAILED" >> $GITHUB_STEP_SUMMARY
+                  failed_modules=$((failed_modules + 1))
+                  
+                  # 실패 상세 정보 추가
+                  echo "<details><summary>❌ $module - Error Details</summary>" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  if grep -A 10 -B 5 "FAIL\|panic\|Error" "$result_dir/test-output.log" | tail -20; then
+                    grep -A 10 -B 5 "FAIL\|panic\|Error" "$result_dir/test-output.log" | tail -20 >> $GITHUB_STEP_SUMMARY
+                  else
+                    tail -20 "$result_dir/test-output.log" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "</details>" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                fi
+              else
+                echo "⚠️ **$module**: NO RESULTS" >> $GITHUB_STEP_SUMMARY
+                failed_modules=$((failed_modules + 1))
+              fi
+            fi
+          done
+          
+          # 요약 통계
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Modules:** $total_modules" >> $GITHUB_STEP_SUMMARY
+          echo "- **Passed:** $passed_modules" >> $GITHUB_STEP_SUMMARY
+          echo "- **Failed:** $failed_modules" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $failed_modules -eq 0 ]; then
+            echo "- **Status:** 🎉 All tests passed!" >> $GITHUB_STEP_SUMMARY
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "- **Status:** ❌ Some tests failed" >> $GITHUB_STEP_SUMMARY
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Comment PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            let summary = "## 🧪 Terraform Unit Test Results\n\n";
+            summary += `**PR:** #${{ github.event.number }}\n`;
+            summary += `**Commit:** ${{ github.sha }}\n`;
+            summary += `**Timestamp:** ${new Date().toISOString()}\n\n`;
+            
+            const testResultsDir = 'test-results';
+            let totalModules = 0;
+            let passedModules = 0;
+            let failedModules = 0;
+            
+            if (fs.existsSync(testResultsDir)) {
+              const entries = fs.readdirSync(testResultsDir, { withFileTypes: true });
+              
+              for (const entry of entries) {
+                if (entry.isDirectory() && entry.name.startsWith('test-results-')) {
+                  const module = entry.name.replace('test-results-', '');
+                  const logPath = path.join(testResultsDir, entry.name, 'test-output.log');
+                  
+                  totalModules++;
+                  
+                  if (fs.existsSync(logPath)) {
+                    const logContent = fs.readFileSync(logPath, 'utf8');
+                    
+                    if (logContent.includes('PASS') && !logContent.includes('FAIL')) {
+                      summary += `✅ **${module}**: PASSED\n`;
+                      passedModules++;
+                    } else {
+                      summary += `❌ **${module}**: FAILED\n`;
+                      failedModules++;
+                      
+                      // 실패 상세 정보
+                      const errorLines = logContent.split('\n')
+                        .filter(line => line.includes('FAIL') || line.includes('Error') || line.includes('panic'))
+                        .slice(0, 5);
+                      
+                      if (errorLines.length > 0) {
+                        summary += `<details><summary>Error Details</summary>\n\n\`\`\`\n`;
+                        summary += errorLines.join('\n');
+                        summary += `\n\`\`\`\n</details>\n\n`;
+                      }
+                    }
+                  } else {
+                    summary += `⚠️ **${module}**: NO RESULTS\n`;
+                    failedModules++;
+                  }
+                }
+              }
+            }
+            
+            summary += `\n## 📊 Summary\n`;
+            summary += `- **Total Modules:** ${totalModules}\n`;
+            summary += `- **Passed:** ${passedModules}\n`;
+            summary += `- **Failed:** ${failedModules}\n`;
+            
+            if (failedModules === 0) {
+              summary += `- **Status:** 🎉 All tests passed!\n`;
+            } else {
+              summary += `- **Status:** ❌ Some tests failed\n`;
+              summary += `\n⚠️ Please review and fix the failing tests before merging.\n`;
+            }
+            
+            // PR에 코멘트 추가
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🧪 Terraform Unit Test Results')
+            );
+            
+            if (botComment) {
+              // 기존 코멘트 업데이트
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: summary
+              });
+            } else {
+              // 새 코멘트 생성
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summary
+              });
+            }
+
+  cleanup-test-resources:
+    name: Cleanup Test Resources
+    needs: [detect-changes, unit-tests]
+    if: always() && needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Cleanup orphaned test resources
+        run: |
+          echo "🧹 Cleaning up orphaned test resources..."
+          
+          # PR 번호 기반 테스트 리소스 정리
+          TEST_PREFIX="pr-${{ github.event.number || 'manual' }}"
+          
+          # 1시간 이전 생성된 테스트 리소스 찾기
+          CUTOFF_TIME=$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S)
+          
+          echo "Looking for test resources with prefix: $TEST_PREFIX"
+          echo "Created before: $CUTOFF_TIME"
+          
+          # 태그 기반 리소스 정리
+          aws resourcegroupstaggingapi get-resources \
+            --tag-filters Key=Purpose,Values=terratest Key=TestID,Values="$TEST_PREFIX*" \
+            --query "ResourceTagMappingList[?Tags[?Key=='CreatedAt' && Value<'$CUTOFF_TIME']].ResourceARN" \
+            --output text | while read -r arn; do
+            
+            if [ -n "$arn" ] && [ "$arn" != "None" ]; then
+              echo "Found orphaned resource: $arn"
+              # 실제 정리 로직은 리소스 타입에 따라 구현 필요
+              # 여기서는 로그만 출력
+            fi
+          done
+          
+          echo "✅ Cleanup scan completed"

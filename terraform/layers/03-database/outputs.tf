@@ -11,6 +11,11 @@ output "cluster_id" {
   value       = module.aurora_cluster.cluster_id
 }
 
+output "cluster_identifier" {
+  description = "Aurora 클러스터 식별자 (호환성 별칭)"
+  value       = module.aurora_cluster.cluster_id
+}
+
 output "cluster_arn" {
   description = "Aurora 클러스터 ARN"
   value       = module.aurora_cluster.cluster_arn

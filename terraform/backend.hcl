@@ -6,4 +6,4 @@
 bucket         = "petclinic-yeonghyeon-test"
 region         = "ap-northeast-1"
 encrypt        = true
-dynamodb_table = "petclinic-terraform-locks"
+dynamodb_table = "petclinic-yeonghyeon-test-locks"

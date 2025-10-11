@@ -112,11 +112,23 @@ jobs:
       services: 'all'
     secrets: inherit
 
-  # 4단계: 배포 후 검증
+  # 4단계: 통합 테스트 실행
+  integration-tests:
+    name: Integration Tests
+    needs: [deployment-plan, deploy-infrastructure, deploy-lambda, deploy-applications]
+    if: always() && (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped')
+    uses: ./.github/workflows/terraform-integration-tests.yml
+    with:
+      environment: ${{ needs.deployment-plan.outputs.environment }}
+      skip-deployment: false
+      test-suite: 'all'
+    secrets: inherit
+
+  # 5단계: 배포 후 검증 (기존 검증 + 테스트 결과 통합)
   post-deployment-verification:
     name: Post-Deployment Verification
     runs-on: ubuntu-latest
-    needs: [deployment-plan, deploy-infrastructure, deploy-lambda, deploy-applications]
+    needs: [deployment-plan, deploy-infrastructure, deploy-lambda, deploy-applications, integration-tests]
     if: always()
     environment: 
       name: ${{ needs.deployment-plan.outputs.environment }}
@@ -305,6 +317,15 @@ jobs:
           echo "- Infrastructure: ${{ needs.deploy-infrastructure.result || 'skipped' }}"
           echo "- Lambda Functions: ${{ needs.deploy-lambda.result || 'skipped' }}"
           echo "- Applications: ${{ needs.deploy-applications.result || 'skipped' }}"
+          echo "- Integration Tests: ${{ needs.integration-tests.result || 'skipped' }}"
+          echo ""
+          
+          # 통합 테스트 결과 표시
+          if [ "${{ needs.integration-tests.result }}" = "success" ]; then
+            echo "✅ Integration Tests: ${{ needs.integration-tests.outputs.test-results }}"
+          elif [ "${{ needs.integration-tests.result }}" = "failure" ]; then
+            echo "❌ Integration Tests: ${{ needs.integration-tests.outputs.test-results }}"
+          fi
           echo ""
           
           # 전체 배포 성공 여부 판단
@@ -322,11 +343,16 @@ jobs:
             OVERALL_SUCCESS=false
           fi
           
+          # 통합 테스트 실패도 전체 실패로 간주
+          if [ "${{ needs.integration-tests.result }}" = "failure" ]; then
+            OVERALL_SUCCESS=false
+          fi
+          
           if [ "${OVERALL_SUCCESS}" = "true" ]; then
             echo "🎉 Overall Status: SUCCESS"
-            echo "All requested components deployed successfully!"
+            echo "All requested components deployed and tested successfully!"
           else
             echo "❌ Overall Status: FAILED"
-            echo "Some components failed to deploy. Check the logs above."
+            echo "Some components failed to deploy or pass tests. Check the logs above."
             exit 1
           fi

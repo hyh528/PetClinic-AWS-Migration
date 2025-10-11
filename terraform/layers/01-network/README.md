@@ -29,14 +29,14 @@ terraform apply -var-file=../../../envs/dev.tfvars
 - **NAT Gateway**: 프라이빗 앱 서브넷 IPv4 아웃바운드 인터넷 접근
 
 ### 서브넷 구성
-| 서브넷 유형 | AZ | CIDR | 용도 | 라우팅 |
-|-------------|----|----- |------|--------|
-| Public | ap-northeast-2a | 10.0.1.0/24 | ALB, NAT Gateway | IGW |
-| Public | ap-northeast-2c | 10.0.2.0/24 | ALB, NAT Gateway | IGW |
-| Private App | ap-northeast-2a | 10.0.3.0/24 | ECS Fargate | NAT Gateway |
-| Private App | ap-northeast-2c | 10.0.4.0/24 | ECS Fargate | NAT Gateway |
-| Private DB | ap-northeast-2a | 10.0.5.0/24 | Aurora MySQL | EIGW (IPv6만) |
-| Private DB | ap-northeast-2c | 10.0.6.0/24 | Aurora MySQL | EIGW (IPv6만) |
+| 서브넷 유형 | AZ              | CIDR        | 용도             | 라우팅        |
+| ----------- | --------------- | ----------- | ---------------- | ------------- |
+| Public      | ap-northeast-2a | 10.0.1.0/24 | ALB, NAT Gateway | IGW           |
+| Public      | ap-northeast-2c | 10.0.2.0/24 | ALB, NAT Gateway | IGW           |
+| Private App | ap-northeast-2a | 10.0.3.0/24 | ECS Fargate      | NAT Gateway   |
+| Private App | ap-northeast-2c | 10.0.4.0/24 | ECS Fargate      | NAT Gateway   |
+| Private DB  | ap-northeast-2a | 10.0.5.0/24 | Aurora MySQL     | EIGW (IPv6만) |
+| Private DB  | ap-northeast-2c | 10.0.6.0/24 | Aurora MySQL     | EIGW (IPv6만) |
 
 ### 라우팅 테이블
 - **Public Route Table**: 0.0.0.0/0 → IGW, ::/0 → IGW

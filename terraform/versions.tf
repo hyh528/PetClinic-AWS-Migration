@@ -13,18 +13,18 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
-    
+
     # 추가 Provider (필요시 활성화)
     # random = {
     #   source  = "hashicorp/random"
     #   version = "~> 3.4"
     # }
-    
+
     # null = {
     #   source  = "hashicorp/null"
     #   version = "~> 3.2"
     # }
-    
+
     # local = {
     #   source  = "hashicorp/local"
     #   version = "~> 2.4"
