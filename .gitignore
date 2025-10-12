@@ -6,6 +6,11 @@ target/
 apache-maven-*.zip
 apache-maven-*/
 
+# Build artifacts
+*.zip
+*.jar
+!**/maven-wrapper.jar
+
 # Jenv
 .java-version
 
