@@ -1,0 +1,63 @@
+# Security 레이어의 출력 값들을 정의합니다.
+
+# ALB 보안 그룹 ID
+output "alb_security_group_id" {
+  description = "ALB 보안 그룹의 ID"
+  value       = module.sg_alb.security_group_id
+}
+
+# App 보안 그룹 ID
+output "app_security_group_id" {
+  description = "App (ECS) 보안 그룹의 ID"
+  value       = module.sg_app.security_group_id
+}
+
+# DB 보안 그룹 ID
+output "db_security_group_id" {
+  description = "DB (Aurora) 보안 그룹의 ID"
+  value       = module.sg_db.security_group_id
+}
+
+# 모든 보안 그룹 ID를 맵으로 출력
+output "security_group_ids" {
+  description = "모든 보안 그룹 ID의 맵"
+  value = {
+    alb = module.sg_alb.security_group_id
+    app = module.sg_app.security_group_id
+    db  = module.sg_db.security_group_id
+  }
+}
+
+# =================================================
+# Database 레이어에서 필요한 추가 출력값들
+# =================================================
+
+# DB 비밀번호 Secret ARN
+output "db_password_secret_arn" {
+  description = "데이터베이스 비밀번호 Secrets Manager ARN"
+  value       = module.db_password_secret.secret_arn
+  sensitive   = true
+}
+
+# DB 비밀번호 Secret 이름
+output "db_password_secret_name" {
+  description = "데이터베이스 비밀번호 Secrets Manager 이름"
+  value       = module.db_password_secret.secret_name
+}
+
+# VPC Endpoint 보안 그룹 ID
+output "vpc_endpoint_security_group_id" {
+  description = "VPC Endpoint 보안 그룹 ID"
+  value       = module.sg_vpce.security_group_id
+}
+
+# Cognito 정보 (나중에 사용)
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID (나중에 사용)"
+  value       = module.cognito.user_pool_id
+}
+
+output "cognito_user_pool_client_id" {
+  description = "Cognito User Pool Client ID (나중에 사용)"
+  value       = module.cognito.user_pool_client_id
+}
