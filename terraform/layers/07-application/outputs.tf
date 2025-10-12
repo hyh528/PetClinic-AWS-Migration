@@ -27,51 +27,44 @@ output "target_group_arn" {
 }
 
 # =============================================================================
-# ECR 관련 출력값
+# ECR 관련 출력값 (멀티 서비스 지원)
 # =============================================================================
 
-output "ecr_repository_url" {
-  description = "ECR 리포지토리 URL (Docker 이미지 푸시용)"
-  value       = module.ecr.repository_url
-}
-
-output "ecr_repository_arn" {
-  description = "ECR 리포지토리 ARN"
-  value       = module.ecr.repository_arn
-}
-
-output "ecr_repository_name" {
-  description = "ECR 리포지토리 이름"
-  value       = module.ecr.repository_name
+output "ecr_repositories" {
+  description = "각 서비스별 ECR 리포지토리 정보"
+  value = {
+    for service_key, service_config in local.services : service_key => {
+      repository_url  = module.ecr_services[service_key].repository_url
+      repository_arn  = module.ecr_services[service_key].repository_arn
+      repository_name = module.ecr_services[service_key].repository_name
+    }
+  }
 }
 
 # =============================================================================
-# ECS 관련 출력값
+# ECS 관련 출력값 (멀티 서비스 지원)
 # =============================================================================
 
 output "ecs_cluster_name" {
   description = "ECS 클러스터 이름"
-  value       = module.ecs.cluster_name
+  value       = aws_ecs_cluster.main.name
 }
 
 output "ecs_cluster_arn" {
   description = "ECS 클러스터 ARN"
-  value       = module.ecs.cluster_arn
+  value       = aws_ecs_cluster.main.arn
 }
 
-output "ecs_service_name" {
-  description = "ECS 서비스 이름"
-  value       = module.ecs.service_name
-}
-
-output "ecs_service_id" {
-  description = "ECS 서비스 ID"
-  value       = module.ecs.service_id
-}
-
-output "ecs_task_definition_arn" {
-  description = "ECS 태스크 정의 ARN"
-  value       = module.ecs.task_definition_arn
+output "ecs_services" {
+  description = "각 서비스별 ECS 서비스 정보"
+  value = {
+    for service_key, service_config in local.services : service_key => {
+      service_name           = aws_ecs_service.services[service_key].name
+      service_id             = aws_ecs_service.services[service_key].id
+      task_definition_arn    = aws_ecs_task_definition.services[service_key].arn
+      desired_count          = aws_ecs_service.services[service_key].desired_count
+    }
+  }
 }
 
 # =============================================================================
@@ -89,11 +82,15 @@ output "health_check_url" {
 }
 
 output "deployment_info" {
-  description = "배포 관련 정보"
+  description = "배포 관련 정보 (멀티 서비스)"
   value = {
-    ecr_repository = module.ecr.repository_url
-    cluster_name   = module.ecs.cluster_name
-    service_name   = module.ecs.service_name
-    alb_dns_name   = module.alb.alb_dns_name
+    ecr_repositories = {
+      for service_key, service_config in local.services : service_key => module.ecr_services[service_key].repository_url
+    }
+    cluster_name = aws_ecs_cluster.main.name
+    services = {
+      for service_key, service_config in local.services : service_key => aws_ecs_service.services[service_key].name
+    }
+    alb_dns_name = module.alb.alb_dns_name
   }
 }
