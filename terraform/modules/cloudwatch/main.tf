@@ -200,7 +200,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
   period              = "300"
   statistic           = "Sum"
   threshold           = "5"
-  alarm_description   = "API Gateway 5XX 에러가 임계값을 초과했습니다"
+  alarm_description   = "API Gateway 5XX errors exceeded threshold"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {
@@ -220,7 +220,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_latency" {
   period              = "300"
   statistic           = "Average"
   threshold           = "1000"
-  alarm_description   = "API Gateway 평균 지연시간이 1초를 초과했습니다"
+  alarm_description   = "API Gateway average latency exceeded 1 second"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {
@@ -240,7 +240,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu_utilization" {
   period              = "300"
   statistic           = "Average"
   threshold           = "80"
-  alarm_description   = "ECS 서비스 CPU 사용률이 80%를 초과했습니다"
+  alarm_description   = "ECS service CPU utilization exceeded 80%"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {
@@ -261,7 +261,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory_utilization" {
   period              = "300"
   statistic           = "Average"
   threshold           = "80"
-  alarm_description   = "ECS 서비스 메모리 사용률이 80%를 초과했습니다"
+  alarm_description   = "ECS service memory utilization exceeded 80%"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {
@@ -282,7 +282,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate" {
   period              = "300"
   statistic           = "Sum"
   threshold           = "5"
-  alarm_description   = "Lambda 함수 에러가 임계값을 초과했습니다"
+  alarm_description   = "Lambda function errors exceeded threshold"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {
@@ -302,7 +302,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   period              = "300"
   statistic           = "Average"
   threshold           = "10000"
-  alarm_description   = "Lambda 함수 평균 실행 시간이 10초를 초과했습니다"
+  alarm_description   = "Lambda function average duration exceeded 10 seconds"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {
@@ -322,7 +322,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_connections" {
   period              = "300"
   statistic           = "Average"
   threshold           = "80"
-  alarm_description   = "Aurora 데이터베이스 연결 수가 임계값을 초과했습니다"
+  alarm_description   = "Aurora database connections exceeded threshold"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {
@@ -342,7 +342,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_cpu_utilization" {
   period              = "300"
   statistic           = "Average"
   threshold           = "80"
-  alarm_description   = "Aurora 데이터베이스 CPU 사용률이 80%를 초과했습니다"
+  alarm_description   = "Aurora database CPU utilization exceeded 80%"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   dimensions = {

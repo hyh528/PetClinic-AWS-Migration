@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Parameter Store Layer - Spring Cloud Config Server 대체
 # =============================================================================
 # 목적: AWS Well-Architected 원칙에 따른 중앙화된 설정 관리
@@ -16,7 +16,7 @@ locals {
   )
 
   # 의존성 검증
-  database_ready = local.aurora_endpoint != "" && local.aurora_endpoint != null
+  database_ready     = local.aurora_endpoint != "" && local.aurora_endpoint != null
   dependencies_ready = local.database_ready
 
   # Parameter Store 공통 설정 (공유 변수 서비스 사용)

@@ -25,6 +25,10 @@ public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
 private_app_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
 private_db_subnet_cidrs  = ["10.0.5.0/24", "10.0.6.0/24"]
 
+# NAT Gateway 설정 (ECR pull 등 인터넷 액세스 필요)
+single_nat_gateway = false
+create_nat_per_az  = true
+
 # VPC 엔드포인트 서비스 (security 레이어에서 사용)
 vpc_endpoint_services = [
   "ecr.api",
@@ -105,6 +109,14 @@ shared_config = {
     Owner       = "team-petclinic"
     CostCenter  = "training"
   }
+}
+
+network_config = {
+  vpc_cidr                 = "10.0.0.0/16"
+  azs                      = ["ap-northeast-1a", "ap-northeast-1c"]
+  public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_app_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+  private_db_subnet_cidrs  = ["10.0.5.0/24", "10.0.6.0/24"]
 }
 
 state_config = {

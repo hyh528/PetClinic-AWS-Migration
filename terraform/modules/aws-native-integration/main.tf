@@ -162,7 +162,7 @@ resource "aws_route53_health_check" "api_gateway_health" {
   request_interval                = "30"
   cloudwatch_alarm_region         = var.aws_region
   cloudwatch_alarm_name           = "${var.name_prefix}-api-gateway-health"
-  insufficient_data_health_status = "Failure"
+  insufficient_data_health_status = "Unhealthy"
 
   tags = merge(var.common_tags, {
     Name = "${var.name_prefix}-api-gateway-health-check"

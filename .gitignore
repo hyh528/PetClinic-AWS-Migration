@@ -2,6 +2,10 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
 
+# Maven installation files
+apache-maven-*.zip
+apache-maven-*/
+
 # Jenv
 .java-version
 

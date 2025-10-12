@@ -29,6 +29,17 @@ data "terraform_remote_state" "security" {
   }
 }
 
+# 06-lambda-genai 레이어 상태 참조 (GenAI Lambda 함수 정보)
+data "terraform_remote_state" "lambda_genai" {
+  backend = "s3"
+  config = {
+    bucket  = var.state_config.bucket_name
+    key     = "${var.shared_config.environment}/06-lambda-genai/terraform.tfstate"
+    region  = var.state_config.region
+    profile = var.state_config.profile
+  }
+}
+
 # 07-application 레이어 상태 참조 (ALB 정보)
 data "terraform_remote_state" "application" {
   backend = "s3"

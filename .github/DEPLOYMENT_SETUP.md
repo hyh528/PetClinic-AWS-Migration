@@ -23,8 +23,8 @@
 
 ### 4. Spring Boot 애플리케이션 배포
 - **파일**: `.github/workflows/application-deployment.yml`
-- **트리거**: 애플리케이션 코드 변경 시, 수동 실행
-- **목적**: ECS 서비스 배포
+- **트리거**: 애플리케이션 코드 변경 시, main 브랜치 푸시
+- **목적**: Docker 이미지 빌드 및 ECR 푸시
 
 ### 5. 통합 배포
 - **파일**: `.github/workflows/full-deployment.yml`
@@ -38,13 +38,12 @@
 Repository Settings > Secrets and variables > Actions에서 다음 시크릿을 설정하세요:
 
 ```bash
-# AWS 인증 정보
+# AWS 인증 정보 (필수)
 AWS_ACCESS_KEY_ID=AKIA...
 AWS_SECRET_ACCESS_KEY=...
-AWS_ROLE_TO_ASSUME=arn:aws:iam::339713019108:role/GitHubActionsRole (선택사항)
 
-# 기타 설정
-REGISTRY_URL=339713019108.dkr.ecr.ap-northeast-2.amazonaws.com
+# AWS OIDC 역할 (권장사항 - 실제 계정 ID로 변경 필요)
+AWS_ROLE_TO_ASSUME=arn:aws:iam::YOUR_ACCOUNT_ID:role/GitHubActionsRole
 ```
 
 ### 2. GitHub Environments 설정
@@ -56,18 +55,18 @@ Repository Settings > Environments에서 다음 환경을 생성하세요:
 - **보호 규칙**: 없음 (자동 배포)
 - **환경 변수**:
   ```
-  AWS_REGION=ap-northeast-2
+  AWS_REGION=ap-northeast-1
   ENVIRONMENT=dev
   ```
 
 #### Staging Environment
 - **이름**: `staging`
-- **보호 규칙**: 
+- **보호 규칙**:
   - Required reviewers: 1명 이상
   - Wait timer: 5분
 - **환경 변수**:
   ```
-  AWS_REGION=ap-northeast-2
+  AWS_REGION=ap-northeast-1
   ENVIRONMENT=staging
   ```
 
@@ -79,7 +78,7 @@ Repository Settings > Environments에서 다음 환경을 생성하세요:
   - Restrict to specific branches: `main`
 - **환경 변수**:
   ```
-  AWS_REGION=ap-northeast-2
+  AWS_REGION=ap-northeast-1
   ENVIRONMENT=prod
   ```
 
@@ -92,7 +91,7 @@ Repository Settings > Environments에서 다음 환경을 생성하세요:
     {
       "Effect": "Allow",
       "Principal": {
-        "Federated": "arn:aws:iam::339713019108:oidc-provider/token.actions.githubusercontent.com"
+        "Federated": "arn:aws:iam::YOUR_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
       },
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
@@ -118,14 +117,15 @@ Force Rebuild: false
 
 ### 시나리오 2: 애플리케이션만 업데이트
 ```bash
-# 코드 변경 후 main 브랜치에 푸시
+# 코드 변경 후 main 브랜치에 푸시 (자동 ECR 푸시)
 git add .
 git commit -m "feat: 고객 서비스 기능 개선"
 git push origin main
 
-# 또는 수동으로 Application Deployment 워크플로우 실행
-Environment: dev
-Services: customers-service,vets-service
+# 푸시 후 자동으로 실행되는 작업:
+# 1. Maven 빌드 (customers-service, vets-service, visits-service, admin-server)
+# 2. Docker 이미지 빌드
+# 3. ECR 푸시 (petclinic-dev-app:customers-latest 등)
 ```
 
 ### 시나리오 3: Lambda 함수만 업데이트

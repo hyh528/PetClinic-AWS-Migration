@@ -31,7 +31,7 @@ on:
 env:
   JAVA_VERSION: "17"
   AWS_REGION: "ap-northeast-1"  # 도쿄 리전으로 변경
-  REGISTRY_URL: "339713019108.dkr.ecr.ap-northeast-1.amazonaws.com"  # 도쿄 리전 ECR
+  ECR_REPO_NAME: "petclinic-dev-app"  # 실제 ECR 리포지토리 이름
 
 jobs:
   # 애플리케이션 빌드 및 테스트
@@ -67,7 +67,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ "${{ github.event.inputs.services }}" = "all" ]; then
-              SERVICES="api-gateway,customers-service,vets-service,visits-service,admin-server"
+              SERVICES="customers-service,vets-service,visits-service,admin-server"
             else
               SERVICES="${{ github.event.inputs.services }}"
             fi
@@ -75,7 +75,7 @@ jobs:
             # Git diff로 변경된 서비스 감지
             CHANGED_SERVICES=""
             
-            for service in api-gateway customers-service vets-service visits-service admin-server; do
+            for service in customers-service vets-service visits-service admin-server; do
               if git diff --name-only HEAD~1 HEAD | grep -q "spring-petclinic-${service}/"; then
                 if [ -z "$CHANGED_SERVICES" ]; then
                   CHANGED_SERVICES="$service"
@@ -87,7 +87,7 @@ jobs:
             
             # pom.xml이 변경되면 모든 서비스 빌드
             if git diff --name-only HEAD~1 HEAD | grep -q "pom.xml"; then
-              CHANGED_SERVICES="api-gateway,customers-service,vets-service,visits-service,admin-server"
+              CHANGED_SERVICES="customers-service,vets-service,visits-service,admin-server"
             fi
             
             SERVICES="${CHANGED_SERVICES:-api-gateway,customers-service,vets-service,visits-service,admin-server}"
@@ -109,10 +109,32 @@ jobs:
       - name: Build Docker Images
         run: |
           echo "🐳 Building Docker images..."
-          mvn clean package -B -DskipTests -PbuildDocker
+
+          IFS=',' read -ra SERVICE_ARRAY <<< "${{ steps.detect-changes.outputs.services }}"
+          for service in "${SERVICE_ARRAY[@]}"; do
+            service=$(echo $service | xargs) # trim whitespace
+
+            if [ -d "spring-petclinic-${service}" ]; then
+              echo "Building Docker image for ${service}"
+              cd "spring-petclinic-${service}"
+
+              # JAR 파일이 있는지 확인
+              if [ -f "target/*.jar" ]; then
+                docker build -t "spring-petclinic-${service}:latest" .
+                echo "✅ Built image: spring-petclinic-${service}:latest"
+              else
+                echo "❌ JAR file not found for ${service}"
+                exit 1
+              fi
+
+              cd ..
+            else
+              echo "❌ Directory spring-petclinic-${service} not found"
+            fi
+          done
 
           # 빌드된 이미지 확인
-          docker images | grep springcommunity/spring-petclinic
+          docker images | grep spring-petclinic
 
       - name: Save Docker Images
         run: |
@@ -122,11 +144,12 @@ jobs:
           IFS=',' read -ra SERVICE_ARRAY <<< "${{ steps.detect-changes.outputs.services }}"
           for service in "${SERVICE_ARRAY[@]}"; do
             service=$(echo $service | xargs) # trim whitespace
-            IMAGE_NAME="springcommunity/spring-petclinic-${service}"
-            
+            IMAGE_NAME="spring-petclinic-${service}"
+
             if docker images --format "table {{.Repository}}" | grep -q "${IMAGE_NAME}"; then
               echo "Saving ${IMAGE_NAME}:latest"
               docker save "${IMAGE_NAME}:latest" | gzip > "docker-images/${service}.tar.gz"
+              echo "✅ Saved image: docker-images/${service}.tar.gz"
             else
               echo "Warning: Image ${IMAGE_NAME} not found"
             fi
@@ -151,7 +174,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [api-gateway, customers-service, vets-service, visits-service, admin-server]
+        service: [customers-service, vets-service, visits-service, admin-server]
 
     steps:
       - name: Checkout
@@ -186,8 +209,12 @@ jobs:
       - name: Login to Amazon ECR
         run: |
           echo "🔐 Logging in to Amazon ECR..."
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY_URL="${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          echo "REGISTRY_URL=${REGISTRY_URL}" >> $GITHUB_ENV
+
           aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
-            docker login --username AWS --password-stdin ${{ env.REGISTRY_URL }}
+            docker login --username AWS --password-stdin ${REGISTRY_URL}
 
       - name: Tag and Push to ECR
         run: |
@@ -196,12 +223,12 @@ jobs:
           ENVIRONMENT="${{ github.event.inputs.environment || 'dev' }}"
           VERSION="${{ needs.build-and-test.outputs.version }}"
 
-          # ECR 리포지토리 이름 (하이픈 제거)
-          ECR_REPO_NAME=$(echo "petclinic-${SERVICE}" | sed 's/-service//')
+          # 서비스별 태그 생성
+          SERVICE_TAG=$(echo "${SERVICE}" | sed 's/-service//' | sed 's/admin-server/admin/')
 
           SOURCE_IMAGE="springcommunity/spring-petclinic-${SERVICE}:latest"
-          TARGET_IMAGE="${{ env.REGISTRY_URL }}/${ECR_REPO_NAME}:${VERSION}"
-          LATEST_IMAGE="${{ env.REGISTRY_URL }}/${ECR_REPO_NAME}:latest"
+          TARGET_IMAGE="${{ env.REGISTRY_URL }}/${{ env.ECR_REPO_NAME }}:${SERVICE_TAG}-latest"
+          LATEST_IMAGE="${{ env.REGISTRY_URL }}/${{ env.ECR_REPO_NAME }}:${SERVICE_TAG}-latest"
 
           echo "🏷️ Tagging image: ${SOURCE_IMAGE} -> ${TARGET_IMAGE}"
           docker tag "${SOURCE_IMAGE}" "${TARGET_IMAGE}"

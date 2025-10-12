@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Database Layer - Aurora MySQL 클러스터
 # =============================================================================
 # 목적: AWS Well-Architected 데이터베이스 원칙에 따른 Aurora 클러스터 구성
@@ -90,7 +90,7 @@ module "aurora_cluster" {
   monitoring_interval          = var.monitoring_interval
   # AWS 관리형 비밀번호 (자동 생성 및 로테이션)
   manage_master_user_password = var.manage_master_user_password
-  tags = local.common_db_tags
+  tags                        = local.common_db_tags
   # 의존성 확인 (선택적 - 디버깅용)
   depends_on = [
     # 명시적 의존성은 data.tf의 remote_state로 처리됨

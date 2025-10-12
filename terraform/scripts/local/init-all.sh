@@ -100,24 +100,22 @@ check_prerequisites() {
 init_layer() {
     local layer=$1
     local layer_dir="$LAYERS_DIR/$layer"
-    
+
     if [[ ! -d "$layer_dir" ]]; then
         log_warning "레이어 디렉터리가 존재하지 않습니다: $layer (건너뜀)"
         return 0
     fi
-    
+
     log "초기화 중: $layer"
-    
-    cd "$layer_dir"
-    
+
     # 기존 .terraform 디렉터리가 있으면 백업
-    if [[ -d ".terraform" ]]; then
+    if [[ -d "$layer_dir/.terraform" ]]; then
         log_warning "기존 .terraform 디렉터리 발견, 백업 중..."
-        mv .terraform ".terraform.backup.$(date +%Y%m%d_%H%M%S)" || true
+        mv "$layer_dir/.terraform" "$layer_dir/.terraform.backup.$(date +%Y%m%d_%H%M%S)" || true
     fi
-    
-    # Terraform 초기화
-    if terraform init -upgrade -input=false; then
+
+    # Terraform 초기화 (using -chdir)
+    if /c/terraform/terraform -chdir="$layer_dir" init -backend-config="$PROJECT_ROOT/backend.hcl" -upgrade -input=false; then
         log_success "$layer 초기화 완료"
         return 0
     else

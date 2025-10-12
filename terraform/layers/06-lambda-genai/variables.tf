@@ -1,10 +1,10 @@
-﻿# =============================================================================
-# Lambda GenAI Layer Variables - 怨듭쑀 蹂???쒖뒪???곸슜 (?⑥닚?붾맖)
 # =============================================================================
-# 紐⑹쟻: shared-variables.tf?먯꽌 ?뺤쓽??怨듯넻 蹂?섎? ?ъ슜?섏뿬 ?쇨????뺣낫
-# 怨듭쑀 ?ㅼ젙 (shared-variables.tf?먯꽌 ?꾨떖)
+# Lambda GenAI Layer Variables - 공유 변수 시스템 활용 (단순화됨)
+# =============================================================================
+# 목적: shared-variables.tf에서 정의된 공유 변수들을 활용하여 설정을 단순화
+# 공유 설정 (shared-variables.tf에서 가져옴)
 variable "shared_config" {
-  description = "怨듭쑀 ?ㅼ젙 ?뺣낫 (shared-variables.tf?먯꽌 ?꾨떖)"
+  description = "공유 설정 변수들 (shared-variables.tf에서 가져옴)"
   type = object({
     name_prefix = string
     environment = string
@@ -14,9 +14,9 @@ variable "shared_config" {
     common_tags = map(string)
   })
 }
-# ?곹깭 愿由??ㅼ젙 (shared-variables.tf?먯꽌 ?꾨떖)
+# 상태 관리 설정 (shared-variables.tf에서 가져옴)
 variable "state_config" {
-  description = "Terraform ?곹깭 愿由??ㅼ젙 (shared-variables.tf?먯꽌 ?꾨떖)"
+  description = "Terraform 상태 관리 설정 (shared-variables.tf에서 가져옴)"
   type = object({
     bucket_name = string
     region      = string
@@ -24,11 +24,11 @@ variable "state_config" {
   })
 }
 # =============================================================================
-# Lambda GenAI ?덉씠???뱁솕 蹂??(?⑥닚??
+# Lambda GenAI 모듈 변수들 (단순화됨)
 # =============================================================================
-# Bedrock ?ㅼ젙 (湲곕낯媛믩쭔)
+# Bedrock 설정 (안정적인 기본값)
 variable "bedrock_model_id" {
-  description = "?ъ슜??Bedrock 紐⑤뜽 ID"
+  description = "사용할 Bedrock 모델 ID"
   type        = string
-  default     = "anthropic.claude-3-haiku-20240307-v1:0"
+  default     = "anthropic.claude-3-sonnet-20240229-v1:0"
 }

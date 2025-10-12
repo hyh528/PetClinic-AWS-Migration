@@ -3,7 +3,7 @@ data "aws_region" "current" {}
 # ALB 보안 그룹
 resource "aws_security_group" "alb" {
   name        = "${var.name_prefix}-alb-sg"
-  description = "ALB용 보안 그룹"
+  description = "Security group for ALB"
   vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
@@ -19,7 +19,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_http_ipv4" {
 
   security_group_id = aws_security_group.alb.id
 
-  description = "구성된 IPv4 CIDR에서 HTTP (80) 허용"
+  description = "Allow HTTP (80) from configured IPv4 CIDR"
   cidr_ipv4   = each.value
   from_port   = 80
   to_port     = 80
@@ -31,7 +31,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https_ipv4" {
 
   security_group_id = aws_security_group.alb.id
 
-  description = "구성된 IPv4 CIDR에서 HTTPS (443) 허용"
+  description = "Allow HTTPS (443) from configured IPv4 CIDR"
   cidr_ipv4   = each.value
   from_port   = 443
   to_port     = 443
@@ -44,7 +44,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_http_ipv6" {
 
   security_group_id = aws_security_group.alb.id
 
-  description = "IPv6 any에서 HTTP (80) 허용"
+  description = "Allow HTTP (80) from IPv6 any"
   cidr_ipv6   = "::/0"
   from_port   = 80
   to_port     = 80
@@ -56,7 +56,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https_ipv6" {
 
   security_group_id = aws_security_group.alb.id
 
-  description = "IPv6 any에서 HTTPS (443) 허용"
+  description = "Allow HTTPS (443) from IPv6 any"
   cidr_ipv6   = "::/0"
   from_port   = 443
   to_port     = 443
@@ -67,7 +67,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https_ipv6" {
 resource "aws_vpc_security_group_egress_rule" "alb_all_out" {
   security_group_id = aws_security_group.alb.id
 
-  description = "모든 아웃바운드 허용"
+  description = "Allow all outbound traffic"
   cidr_ipv4   = "0.0.0.0/0"
   ip_protocol = "-1"
 }
@@ -77,7 +77,7 @@ resource "aws_lb" "this" {
   name               = "${var.name_prefix}-alb"
   load_balancer_type = "application"
   internal           = false
-  ip_address_type    = "dualstack"
+  ip_address_type    = "ipv4"
   subnets            = var.public_subnet_ids
   security_groups    = [aws_security_group.alb.id]
 

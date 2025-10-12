@@ -19,16 +19,16 @@ output "vpce_security_group_id" {
   value       = local.vpce_security_group_id
 }
 
-# IAM 출력
-output "cli_group_name" {
-  description = "CLI 사용자 그룹 이름"
-  value       = module.iam_roles.cli_group_name
-}
+# IAM 출력 (주석 처리)
+# output "cli_group_name" {
+#   description = "CLI 사용자 그룹 이름"
+#   value       = module.iam_roles.cli_group_name
+# }
 
-output "user_names" {
-  description = "IAM 사용자 이름 목록"
-  value       = module.iam_roles.user_names
-}
+# output "user_names" {
+#   description = "IAM 사용자 이름 목록"
+#   value       = module.iam_roles.user_names
+# }
 
 output "rds_secret_access_policy_arn" {
   description = "RDS 시크릿 접근 정책 ARN"

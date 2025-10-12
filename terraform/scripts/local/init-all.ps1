@@ -92,10 +92,9 @@ Write-ColorOutput "" "Info"
 Write-ColorOutput "Step 1: Cleaning up previously copied shared files..." "Info"
 Write-ColorOutput "==============================================================================" "Info"
 
-# Define shared files to remove from layers (to avoid duplicates)
+# Define shared files to copy to layers
 $SharedFiles = @(
-    "shared-variables.tf",
-    "provider.tf", 
+    "provider.tf",
     "versions.tf"
 )
 
@@ -122,6 +121,41 @@ foreach ($Layer in $Layers) {
 }
 
 Write-ColorOutput "[SUCCESS] Cleanup completed! Using terraform -chdir approach." "Success"
+
+# =============================================================================
+# Step 1.5: Copy shared files to layers
+# =============================================================================
+
+Write-ColorOutput "" "Info"
+Write-ColorOutput "Step 1.5: Copying shared files to layers..." "Info"
+Write-ColorOutput "==============================================================================" "Info"
+
+foreach ($Layer in $Layers) {
+    $LayerDir = Join-Path $LayersDir $Layer
+
+    if (-not (Test-Path $LayerDir)) {
+        Write-ColorOutput "[WARNING] Layer directory does not exist: $LayerDir" "Warning"
+        continue
+    }
+
+    foreach ($SharedFile in $SharedFiles) {
+        $SrcFile = Join-Path $ProjectRoot $SharedFile
+        $DestFile = Join-Path $LayerDir $SharedFile
+
+        if (Test-Path $SrcFile) {
+            try {
+                Copy-Item $SrcFile $DestFile -Force
+                Write-ColorOutput "[SUCCESS] Copied $SharedFile to $Layer" "Success"
+            } catch {
+                Write-ColorOutput "[WARNING] Failed to copy $SharedFile to $Layer`: $($_.Exception.Message)" "Warning"
+            }
+        } else {
+            Write-ColorOutput "[WARNING] Shared file does not exist: $SrcFile" "Warning"
+        }
+    }
+}
+
+Write-ColorOutput "[SUCCESS] Shared files copy completed!" "Success"
 
 # =============================================================================
 # Step 2: Initialize each layer using terraform -chdir
@@ -174,6 +208,7 @@ foreach ($Layer in $Layers) {
             "init",
             "-input=false",
             "-upgrade",
+            "-reconfigure",
             "-backend-config=..\..\$BackendConfig",
             "-backend-config=key=$StateKey"
         )

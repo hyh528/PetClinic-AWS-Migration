@@ -1,7 +1,7 @@
 # ECS 태스크 보안 그룹
 resource "aws_security_group" "ecs" {
   name        = "${var.name_prefix}-ecs-sg"
-  description = "ECS 태스크용 보안 그룹"
+  description = "Security group for ECS tasks"
   vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
@@ -28,7 +28,7 @@ resource "aws_vpc_security_group_egress_rule" "ecs_out_to_vpce_443" {
   count = var.vpce_security_group_id != "" ? 1 : 0
 
   security_group_id            = aws_security_group.ecs.id
-  description                  = "VPCE SG로 HTTPS (443) 송신 허용"
+  description                  = "Allow HTTPS (443) outbound to VPCE SG"
   referenced_security_group_id = var.vpce_security_group_id
   from_port                    = 443
   to_port                      = 443
@@ -60,7 +60,7 @@ resource "aws_vpc_security_group_egress_rule" "ecs_out_to_internet_443_ipv6" {
 # Aurora 클러스터 보안 그룹
 resource "aws_security_group" "rds" {
   name        = "${var.name_prefix}-aurora-sg"
-  description = "Aurora MySQL 클러스터용 보안 그룹"
+  description = "Security group for Aurora MySQL cluster"
   vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
@@ -73,7 +73,7 @@ resource "aws_security_group" "rds" {
 # ECS SG에서 Aurora 클러스터 인그레스 허용
 resource "aws_vpc_security_group_ingress_rule" "rds_in_from_ecs" {
   security_group_id            = aws_security_group.rds.id
-  description                  = "ECS 태스크 SG에서 Aurora 포트 허용"
+  description                  = "Allow Aurora port from ECS task SG"
   referenced_security_group_id = aws_security_group.ecs.id
   from_port                    = var.rds_port
   to_port                      = var.rds_port
@@ -83,7 +83,7 @@ resource "aws_vpc_security_group_ingress_rule" "rds_in_from_ecs" {
 # (선택 사항) ECS에서 Aurora로 송신 (상태 저장인 경우 엄격히 필요하지 않지만 최소 권한을 위해 강화)
 resource "aws_vpc_security_group_egress_rule" "ecs_out_to_rds" {
   security_group_id            = aws_security_group.ecs.id
-  description                  = "ECS에서 Aurora 포트로 송신 허용"
+  description                  = "Allow outbound to Aurora port from ECS"
   referenced_security_group_id = aws_security_group.rds.id
   from_port                    = var.rds_port
   to_port                      = var.rds_port

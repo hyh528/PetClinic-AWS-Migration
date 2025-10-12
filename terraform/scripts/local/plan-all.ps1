@@ -77,7 +77,7 @@ $Layers = @(
 
 # Path configuration
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectRoot = Split-Path -Parent $ScriptDir
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 $LayersDir = Join-Path $ProjectRoot "layers"
 $EnvVarsFile = Join-Path $ProjectRoot "envs/$Environment.tfvars"
 
@@ -109,60 +109,66 @@ foreach ($Layer in $Layers) {
     }
     
     try {
-        # Move to layer directory
-        Push-Location $LayerDir
-        
-        # Check if terraform is initialized
-        if (-not (Test-Path ".terraform")) {
-            Write-ColorOutput "[ERROR] Layer $Layer is not initialized. Run init-all.ps1 first." "Error"
+        Write-ColorOutput "[INFO] Running terraform plan for layer: $Layer" "Info"
+
+        # Ensure the layer is initialized
+        $InitArgs = @(
+            "-chdir=$LayerDir"
+            "init"
+            "-upgrade"
+            "-input=false"
+            "-reconfigure"
+        )
+
+        Write-ColorOutput "[INFO] Initializing layer: $Layer" "Info"
+        & terraform @InitArgs
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-ColorOutput "[ERROR] Failed to initialize layer: $Layer" "Error"
             $FailureCount++
             $FailedLayers += $Layer
             continue
         }
-        
-        Write-ColorOutput "[INFO] Running terraform plan for layer: $Layer" "Info"
-        
-        # Run terraform plan with relative paths
-        $RelativeVarFile = "../../envs/$Environment.tfvars"
+
+        # Run terraform plan using -chdir
+        $VarFile = Join-Path $ProjectRoot "envs/$Environment.tfvars"
         $PlanArgs = @(
+            "-chdir=$LayerDir"
             "plan"
-            "-var-file=$RelativeVarFile"
+            "-var-file=$VarFile"
             "-input=false"
             "-detailed-exitcode"
         )
-        
+
         & terraform @PlanArgs
-        
+
         $ExitCode = $LASTEXITCODE
-        
+
         switch ($ExitCode) {
-            0 { 
+            0 {
                 Write-ColorOutput "[SUCCESS] Layer $Layer - No changes needed" "Success"
                 $SuccessCount++
             }
-            1 { 
+            1 {
                 Write-ColorOutput "[ERROR] Layer $Layer - Plan failed!" "Error"
                 $FailureCount++
                 $FailedLayers += $Layer
             }
-            2 { 
+            2 {
                 Write-ColorOutput "[SUCCESS] Layer $Layer - Changes detected and planned" "Success"
                 $SuccessCount++
             }
-            default { 
+            default {
                 Write-ColorOutput "[ERROR] Layer $Layer - Unexpected exit code: $ExitCode" "Error"
                 $FailureCount++
                 $FailedLayers += $Layer
             }
         }
-        
+
     } catch {
         Write-ColorOutput "[ERROR] Exception during $Layer planning: $($_.Exception.Message)" "Error"
         $FailureCount++
         $FailedLayers += $Layer
-    } finally {
-        # Return to original directory
-        Pop-Location
     }
 }
 

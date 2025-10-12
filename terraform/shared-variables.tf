@@ -106,10 +106,6 @@ variable "private_db_subnet_cidrs" {
   type        = list(string)
 }
 
-variable "vpc_endpoint_services" {
-  description = "생성할 VPC 인터페이스 엔드포인트 서비스 목록"
-  type        = list(string)
-}
 
 # =============================================================================
 # 로컬 값 (계산된 공통 값들)
@@ -142,7 +138,6 @@ output "shared_config" {
     aws_region  = var.aws_region
     aws_profile = var.aws_profile
     common_name = local.common_name
-    common_tags = local.common_tags
   }
 }
 

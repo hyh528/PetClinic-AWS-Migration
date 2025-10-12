@@ -281,7 +281,7 @@ resource "aws_cloudwatch_metric_alarm" "root_usage" {
   period              = "300"
   statistic           = "Sum"
   threshold           = "1"
-  alarm_description   = "Root 계정 사용이 감지되었습니다"
+  alarm_description   = "Root account usage detected"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   tags = var.tags
@@ -296,7 +296,7 @@ resource "aws_cloudwatch_metric_alarm" "unauthorized_api_calls" {
   period              = "300"
   statistic           = "Sum"
   threshold           = "1"
-  alarm_description   = "무단 API 호출이 감지되었습니다"
+  alarm_description   = "Unauthorized API calls detected"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   tags = var.tags
@@ -311,7 +311,7 @@ resource "aws_cloudwatch_metric_alarm" "console_signin_failures" {
   period              = "300"
   statistic           = "Sum"
   threshold           = "3"
-  alarm_description   = "콘솔 로그인 실패가 3회 이상 발생했습니다"
+  alarm_description   = "Console sign-in failures occurred 3 or more times"
   alarm_actions       = var.sns_topic_arn != null ? [var.sns_topic_arn] : []
 
   tags = var.tags

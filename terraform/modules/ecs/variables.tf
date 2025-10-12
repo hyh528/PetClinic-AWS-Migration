@@ -97,7 +97,7 @@ variable "target_group_arn" {
   type        = string
 
   validation {
-    condition     = startswith(var.target_group_arn, "arn:aws:elasticloadbalancing::")
+    condition     = startswith(var.target_group_arn, "arn:aws:elasticloadbalancing:")
     error_message = "유효한 ALB 대상 그룹 ARN이어야 합니다."
   }
 }

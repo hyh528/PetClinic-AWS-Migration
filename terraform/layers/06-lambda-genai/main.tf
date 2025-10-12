@@ -7,7 +7,7 @@
 # 공통 로컬 변수
 locals {
   # Lambda GenAI 공통 설정 (공유 변수 시스템 사용)
-  common_tags = merge(var.shared_config.common_tags, {
+  layer_common_tags = merge(var.shared_config.common_tags, {
     Layer     = "06-lambda-genai"
     Component = "serverless-ai"
     Purpose   = "genai-service-replacement"
@@ -29,5 +29,5 @@ module "lambda_genai" {
   bedrock_model_id = var.bedrock_model_id
 
   # 공통 태그 적용
-  tags = local.common_tags
+  tags = local.layer_common_tags
 }

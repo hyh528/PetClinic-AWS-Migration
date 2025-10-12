@@ -58,10 +58,10 @@ def invoke_bedrock_model(prompt: str, model_id: str = None) -> Dict[str, Any]:
     try:
         client = get_bedrock_client()
         
-        # Claude 3 Haiku 모델용 요청 페이로드
+        # Claude 3 Sonnet 모델용 요청 페이로드
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1000,
+            "max_tokens": 2000,
             "temperature": 0.7,
             "messages": [
                 {

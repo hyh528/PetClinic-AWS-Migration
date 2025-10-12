@@ -152,40 +152,40 @@ resource "aws_api_gateway_stage" "petclinic" {
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
   stage_name    = var.stage_name
 
-  # 액세스 로깅 설정 (구조화된 JSON 로그)
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
-    format = jsonencode({
-      # 요청 정보
-      requestId    = "$context.requestId"
-      requestTime  = "$context.requestTime"
-      httpMethod   = "$context.httpMethod"
-      resourcePath = "$context.resourcePath"
-      protocol     = "$context.protocol"
-
-      # 클라이언트 정보
-      sourceIp  = "$context.identity.sourceIp"
-      userAgent = "$context.identity.userAgent"
-      caller    = "$context.identity.caller"
-      user      = "$context.identity.user"
-
-      # 응답 정보
-      status         = "$context.status"
-      responseLength = "$context.responseLength"
-      responseTime   = "$context.responseTime"
-
-      # 에러 정보
-      error              = "$context.error.message"
-      integrationError   = "$context.integration.error"
-      integrationStatus  = "$context.integration.status"
-      integrationLatency = "$context.integration.latency"
-
-      # 추가 메타데이터
-      stage       = "$context.stage"
-      apiId       = "$context.apiId"
-      environment = var.environment
-    })
-  }
+  # 액세스 로깅 설정 비활성화 (CloudWatch Logs 역할 문제로 인한 임시 조치)
+  # access_log_settings {
+  #   destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+  #   format = jsonencode({
+  #     # 요청 정보
+  #     requestId    = "$context.requestId"
+  #     requestTime  = "$context.requestTime"
+  #     httpMethod   = "$context.httpMethod"
+  #     resourcePath = "$context.resourcePath"
+  #     protocol     = "$context.protocol"
+  #
+  #     # 클라이언트 정보
+  #     sourceIp  = "$context.identity.sourceIp"
+  #     userAgent = "$context.identity.userAgent"
+  #     caller    = "$context.identity.caller"
+  #     user      = "$context.identity.user"
+  #
+  #     # 응답 정보
+  #     status         = "$context.status"
+  #     responseLength = "$context.responseLength"
+  #     responseTime   = "$context.responseTime"
+  #
+  #     # 에러 정보
+  #     error              = "$context.error.message"
+  #     integrationError   = "$context.integration.error"
+  #     integrationStatus  = "$context.integration.status"
+  #     integrationLatency = "$context.integration.latency"
+  #
+  #     # 추가 메타데이터
+  #     stage       = "$context.stage"
+  #     apiId       = "$context.apiId"
+  #     environment = var.environment
+  #   })
+  # }
 
   # X-Ray 추적 활성화
   xray_tracing_enabled = var.enable_xray_tracing
@@ -198,9 +198,11 @@ resource "aws_api_gateway_method_settings" "petclinic" {
   method_path = "*/*"
 
   settings {
-    # 로깅 설정
-    logging_level      = "INFO"
-    data_trace_enabled = true
+    # 로깅 설정 비활성화 (CloudWatch Logs 역할 문제로 인한 임시 조치)
+    # logging_level      = "INFO"
+    # data_trace_enabled = true
+    logging_level      = "OFF"
+    data_trace_enabled = false
     metrics_enabled    = true
 
     # 스로틀링 설정

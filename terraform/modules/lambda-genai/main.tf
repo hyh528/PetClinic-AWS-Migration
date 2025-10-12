@@ -98,7 +98,6 @@ resource "aws_lambda_function" "genai_function" {
   environment {
     variables = {
       BEDROCK_MODEL_ID = var.bedrock_model_id
-      AWS_REGION       = data.aws_region.current.name
       LOG_LEVEL        = "INFO"
     }
   }

@@ -1,8 +1,19 @@
-﻿# =============================================================================
+# =============================================================================
 # Network Layer - VPC 및 엔드포인트 구성
 # =============================================================================
 # 목적: AWS Well-Architected 네트워킹 원칙에 따른 기본 네트워크 구성
 # 의존성: 없음 (기본 레이어)
+
+terraform {
+  backend "s3" {
+    bucket  = "petclinic-yeonghyeon-test"
+    key     = "dev/01-network/terraform.tfstate"
+    region  = "ap-northeast-1"
+    profile = "petclinic-dev"
+    encrypt = true
+    dynamodb_table = "petclinic-yeonghyeon-test-locks"
+  }
+}
 
 locals {
   common_network_tags = merge(var.shared_config.common_tags, {
@@ -40,10 +51,10 @@ module "vpc_endpoints" {
   vpc_id   = module.vpc.vpc_id
   vpc_cidr = var.network_config.vpc_cidr
 
-  interface_subnet_ids         = values(module.vpc.private_app_subnet_ids)
-  public_route_table_id        = module.vpc.public_route_table_id
-  private_app_route_table_ids  = module.vpc.private_app_route_table_ids
-  private_db_route_table_ids   = module.vpc.private_db_route_table_ids
-  interface_services           = var.vpc_endpoint_services
-  tags                         = local.common_network_tags
+  interface_subnet_ids        = values(module.vpc.private_app_subnet_ids)
+  public_route_table_id       = module.vpc.public_route_table_id
+  private_app_route_table_ids = module.vpc.private_app_route_table_ids
+  private_db_route_table_ids  = module.vpc.private_db_route_table_ids
+  interface_services          = var.vpc_endpoint_services
+  tags                        = local.common_network_tags
 }

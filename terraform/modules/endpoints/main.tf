@@ -3,7 +3,7 @@ data "aws_region" "current" {}
 # 인터페이스 엔드포인트용 보안 그룹 (443)
 resource "aws_security_group" "vpce" {
   name        = "${var.name_prefix}-vpce-sg"
-  description = "VPC 인터페이스 엔드포인트용 보안 그룹"
+  description = "Security group for VPC interface endpoints"
   vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
@@ -17,7 +17,7 @@ resource "aws_security_group" "vpce" {
 resource "aws_vpc_security_group_ingress_rule" "vpce_https_ipv4" {
   security_group_id = aws_security_group.vpce.id
 
-  description = "VPC IPv4 CIDR에서 HTTPS 허용"
+  description = "Allow HTTPS from VPC IPv4 CIDR"
   cidr_ipv4   = var.vpc_cidr
   from_port   = 443
   to_port     = 443
@@ -28,7 +28,7 @@ resource "aws_vpc_security_group_ingress_rule" "vpce_https_ipv4" {
 resource "aws_vpc_security_group_egress_rule" "vpce_all_out" {
   security_group_id = aws_security_group.vpce.id
 
-  description = "모든 아웃바운드 허용"
+  description = "Allow all outbound traffic"
   cidr_ipv4   = "0.0.0.0/0"
   ip_protocol = "-1"
 }

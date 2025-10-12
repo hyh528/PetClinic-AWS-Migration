@@ -15,7 +15,7 @@ variable "environment" {
 variable "bedrock_model_id" {
   description = "사용할 Bedrock 모델 ID"
   type        = string
-  default     = "anthropic.claude-3-haiku-20240307-v1:0"
+  default     = "anthropic.claude-3-sonnet-20240229-v1:0"
 }
 
 # 태그

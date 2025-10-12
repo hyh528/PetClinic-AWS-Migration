@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Security Layer - 보안 그룹 및 IAM 역할 구성
 # =============================================================================
 # 목적: AWS Well-Architected 보안 원칙에 따른 네트워크 및 접근 제어
@@ -36,11 +36,11 @@ module "security_groups" {
   tags                   = local.common_security_tags
 }
 
-# IAM 역할 및 정책 모듈
-module "iam_roles" {
-  source = "../../modules/iam"
+# IAM 역할 및 정책 모듈 (이미 생성됨 - 주석 처리)
+# module "iam_roles" {
+#   source = "../../modules/iam"
 
-  project_name              = var.shared_config.name_prefix
-  team_members              = var.team_members
-  enable_role_based_policies = var.enable_role_based_policies
-}
+#   project_name               = var.shared_config.name_prefix
+#   team_members               = var.team_members
+#   enable_role_based_policies = var.enable_role_based_policies
+# }

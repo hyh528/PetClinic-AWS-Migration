@@ -107,33 +107,31 @@ plan_layer() {
     local layer=$1
     local phase=$2
     local layer_dir="$LAYERS_DIR/$layer"
-    
+
     if [[ ! -d "$layer_dir" ]]; then
         log_warning "레이어 디렉터리가 존재하지 않습니다: $layer (건너뜀)"
         return 0
     fi
-    
+
     log "Planning $layer ($phase)..."
-    
-    cd "$layer_dir"
-    
+
     # .terraform 디렉터리 확인
-    if [[ ! -d ".terraform" ]]; then
+    if [[ ! -d "$layer_dir/.terraform" ]]; then
         log_error "$layer가 초기화되지 않았습니다. 먼저 ./scripts/init-all.sh를 실행하세요."
         return 1
     fi
-    
+
     # 02-security 레이어 특별 처리
     local additional_vars=""
     if [[ "$layer" == "02-security" && "$phase" == "Phase 2" ]]; then
         log "02-security 레이어: ALB 통합 활성화"
         additional_vars="-var enable_alb_integration=true"
     fi
-    
-    # Plan 실행
+
+    # Plan 실행 (using -chdir)
     local tfvars_file="$PROJECT_ROOT/envs/$ENVIRONMENT.tfvars"
     if [[ -f "$tfvars_file" ]]; then
-        if terraform plan -var-file="$tfvars_file" $additional_vars -out=tfplan; then
+        if /c/terraform/terraform -chdir="$layer_dir" plan -var-file="$tfvars_file" $additional_vars -out=tfplan; then
             log_success "$layer plan 완료"
             return 0
         else
@@ -142,7 +140,7 @@ plan_layer() {
         fi
     else
         log_warning "tfvars 파일이 없습니다: $tfvars_file"
-        if terraform plan $additional_vars -out=tfplan; then
+        if /c/terraform/terraform -chdir="$layer_dir" plan $additional_vars -out=tfplan; then
             log_success "$layer plan 완료"
             return 0
         else
