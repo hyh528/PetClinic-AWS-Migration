@@ -59,10 +59,10 @@ output "ecs_services" {
   description = "각 서비스별 ECS 서비스 정보"
   value = {
     for service_key, service_config in local.services : service_key => {
-      service_name           = aws_ecs_service.services[service_key].name
-      service_id             = aws_ecs_service.services[service_key].id
-      task_definition_arn    = aws_ecs_task_definition.services[service_key].arn
-      desired_count          = aws_ecs_service.services[service_key].desired_count
+      service_name        = aws_ecs_service.services[service_key].name
+      service_id          = aws_ecs_service.services[service_key].id
+      task_definition_arn = aws_ecs_task_definition.services[service_key].arn
+      desired_count       = aws_ecs_service.services[service_key].desired_count
     }
   }
 }

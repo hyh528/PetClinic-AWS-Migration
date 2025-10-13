@@ -6,8 +6,8 @@
 
 # 공통 로컬 변수
 locals {
-  # Cloud Map 공통 설정 (공유 변수 시스템 사용)
-  common_tags = merge(var.shared_config.common_tags, {
+  # Cloud Map 공통 설정
+  common_tags = merge(var.tags, {
     Layer     = "05-cloud-map"
     Component = "service-discovery"
     Purpose   = "eureka-replacement"
@@ -25,9 +25,9 @@ locals {
 module "cloud_map" {
   source = "../../modules/cloud-map"
 
-  # 기본 설정 (공유 변수 시스템 사용)
-  name_prefix = var.shared_config.name_prefix
-  environment = var.shared_config.environment
+  # 기본 설정
+  name_prefix = var.name_prefix
+  environment = var.environment
 
   # VPC 설정
   vpc_id = data.terraform_remote_state.network.outputs.vpc_id

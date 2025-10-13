@@ -16,13 +16,13 @@ locals {
 module "cloudwatch" {
   source = "../../modules/cloudwatch"
 
-  dashboard_name = "${var.shared_config.name_prefix}-${var.shared_config.environment}-Dashboard"
-  aws_region     = var.shared_config.aws_region
+  dashboard_name = "${var.name_prefix}-${var.environment}-Dashboard"
+  aws_region     = var.aws_region
 
   # 각 레이어에서 가져온 리소스 정보 (의존성 역전)
   api_gateway_name     = local.api_gateway_name
-  ecs_cluster_name     = "${var.shared_config.name_prefix}-${var.shared_config.environment}-cluster"
-  ecs_service_name     = "${var.shared_config.name_prefix}-app-service"
+  ecs_cluster_name     = "${var.name_prefix}-${var.environment}-cluster"
+  ecs_service_name     = "${var.name_prefix}-app-service"
   lambda_function_name = local.lambda_function_name
   aurora_cluster_name  = local.aurora_cluster_name
   alb_name             = local.alb_name
@@ -30,18 +30,18 @@ module "cloudwatch" {
   log_retention_days = 30
   sns_topic_arn      = var.sns_topic_arn
 
-  tags = var.shared_config.common_tags
+  tags = var.tags
 }
 
 # CloudTrail 감사 로그 모듈 호출
 module "cloudtrail" {
   source = "../../modules/cloudtrail"
 
-  cloudtrail_name        = "${var.shared_config.name_prefix}-${var.shared_config.environment}-audit-trail"
-  cloudtrail_bucket_name = "${var.shared_config.name_prefix}-${var.shared_config.environment}-cloudtrail-logs"
-  aws_region             = var.shared_config.aws_region
+  cloudtrail_name        = "${var.name_prefix}-${var.environment}-audit-trail"
+  cloudtrail_bucket_name = "${var.name_prefix}-${var.environment}-cloudtrail-logs"
+  aws_region             = var.aws_region
   log_retention_days     = 90
   sns_topic_arn          = var.sns_topic_arn
 
-  tags = var.shared_config.common_tags
+  tags = var.tags
 }

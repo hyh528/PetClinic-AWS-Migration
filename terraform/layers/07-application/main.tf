@@ -17,8 +17,8 @@ locals {
   # Security 레이어에서 필요한 정보
   ecs_security_group_id = data.terraform_remote_state.security.outputs.ecs_security_group_id
 
-  # 공통 태그 (공유 변수 활용)
-  layer_common_tags = merge(var.shared_config.common_tags, {
+  # 공통 태그
+  layer_common_tags = merge(var.tags, {
     Layer     = "07-application"
     Component = "application-infrastructure"
   })
@@ -26,32 +26,32 @@ locals {
   # 서비스 정의 (환경별 설정 가능)
   services = {
     customers = {
-      name          = "customers-service"
-      port          = 8081
-      health_path   = "/actuator/health"
-      cpu           = 256
-      memory        = 512
+      name        = "customers-service"
+      port        = 8081
+      health_path = "/actuator/health"
+      cpu         = 256
+      memory      = 512
     }
     vets = {
-      name          = "vets-service"
-      port          = 8082
-      health_path   = "/actuator/health"
-      cpu           = 256
-      memory        = 512
+      name        = "vets-service"
+      port        = 8082
+      health_path = "/actuator/health"
+      cpu         = 256
+      memory      = 512
     }
     visits = {
-      name          = "visits-service"
-      port          = 8083
-      health_path   = "/actuator/health"
-      cpu           = 256
-      memory        = 512
+      name        = "visits-service"
+      port        = 8083
+      health_path = "/actuator/health"
+      cpu         = 256
+      memory      = 512
     }
     admin = {
-      name          = "admin-server"
-      port          = 9090
-      health_path   = "/actuator/health"
-      cpu           = 256
-      memory        = 512
+      name        = "admin-server"
+      port        = 9090
+      health_path = "/actuator/health"
+      cpu         = 256
+      memory      = 512
     }
   }
 
@@ -73,8 +73,8 @@ module "ecr_services" {
 
   source = "../../modules/ecr"
 
-  repository_name = "${var.shared_config.name_prefix}-${each.key}"
-  tags            = merge(local.layer_common_tags, {
+  repository_name = "${var.name_prefix}-${each.key}"
+  tags = merge(local.layer_common_tags, {
     Service = each.key
   })
 }
@@ -90,7 +90,7 @@ resource "null_resource" "build_and_push_images" {
 
   provisioner "local-exec" {
     working_dir = "../../../"
-    command = <<-EOT
+    command     = <<-EOT
       echo "Building and pushing ${each.key} service image..."
 
       # ECR 로그인 및 이미지 빌드/푸시
@@ -114,8 +114,8 @@ resource "null_resource" "build_and_push_images" {
 module "alb" {
   source = "../../modules/alb"
 
-  name_prefix = var.shared_config.name_prefix
-  environment = var.shared_config.environment
+  name_prefix = var.name_prefix
+  environment = var.environment
 
   vpc_id            = local.vpc_id
   public_subnet_ids = local.public_subnet_ids
@@ -127,7 +127,7 @@ module "alb" {
 resource "aws_lb_target_group" "services" {
   for_each = local.services
 
-  name        = "${var.shared_config.name_prefix}-${each.key}"
+  name        = "${var.name_prefix}-${each.key}"
   port        = each.value.port
   protocol    = "HTTP"
   vpc_id      = local.vpc_id
@@ -162,7 +162,7 @@ resource "aws_lb_listener_rule" "services" {
 
   condition {
     host_header {
-      values = ["${each.key}.${var.shared_config.name_prefix}.local"]
+      values = ["${each.key}.${var.name_prefix}.local"]
     }
   }
 
@@ -176,7 +176,7 @@ resource "aws_lb_listener_rule" "services" {
 # =============================================================================
 
 resource "aws_ecs_cluster" "main" {
-  name = "${var.shared_config.name_prefix}-cluster"
+  name = "${var.name_prefix}-cluster"
 
   setting {
     name  = "containerInsights"
@@ -190,7 +190,7 @@ resource "aws_ecs_cluster" "main" {
 resource "aws_cloudwatch_log_group" "services" {
   for_each = local.services
 
-  name              = "/ecs/${var.shared_config.name_prefix}-${each.key}"
+  name              = "/ecs/${var.name_prefix}-${each.key}"
   retention_in_days = 30
 
   tags = merge(local.layer_common_tags, {
@@ -205,7 +205,7 @@ resource "aws_cloudwatch_log_group" "services" {
 resource "aws_ecs_task_definition" "services" {
   for_each = local.services
 
-  family                   = "${var.shared_config.name_prefix}-${each.key}"
+  family                   = "${var.name_prefix}-${each.key}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = each.value.cpu
@@ -214,10 +214,10 @@ resource "aws_ecs_task_definition" "services" {
 
   container_definitions = jsonencode([
     {
-      name  = each.key
-      image = "${module.ecr_services[each.key].repository_url}:latest"
-      cpu   = each.value.cpu
-      memory = each.value.memory
+      name      = each.key
+      image     = "${module.ecr_services[each.key].repository_url}:latest"
+      cpu       = each.value.cpu
+      memory    = each.value.memory
       essential = true
       portMappings = [
         {
@@ -230,7 +230,7 @@ resource "aws_ecs_task_definition" "services" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.services[each.key].name
-          "awslogs-region"        = var.shared_config.aws_region
+          "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "ecs"
         }
       }
@@ -253,7 +253,7 @@ resource "aws_ecs_task_definition" "services" {
 resource "aws_ecs_service" "services" {
   for_each = local.services
 
-  name            = "${var.shared_config.name_prefix}-${each.key}"
+  name            = "${var.name_prefix}-${each.key}"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.services[each.key].arn
   desired_count   = 1
@@ -295,7 +295,7 @@ resource "aws_appautoscaling_target" "services" {
 resource "aws_appautoscaling_policy" "cpu_scaling" {
   for_each = local.services
 
-  name               = "${var.shared_config.name_prefix}-${each.key}-cpu-scaling"
+  name               = "${var.name_prefix}-${each.key}-cpu-scaling"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.services[each.key].resource_id
   scalable_dimension = aws_appautoscaling_target.services[each.key].scalable_dimension

@@ -130,12 +130,26 @@ foreach ($Layer in $Layers) {
             continue
         }
 
-        # Run terraform apply using -chdir
-        $VarFile = Join-Path $ProjectRoot "envs/$Environment.tfvars"
+        # Run terraform apply using -chdir with common + env vars
+        $CommonVarsFile = Join-Path $ProjectRoot "shared/common.tfvars"
+        $EnvVarsFile = Join-Path $ProjectRoot "envs/$Environment.tfvars"
+
         $ApplyArgs = @(
             "-chdir=$LayerDir"
             "apply"
-            "-var-file=$VarFile"
+        )
+
+        # Add common vars if file exists
+        if (Test-Path $CommonVarsFile) {
+            $ApplyArgs += "-var-file=$CommonVarsFile"
+        }
+
+        # Add environment vars if file exists
+        if (Test-Path $EnvVarsFile) {
+            $ApplyArgs += "-var-file=$EnvVarsFile"
+        }
+
+        $ApplyArgs += @(
             "-input=false"
             "-auto-approve"
         )

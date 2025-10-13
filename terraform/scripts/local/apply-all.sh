@@ -127,10 +127,28 @@ apply_layer() {
         additional_vars="-var enable_alb_integration=true"
     fi
 
-    # Apply 실행 (using -chdir)
-    local tfvars_file="$PROJECT_ROOT/envs/$ENVIRONMENT.tfvars"
-    if [[ -f "$tfvars_file" ]]; then
-        if /c/terraform/terraform -chdir="$layer_dir" apply -var-file="$tfvars_file" $additional_vars -auto-approve; then
+    # Apply 실행 (using -chdir with common + env vars)
+    local common_tfvars="$PROJECT_ROOT/shared/common.tfvars"
+    local env_tfvars="$PROJECT_ROOT/envs/$ENVIRONMENT.tfvars"
+
+    if [[ -f "$common_tfvars" && -f "$env_tfvars" ]]; then
+        if /c/terraform/terraform -chdir="$layer_dir" apply \
+            -var-file="$common_tfvars" \
+            -var-file="$env_tfvars" \
+            $additional_vars \
+            -auto-approve; then
+            log_success "$layer apply 완료"
+            return 0
+        else
+            log_error "$layer apply 실패"
+            return 1
+        fi
+    elif [[ -f "$env_tfvars" ]]; then
+        log_warning "common.tfvars 파일이 없습니다: $common_tfvars (환경 변수만 사용)"
+        if /c/terraform/terraform -chdir="$layer_dir" apply \
+            -var-file="$env_tfvars" \
+            $additional_vars \
+            -auto-approve; then
             log_success "$layer apply 완료"
             return 0
         else
@@ -138,7 +156,7 @@ apply_layer() {
             return 1
         fi
     else
-        log_warning "tfvars 파일이 없습니다: $tfvars_file"
+        log_warning "tfvars 파일이 없습니다: $env_tfvars"
         if /c/terraform/terraform -chdir="$layer_dir" apply $additional_vars -auto-approve; then
             log_success "$layer apply 완료"
             return 0

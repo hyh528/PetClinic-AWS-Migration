@@ -19,8 +19,8 @@ locals {
   database_ready     = local.aurora_endpoint != "" && local.aurora_endpoint != null
   dependencies_ready = local.database_ready
 
-  # Parameter Store 공통 설정 (공유 변수 서비스 사용)
-  common_parameter_tags = merge(var.shared_config.common_tags, {
+  # Parameter Store 공통 설정
+  common_parameter_tags = merge(var.tags, {
     Layer     = "04-parameter-store"
     Component = "parameter-store"
     Purpose   = "spring-config-replacement"
@@ -36,19 +36,19 @@ locals {
     "/petclinic/common/spring.profiles.active" = "mysql,aws"
     "/petclinic/common/logging.level.root"     = "INFO"
     # 서버 포트 설정
-    "/petclinic/${var.shared_config.environment}/customers/server.port" = "8080"
-    "/petclinic/${var.shared_config.environment}/vets/server.port"      = "8080"
-    "/petclinic/${var.shared_config.environment}/visits/server.port"    = "8080"
-    "/petclinic/${var.shared_config.environment}/admin/server.port"     = "9090"
+    "/petclinic/${var.environment}/customers/server.port" = "8080"
+    "/petclinic/${var.environment}/vets/server.port"      = "8080"
+    "/petclinic/${var.environment}/visits/server.port"    = "8080"
+    "/petclinic/${var.environment}/admin/server.port"     = "9090"
   }
   # 데이터베이스 연결 정보 (data.tf에서 참조)
   database_parameters = local.dependencies_ready ? {
-    "/petclinic/${var.shared_config.environment}/customers/database.url"      = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_customers"
-    "/petclinic/${var.shared_config.environment}/customers/database.username" = var.database_username
-    "/petclinic/${var.shared_config.environment}/vets/database.url"           = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_vets"
-    "/petclinic/${var.shared_config.environment}/vets/database.username"      = var.database_username
-    "/petclinic/${var.shared_config.environment}/visits/database.url"         = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_visits"
-    "/petclinic/${var.shared_config.environment}/visits/database.username"    = var.database_username
+    "/petclinic/${var.environment}/customers/database.url"      = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_customers"
+    "/petclinic/${var.environment}/customers/database.username" = var.database_username
+    "/petclinic/${var.environment}/vets/database.url"           = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_vets"
+    "/petclinic/${var.environment}/vets/database.username"      = var.database_username
+    "/petclinic/${var.environment}/visits/database.url"         = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_visits"
+    "/petclinic/${var.environment}/visits/database.username"    = var.database_username
   } : {}
 }
 # =============================================================================
@@ -56,9 +56,9 @@ locals {
 # =============================================================================
 module "parameter_store" {
   source = "../../modules/parameter-store"
-  # 기본 설정 (공유 변수 서비스 사용)
-  name_prefix      = var.shared_config.name_prefix
-  environment      = var.shared_config.environment
+  # 기본 설정
+  name_prefix      = var.name_prefix
+  environment      = var.environment
   parameter_prefix = var.parameter_prefix
   # 애플리케이션 파라미터 설정 (모듈 변수명에 맞춤)
   common_parameters      = local.basic_parameters

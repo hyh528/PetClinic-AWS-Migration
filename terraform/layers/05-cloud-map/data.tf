@@ -11,9 +11,9 @@
 data "terraform_remote_state" "network" {
   backend = "s3"
   config = {
-    bucket  = var.state_config.bucket_name
-    key     = "${var.shared_config.environment}/01-network/terraform.tfstate"
-    region  = var.state_config.region
-    profile = var.state_config.profile
+    bucket  = var.tfstate_bucket_name
+    key     = "${var.environment}/01-network/terraform.tfstate"
+    region  = var.aws_region
+    profile = var.aws_profile
   }
 }

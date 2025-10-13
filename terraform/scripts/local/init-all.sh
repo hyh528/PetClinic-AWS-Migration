@@ -114,8 +114,8 @@ init_layer() {
         mv "$layer_dir/.terraform" "$layer_dir/.terraform.backup.$(date +%Y%m%d_%H%M%S)" || true
     fi
 
-    # Terraform 초기화 (using -chdir)
-    if /c/terraform/terraform -chdir="$layer_dir" init -backend-config="$PROJECT_ROOT/backend.hcl" -upgrade -input=false; then
+    # Terraform 초기화 (using -chdir with reconfigure for state issues)
+    if /c/terraform/terraform -chdir="$layer_dir" init -backend-config="$PROJECT_ROOT/backend.hcl" -upgrade -input=false -reconfigure; then
         log_success "$layer 초기화 완료"
         return 0
     else

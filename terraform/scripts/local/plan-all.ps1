@@ -130,12 +130,26 @@ foreach ($Layer in $Layers) {
             continue
         }
 
-        # Run terraform plan using -chdir
-        $VarFile = Join-Path $ProjectRoot "envs/$Environment.tfvars"
+        # Run terraform plan using -chdir with common + env vars
+        $CommonVarsFile = Join-Path $ProjectRoot "shared/common.tfvars"
+        $EnvVarsFile = Join-Path $ProjectRoot "envs/$Environment.tfvars"
+
         $PlanArgs = @(
             "-chdir=$LayerDir"
             "plan"
-            "-var-file=$VarFile"
+        )
+
+        # Add common vars if file exists
+        if (Test-Path $CommonVarsFile) {
+            $PlanArgs += "-var-file=$CommonVarsFile"
+        }
+
+        # Add environment vars if file exists
+        if (Test-Path $EnvVarsFile) {
+            $PlanArgs += "-var-file=$EnvVarsFile"
+        }
+
+        $PlanArgs += @(
             "-input=false"
             "-detailed-exitcode"
         )

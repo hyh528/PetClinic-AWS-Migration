@@ -1,29 +1,45 @@
 # =============================================================================
-# Parameter Store Layer Variables - 공유 변수 서비스 적용
+# Parameter Store Layer Variables
 # =============================================================================
-# 목적: shared-variables.tf에서 정의된 공통 변수를 사용하여 중복 정보 제거
+# 목적: 레이어 전용 변수만 정의 (공통 변수는 shared/common.tfvars에서 로드)
 
-# 공유 설정 (shared-variables.tf에서 전달)
-variable "shared_config" {
-  description = "공유 설정 정보 (shared-variables.tf에서 전달)"
-  type = object({
-    name_prefix = string
-    environment = string
-    aws_region  = string
-    aws_profile = string
-    common_name = string
-    common_tags = map(string)
-  })
+# =============================================================================
+# 공통 변수 (shared/common.tfvars에서 로드)
+# =============================================================================
+
+variable "project_name" {
+  description = "프로젝트 이름"
+  type        = string
 }
 
-# 상태 관리 설정 (shared-variables.tf에서 전달)
-variable "state_config" {
-  description = "Terraform 상태 관리 설정 (shared-variables.tf에서 전달)"
-  type = object({
-    bucket_name = string
-    region      = string
-    profile     = string
-  })
+variable "name_prefix" {
+  description = "모든 리소스 이름의 접두사"
+  type        = string
+}
+
+variable "environment" {
+  description = "배포 환경 (dev, staging, prod)"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS 리전"
+  type        = string
+}
+
+variable "aws_profile" {
+  description = "AWS CLI 프로파일"
+  type        = string
+}
+
+variable "tags" {
+  description = "모든 리소스에 적용할 공통 태그"
+  type        = map(string)
+}
+
+variable "tfstate_bucket_name" {
+  description = "Terraform 상태 파일을 저장하는 S3 버킷 이름"
+  type        = string
 }
 
 # =============================================================================

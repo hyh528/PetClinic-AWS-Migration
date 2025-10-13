@@ -133,18 +133,18 @@ for layer in "${LAYERS[@]}"; do
         fi
     done
     
-    # Terraform 초기화
+    # Terraform 초기화 (reconfigure로 상태 문제 해결)
     log_info "  🔧 Terraform 초기화 중..."
-    if terraform init -input=false -upgrade > /dev/null 2>&1; then
+    if terraform init -input=false -upgrade -reconfigure > /dev/null 2>&1; then
         log_success "  ✅ 초기화 성공"
     else
         log_error "  ❌ 초기화 실패"
-        terraform init -input=false -upgrade
+        terraform init -input=false -upgrade -reconfigure
         FAILED_LAYERS+=("$layer")
         ((ERRORS++))
         continue
     fi
-    
+
     # Terraform 검증
     log_info "  🔍 Terraform 검증 중..."
     if terraform validate > /dev/null 2>&1; then
@@ -156,23 +156,35 @@ for layer in "${LAYERS[@]}"; do
         ((ERRORS++))
         continue
     fi
-    
-    # Terraform Plan (tfvars 파일이 있는 경우)
-    tfvars_file="${ENVIRONMENT}.tfvars"
-    if [ -f "$tfvars_file" ]; then
-        log_info "  📋 Terraform Plan 생성 중..."
-        if terraform plan -var-file="$tfvars_file" -input=false > /dev/null 2>&1; then
-            log_success "  ✅ Plan 생성 성공"
-        else
-            log_error "  ❌ Plan 생성 실패"
-            terraform plan -var-file="$tfvars_file" -input=false
-            FAILED_LAYERS+=("$layer")
-            ((ERRORS++))
-            continue
-        fi
+
+    # Terraform Plan (공통 + 환경 변수 파일 사용)
+    common_tfvars="$PROJECT_ROOT/shared/common.tfvars"
+    env_tfvars="$PROJECT_ROOT/envs/$ENVIRONMENT.tfvars"
+
+    log_info "  📋 Terraform Plan 생성 중..."
+    plan_args="-input=false"
+
+    # 공통 변수 파일이 있으면 추가
+    if [ -f "$common_tfvars" ]; then
+        plan_args="$plan_args -var-file=$common_tfvars"
+    fi
+
+    # 환경 변수 파일이 있으면 추가
+    if [ -f "$env_tfvars" ]; then
+        plan_args="$plan_args -var-file=$env_tfvars"
     else
-        log_warning "  ⚠️  tfvars 파일 없음: $tfvars_file"
+        log_warning "  ⚠️  환경 tfvars 파일 없음: $env_tfvars"
         ((WARNINGS++))
+    fi
+
+    if terraform plan $plan_args > /dev/null 2>&1; then
+        log_success "  ✅ Plan 생성 성공"
+    else
+        log_error "  ❌ Plan 생성 실패"
+        terraform plan $plan_args
+        FAILED_LAYERS+=("$layer")
+        ((ERRORS++))
+        continue
     fi
     
     SUCCESS_LAYERS+=("$layer")

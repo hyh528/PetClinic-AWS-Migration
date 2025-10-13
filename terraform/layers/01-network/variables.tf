@@ -1,35 +1,74 @@
 # =============================================================================
-# Network Layer Variables - 공유 변수 사용
+# Network Layer Variables
 # =============================================================================
-# 설명: shared-variables.tf에서 정의된 공유 변수를 사용하여 중복 제거
+# 설명: 레이어 전용 변수만 정의 (공통 변수는 shared/common.tfvars에서 로드)
 
 # =============================================================================
-# 공유 설정
+# 공통 변수 (shared/common.tfvars에서 로드)
 # =============================================================================
 
-variable "shared_config" {
-  description = "공유 설정 정보"
-  type = object({
-    name_prefix = string
-    environment = string
-    aws_region  = string
-    common_tags = map(string)
-  })
+variable "project_name" {
+  description = "프로젝트 이름"
+  type        = string
 }
 
-variable "network_config" {
-  description = "네트워크 공통 설정"
-  type = object({
-    vpc_cidr                 = string
-    azs                      = list(string)
-    public_subnet_cidrs      = list(string)
-    private_app_subnet_cidrs = list(string)
-    private_db_subnet_cidrs  = list(string)
-  })
+variable "name_prefix" {
+  description = "모든 리소스 이름의 접두사"
+  type        = string
+}
+
+variable "environment" {
+  description = "배포 환경 (dev, staging, prod)"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS 리전"
+  type        = string
+}
+
+variable "aws_profile" {
+  description = "AWS CLI 프로파일"
+  type        = string
+}
+
+variable "vpc_cidr" {
+  description = "VPC CIDR 블록"
+  type        = string
+}
+
+variable "azs" {
+  description = "사용할 가용 영역 목록"
+  type        = list(string)
+}
+
+variable "public_subnet_cidrs" {
+  description = "퍼블릭 서브넷 CIDR 목록"
+  type        = list(string)
+}
+
+variable "private_app_subnet_cidrs" {
+  description = "프라이빗 앱 서브넷 CIDR 목록"
+  type        = list(string)
+}
+
+variable "private_db_subnet_cidrs" {
+  description = "프라이빗 DB 서브넷 CIDR 목록"
+  type        = list(string)
+}
+
+variable "vpc_endpoint_services" {
+  description = "생성할 VPC 인터페이스 엔드포인트 서비스 목록"
+  type        = list(string)
+}
+
+variable "tags" {
+  description = "모든 리소스에 적용할 공통 태그"
+  type        = map(string)
 }
 
 # =============================================================================
-# 네트워크 설정(dev.tfvars에서 정의)
+# 네트워크 전용 변수
 # =============================================================================
 
 # VPC IPv6 설정

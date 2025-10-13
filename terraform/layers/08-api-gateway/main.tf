@@ -13,8 +13,8 @@ locals {
   # GenAI Lambda 함수 정보 (06-lambda-genai 레이어에서 참조)
   lambda_function_invoke_arn = data.terraform_remote_state.lambda_genai.outputs.lambda_function_invoke_arn
 
-  # API Gateway 공통 설정 (공유 변수 서비스 사용)
-  layer_common_tags = merge(var.shared_config.common_tags, {
+  # API Gateway 공통 설정
+  layer_common_tags = merge(var.tags, {
     Layer     = "08-api-gateway"
     Component = "api-gateway"
     Purpose   = "spring-cloud-gateway-replacement"
@@ -31,9 +31,9 @@ locals {
 module "api_gateway" {
   source = "../../modules/api-gateway"
 
-  # 공유 변수 서비스 사용
-  name_prefix = var.shared_config.name_prefix
-  environment = var.shared_config.environment
+  # 기본 설정
+  name_prefix = var.name_prefix
+  environment = var.environment
   stage_name  = var.stage_name
 
   # ALB 통합 설정 (application 레이어에서 참조)
@@ -53,7 +53,7 @@ module "api_gateway" {
 
   # 로깅 및 추적 (임시로 로깅 비활성화)
   log_retention_days  = var.log_retention_days
-  enable_xray_tracing = false  # X-Ray 추적도 임시 비활성화
+  enable_xray_tracing = false # X-Ray 추적도 임시 비활성화
 
   # CORS 설정
   enable_cors = var.enable_cors

@@ -10,7 +10,7 @@
 
 locals {
   # Well-Architected: Cost Optimization 및 Operational Excellence
-  layer_common_tags = merge(var.shared_config.common_tags, {
+  layer_common_tags = merge(var.tags, {
     Layer     = "10-aws-native"
     Component = "aws-native-integration"
     Purpose   = "petclinic-aws-native-services"
@@ -25,8 +25,8 @@ module "aws_native_integration" {
   source = "../../modules/aws-native-integration"
 
   # 기본 설정
-  name_prefix = var.shared_config.name_prefix
-  aws_region  = var.shared_config.aws_region
+  name_prefix = var.name_prefix
+  aws_region  = var.aws_region
   common_tags = local.layer_common_tags
 
   # API Gateway 설정 (data.tf에서 참조)

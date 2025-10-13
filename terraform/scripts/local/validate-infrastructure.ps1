@@ -184,9 +184,9 @@ foreach ($Layer in $Layers) {
             }
         }
 
-        # Terraform init
+        # Terraform init (reconfigure로 상태 문제 해결)
         Write-ColorOutput "  🔧 Initializing Terraform..." "Info"
-        $initResult = & terraform init -input=false -upgrade 2>&1
+        $initResult = & terraform init -input=false -upgrade -reconfigure 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-ColorOutput "  ✅ Initialization successful" "Success"
         } else {
@@ -212,24 +212,37 @@ foreach ($Layer in $Layers) {
             continue
         }
 
-        # Terraform plan (if tfvars file exists)
-        $tfvarsFile = "$Environment.tfvars"
-        if (Test-Path $tfvarsFile) {
-            Write-ColorOutput "  📋 Generating Terraform plan..." "Info"
-            $planResult = & terraform plan -var-file="$tfvarsFile" -input=false 2>&1
-            if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 2) {
-                Write-ColorOutput "  ✅ Plan generation successful" "Success"
-            } else {
-                Write-ColorOutput "  ❌ Plan generation failed" "Error"
-                $planResult | ForEach-Object { Write-ColorOutput "    $_" "Error" }
-                $FailedLayers += $Layer
-                $Errors++
-                Pop-Location
-                continue
-            }
+        # Terraform plan (공통 + 환경 변수 파일 사용)
+        Write-ColorOutput "  📋 Generating Terraform plan..." "Info"
+
+        $CommonVarsFile = Join-Path $ProjectRoot "shared/common.tfvars"
+        $EnvVarsFile = Join-Path $ProjectRoot "envs/$Environment.tfvars"
+
+        $planArgs = @("-input=false")
+
+        # 공통 변수 파일이 있으면 추가
+        if (Test-Path $CommonVarsFile) {
+            $planArgs += "-var-file=$CommonVarsFile"
+        }
+
+        # 환경 변수 파일이 있으면 추가
+        if (Test-Path $EnvVarsFile) {
+            $planArgs += "-var-file=$EnvVarsFile"
         } else {
-            Write-ColorOutput "  ⚠️  tfvars file not found: $tfvarsFile" "Warning"
+            Write-ColorOutput "  ⚠️  Environment tfvars file not found: $EnvVarsFile" "Warning"
             $Warnings++
+        }
+
+        $planResult = & terraform plan @planArgs 2>&1
+        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 2) {
+            Write-ColorOutput "  ✅ Plan generation successful" "Success"
+        } else {
+            Write-ColorOutput "  ❌ Plan generation failed" "Error"
+            $planResult | ForEach-Object { Write-ColorOutput "    $_" "Error" }
+            $FailedLayers += $Layer
+            $Errors++
+            Pop-Location
+            continue
         }
 
         $SuccessLayers += $Layer

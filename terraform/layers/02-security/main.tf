@@ -17,7 +17,14 @@ locals {
     try(data.terraform_remote_state.application[0].outputs.alb_security_group_id, "")
   ) : ""
 
-  common_security_tags = merge(var.shared_config.common_tags, {
+  # 공통 태그 계산
+  common_tags = merge(var.tags, {
+    Environment = var.environment
+    Region      = var.aws_region
+    Timestamp   = timestamp()
+  })
+
+  common_security_tags = merge(local.common_tags, {
     Layer     = "02-security"
     Component = "security"
   })
@@ -27,10 +34,10 @@ locals {
 module "security_groups" {
   source = "../../modules/security"
 
-  name_prefix            = var.shared_config.name_prefix
-  environment            = var.shared_config.environment
+  name_prefix            = var.name_prefix
+  environment            = var.environment
   vpc_id                 = local.vpc_id
-  aws_region             = var.shared_config.aws_region
+  aws_region             = var.aws_region
   alb_security_group_id  = local.alb_sg_id
   vpce_security_group_id = local.vpce_security_group_id
   tags                   = local.common_security_tags

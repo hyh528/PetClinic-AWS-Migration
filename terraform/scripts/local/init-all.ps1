@@ -208,9 +208,7 @@ foreach ($Layer in $Layers) {
             "init",
             "-input=false",
             "-upgrade",
-            "-reconfigure",
-            "-backend-config=..\..\$BackendConfig",
-            "-backend-config=key=$StateKey"
+            "-reconfigure"  # Force reconfiguration to fix state checksum issues
         )
         
         Write-ColorOutput "[INFO] Running: terraform $($InitArgs -join ' ')" "Info"

@@ -43,8 +43,8 @@ locals {
   # 전체 의존성 준비 상태
   dependencies_ready = local.network_ready && local.security_ready
 
-  # 데이터베이스 공통 설정 (공유 변수 서비스 사용)
-  common_db_tags = merge(var.shared_config.common_tags, {
+  # 데이터베이스 공통 설정
+  common_db_tags = merge(var.tags, {
     Layer     = "03-database"
     Component = "aurora-mysql"
     Purpose   = "petclinic-microservices"
@@ -64,9 +64,9 @@ locals {
 # =============================================================================
 module "aurora_cluster" {
   source = "../../modules/database"
-  # 기본 설정 (공유 변수 서비스 사용)
-  name_prefix = var.shared_config.name_prefix
-  environment = var.shared_config.environment
+  # 기본 설정
+  name_prefix = var.name_prefix
+  environment = var.environment
   # Network 정보 (data.tf에서 참조)
   private_db_subnet_ids = local.private_db_subnet_ids
   # Security 정보 (data.tf에서 참조)
