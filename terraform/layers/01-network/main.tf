@@ -4,29 +4,24 @@
 # 목적: AWS Well-Architected 네트워킹 원칙에 따른 기본 네트워크 구성
 # 의존성: 없음 (기본 레이어)
 
-terraform {
-  backend "s3" {
-    bucket         = "petclinic-yeonghyeon-test"
-    key            = "dev/01-network/terraform.tfstate"
-    region         = "ap-northeast-1"
-    profile        = "petclinic-dev"
-    encrypt        = true
-    dynamodb_table = "petclinic-yeonghyeon-test-locks"
-  }
-}
+# 공통 모듈에서 provider 설정 상속
 
 locals {
-  # 공통 태그 계산
-  common_tags = merge(var.tags, {
-    Environment = var.environment
-    Region      = var.aws_region
-    Timestamp   = timestamp()
-  })
+  # 공통 모듈에서 태그 가져오기
+  common_network_tags = module.common.get_tags_for_layer
+}
 
-  common_network_tags = merge(local.common_tags, {
-    Layer     = "01-network"
-    Component = "networking"
-  })
+# 공통 모듈 (공통 변수들은 terraform plan/apply 시 -var-file로 전달됨)
+module "common" {
+  source = "../../modules/common"
+
+  # 공통 변수들은 terraform plan/apply 시 -var-file로 전달됨
+  name_prefix = var.name_prefix
+  environment = var.environment
+  aws_region  = var.aws_region
+  aws_profile = var.aws_profile
+  tags        = var.tags
+  layer       = "01-network"
 }
 
 # VPC 및 서브넷 모듈
@@ -45,7 +40,7 @@ module "vpc" {
   private_db_subnet_cidrs  = var.private_db_subnet_cidrs
 
   create_nat_per_az = var.create_nat_per_az
-  tags              = local.common_network_tags
+  tags              = module.common.get_tags_for_layer
 }
 
 # VPC 엔드포인트 모듈
@@ -63,5 +58,5 @@ module "vpc_endpoints" {
   private_app_route_table_ids = module.vpc.private_app_route_table_ids
   private_db_route_table_ids  = module.vpc.private_db_route_table_ids
   interface_services          = var.vpc_endpoint_services
-  tags                        = local.common_network_tags
+  tags                        = module.common.get_tags_for_layer
 }
