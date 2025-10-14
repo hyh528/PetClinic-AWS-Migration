@@ -44,6 +44,7 @@
         <!-- The -load option is a shortcut for or -output=type=docker -->
         <!-- Could be changed by the -push option !-->
         <container.build.extraarg>--load</container.build.extraarg>
+        <spring-cloud-aws.version>3.1.1</spring-cloud-aws.version>
     </properties>
 
     <dependencyManagement>
@@ -51,7 +52,7 @@
             <dependency>
                 <groupId>io.awspring.cloud</groupId>
                 <artifactId>spring-cloud-aws-dependencies</artifactId>
-                <version>3.1.1</version>
+                <version>${spring-cloud-aws.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
