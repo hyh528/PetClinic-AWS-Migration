@@ -1,12 +1,26 @@
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://discovery-server:8761/eureka/
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "health,info,prometheus"
-  zipkin:
-    tracing:
-      endpoint: http://tracing-server:9411/api/v2/spans
+ spring:
+   cloud:
+     gateway:
+       discovery:
+         locator:
+           enabled: true
+           lower-case-service-id: true # 서비스 이름을 소문자로 찾도록 설정
+     aws:
+       region:
+         static: ap-northeast-2
+       servicediscovery:
+         enabled: true
+         namespace: petclinic.local
+
+ eureka:
+   client:
+     enabled: false
+
+ management:
+   endpoints:
+     web:
+       exposure:
+         include: "health,info,prometheus"
+   zipkin:
+     tracing:
+       endpoint: http://tracing-server:9411/api/v2/spans
