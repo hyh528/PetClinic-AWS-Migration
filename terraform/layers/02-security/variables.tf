@@ -71,3 +71,8 @@ variable "enable_role_based_policies" {
   type        = bool
   default     = false
 }
+
+variable "tfstate_bucket_name" {
+  description = "Terraform 상태 파일 저장 버킷 이름"
+  type        = string
+}

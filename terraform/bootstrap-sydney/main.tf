@@ -109,3 +109,11 @@ resource "aws_dynamodb_table" "tf_lock" {
     Description = "Petclinic용 Terraform 상태 잠금 테이블"
   }
 }
+
+# ==========================================
+# Bootstrap 완료 후 다음 단계
+# ==========================================
+# 1. terraform output으로 값 확인
+# 2. envs/dev/network/providers.tf의 backend 설정 확인
+# 3. terraform init (백엔드 전환)
+# 4. terraform apply (실제 인프라 생성)

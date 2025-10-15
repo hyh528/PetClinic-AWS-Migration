@@ -16,12 +16,15 @@ module "common" {
   source = "../../modules/common"
 
   # 공통 변수들은 terraform plan/apply 시 -var-file로 전달됨
-  name_prefix = var.name_prefix
-  environment = var.environment
-  aws_region  = var.aws_region
-  aws_profile = var.aws_profile
-  tags        = var.tags
-  layer       = "01-network"
+  name_prefix  = var.name_prefix
+  environment  = var.environment
+  aws_region   = var.aws_region
+  aws_profile  = var.aws_profile
+  tags         = var.tags
+  layer        = "01-network"
+  project_name = "petclinic"
+  cost_center  = "training"
+  owner        = "team-petclinic"
 }
 
 # VPC 및 서브넷 모듈

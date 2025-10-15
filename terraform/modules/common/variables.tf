@@ -29,3 +29,56 @@ variable "layer" {
   type        = string
   default     = ""
 }
+
+variable "project_name" {
+  description = "프로젝트 이름"
+  type        = string
+}
+
+variable "cost_center" {
+  description = "비용 센터"
+  type        = string
+  default     = ""
+}
+
+variable "owner" {
+  description = "소유자"
+  type        = string
+  default     = ""
+}
+
+variable "backup_required" {
+  description = "백업 필요 여부"
+  type        = bool
+  default     = false
+}
+
+variable "monitoring_enabled" {
+  description = "모니터링 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "compliance_level" {
+  description = "컴플라이언스 레벨"
+  type        = string
+  default     = "standard"
+}
+
+variable "terraform_module" {
+  description = "Terraform 모듈 이름"
+  type        = string
+  default     = "common"
+}
+
+variable "component" {
+  description = "컴포넌트 이름"
+  type        = string
+  default     = ""
+}
+
+variable "additional_tags" {
+  description = "추가 태그 맵"
+  type        = map(string)
+  default     = {}
+}

@@ -10,43 +10,35 @@
 ### 4.1. 인프라 배포 (높은 우선순위)
 - [ ] **Network 레이어 배포**
   - VPC, 서브넷, 라우팅 테이블, 게이트웨이 생성
-  - 명령어: `cd terraform/envs/dev/network && terraform apply`
   - 검증: VPC 연결성, 서브넷 구성 확인
 
 - [ ] **Security 레이어 배포**
   - 보안 그룹, IAM 역할, VPC 엔드포인트 생성
-  - 명령어: `cd terraform/envs/dev/security && terraform apply`
   - 검증: 보안 그룹 규칙, IAM 정책 확인
 
 - [ ] **Database 레이어 배포**
   - Aurora Serverless v2 클러스터 생성
-  - 명령어: `cd terraform/envs/dev/database && terraform apply`
   - 검증: Aurora 연결성, Multi-AZ 구성 확인
 
 - [ ] **Application 레이어 배포**
   - ECS 클러스터, 서비스, ALB 생성
-  - 명령어: `cd terraform/envs/dev/application && terraform apply`
   - 검증: ECS 태스크 실행, ALB 헬스체크 확인
 
 ### 4.2. AWS 네이티브 서비스 배포
 - [ ] **Parameter Store 배포**
   - 계층적 파라미터 생성
-  - 명령어: `cd terraform/envs/dev/parameter-store && terraform apply`
   - 검증: 파라미터 값 조회, Spring Boot 자동 주입 확인
 
 - [ ] **Cloud Map 배포**
   - 프라이빗 DNS 네임스페이스 생성
-  - 명령어: `cd terraform/envs/dev/cloud-map && terraform apply`
   - 검증: 서비스 등록/해제, DNS 해석 확인
 
 - [ ] **API Gateway 배포**
   - REST API 생성 및 ALB 통합
-  - 명령어: `cd terraform/envs/dev/api-gateway && terraform apply`
   - 검증: API 엔드포인트 호출, 라우팅 확인
 
 - [ ] **Lambda + Bedrock 배포**
   - AI Lambda 함수 생성
-  - 명령어: `cd terraform/envs/dev/lambda-genai && terraform apply`
   - 검증: Bedrock 모델 호출, API Gateway 통합 확인
 
 ## 🔧 Phase 5: 애플리케이션 및 서비스 최적화

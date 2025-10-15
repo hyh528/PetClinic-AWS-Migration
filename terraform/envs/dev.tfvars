@@ -6,19 +6,19 @@
 environment = "dev"
 
 # AWS 설정
-aws_region  = "ap-northeast-1"
+aws_region  = "ap-southeast-2"
 aws_profile = "petclinic-dev"
 
 # Terraform 상태 관리
-tfstate_bucket_name = "petclinic-yeonghyeon-test"
+tfstate_bucket_name = "petclinic-tfstate-sydney-dev"
 
 # 네트워킹 설정
 name_prefix = "petclinic-dev"
 vpc_cidr    = "10.0.0.0/16"
 
 azs = [
-  "ap-northeast-1a",
-  "ap-northeast-1c"
+  "ap-southeast-2a",
+  "ap-southeast-2b"
 ]
 
 public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
@@ -99,7 +99,7 @@ tags = {
 shared_config = {
   name_prefix = "petclinic-dev"
   environment = "dev"
-  aws_region  = "ap-northeast-1"
+  aws_region  = "ap-southeast-2"
   aws_profile = "petclinic-dev"
   common_name = "petclinic-dev"
   common_tags = {
@@ -113,14 +113,14 @@ shared_config = {
 
 network_config = {
   vpc_cidr                 = "10.0.0.0/16"
-  azs                      = ["ap-northeast-1a", "ap-northeast-1c"]
+  azs                      = ["ap-southeast-2a", "ap-southeast-2b"]
   public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
   private_app_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
   private_db_subnet_cidrs  = ["10.0.5.0/24", "10.0.6.0/24"]
 }
 
 state_config = {
-  bucket_name = "petclinic-yeonghyeon-test"
-  region      = "ap-northeast-1"
+  bucket_name = "petclinic-tfstate-sydney-dev"
+  region      = "ap-southeast-2"
   profile     = "petclinic-dev"
 }

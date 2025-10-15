@@ -3,13 +3,7 @@
 # =============================================================================
 # 목적: 모든 레이어에서 사용하는 공통 버전 제약을 중앙화
 
+# Terraform 버전 제약만 (required_providers는 provider.tf로 이동)
 terraform {
   required_version = ">= 1.12.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-  }
 }

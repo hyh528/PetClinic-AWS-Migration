@@ -14,15 +14,24 @@
 
 ```
 terraform/
-├── envs/dev/                    # 개발 환경 설정
-│   ├── network/                 # ✅ VPC, 서브넷, 게이트웨이
-│   ├── security/                # ✅ 보안 그룹, IAM, VPC 엔드포인트
-│   ├── database/                # ✅ Aurora 클러스터
-│   ├── application/             # ⚠️  ECS, ALB, ECR (검증 필요)
-│   ├── monitoring/              # ✅ CloudWatch, X-Ray
-│   ├── aws-native/              # ✅ API Gateway, Parameter Store 등
-
-└── modules/                     # 재사용 가능한 모듈들
+├── docs/
+├── scripts/
+│   └── local/                     # 로컬 자동화 스크립트들
+├── bootstrap/
+├── envs/
+│   └── dev.tfvars                 # 환경별 변수 파일
+├── layers/
+│   ├── 01-network/
+│   ├── 02-security/
+│   ├── 03-database/
+│   ├── 04-parameter-store/
+│   ├── 05-cloud-map/
+│   ├── 06-lambda-genai/
+│   ├── 07-application/
+│   ├── 08-api-gateway/
+│   ├── 09-monitoring/
+│   └── 10-aws-native/
+└── modules/
 ```
 
 ## 🔍 1단계: 사전 검증
@@ -44,17 +53,18 @@ aws sts get-caller-identity
 
 ```bash
 # 프로젝트 루트로 이동
-cd terraform/envs/dev
+cd terraform/layers
 
-# 각 레이어별 상태 확인
-for dir in network security database application monitoring; do
+# 각 레이어별 원격 상태 확인 (백엔드 연결 필요)
+for dir in 01-network 02-security 03-database 07-application 09-monitoring 10-aws-native; do
     echo "=== $dir 레이어 확인 ==="
     cd $dir
-    if [ -f "terraform.tfstate" ]; then
-        echo "✅ 로컬 상태 파일 존재"
+    terraform init -backend-config=backend.config -reconfigure >/dev/null 2>&1
+    if terraform state list >/dev/null 2>&1; then
+        echo "✅ 원격 상태 연결됨"
         terraform state list | head -5
     else
-        echo "❌ 상태 파일 없음"
+        echo "❌ 상태 없음 또는 초기화 필요"
     fi
     cd ..
     echo
@@ -82,12 +92,12 @@ done
 ### 2.2 환경별 설정 검증
 
 ```bash
-# 개발 환경 검증
-cd terraform/envs/dev
+# 레이어별 검증 (백엔드 없이)
+cd terraform/layers
 
-for env in */; do
-    echo "=== $env 환경 검증 ==="
-    cd "$env"
+for layer in 01-network 02-security 03-database 04-parameter-store 05-cloud-map 06-lambda-genai 07-application 08-api-gateway 09-monitoring 10-aws-native; do
+    echo "=== $layer 레이어 검증 ==="
+    cd "$layer"
     terraform fmt -check
     terraform init -backend=false  # 백엔드 없이 초기화
     terraform validate
@@ -118,48 +128,48 @@ terraform apply  # 신중하게 검토 후 yes 입력
 ### 3.2 네트워크 레이어 (기반 인프라)
 
 ```bash
-cd terraform/envs/dev/network
+cd terraform/layers/01-network
 
 # 1. 백엔드 설정 적용 (상태 관리 완료 후)
-terraform init
+terraform init -backend-config=backend.config -reconfigure
 
 # 2. 계획 확인
-terraform plan
+terraform plan -var-file=../../envs/dev.tfvars
 
 # 3. 배포 (기존 리소스가 있다면 import 필요)
-terraform apply
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 ### 3.3 보안 레이어
 
 ```bash
-cd terraform/envs/dev/security
+cd terraform/layers/02-security
 
-terraform init
-terraform plan
-terraform apply
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 ### 3.4 데이터베이스 레이어
 
 ```bash
-cd terraform/envs/dev/database
+cd terraform/layers/03-database
 
-terraform init
-terraform plan
-terraform apply
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 ### 3.5 애플리케이션 레이어 (주의 필요)
 
 ```bash
-cd terraform/envs/dev/application
+cd terraform/layers/07-application
 
 # ⚠️ 현재 알려진 이슈: task_role_arn 속성 오류
 # 배포 전 이슈 해결 필요
 
-terraform init
-terraform plan  # 오류 확인
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars  # 오류 확인
 ```
 
 ## 🚨 4단계: 문제 해결
@@ -239,8 +249,8 @@ chmod +x scripts/migrate-to-remote-state.sh
 
 ```bash
 # 각 레이어별로 수동 마이그레이션
-cd terraform/envs/dev/network
-terraform init  # 백엔드 마이그레이션 프롬프트에서 'yes'
+cd terraform/layers/01-network
+terraform init -backend-config=backend.config -reconfigure  # 백엔드 마이그레이션 프롬프트에서 'yes'
 ```
 
 ## 📞 7단계: 문제 발생 시 대응
@@ -257,5 +267,3 @@ terraform init  # 백엔드 마이그레이션 프롬프트에서 'yes'
 2. **실행한 명령어 기록**
 3. **현재 작업 디렉토리 확인**
 4. **팀 채널에 공유**
-
-**⚠️ 주의**: 이 가이드는 개발 환경 기준입니다. 운영 환경 배포 시에는 별도 승인 절차가 필요합니다.

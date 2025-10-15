@@ -4,12 +4,8 @@
 # 목적: 모든 레이어에서 사용하는 공통 태그와 설정을 중앙화하여 중복 제거
 
 locals {
-  # 공통 태그 계산
-  common_tags = merge(var.tags, {
-    Environment = var.environment
-    Region      = var.aws_region
-    Timestamp   = timestamp()
-  })
+  # 공통 태그 계산 (중복 제거됨)
+  # common_tags는 locals.tf에서 정의됨
 
   # 레이어 전용 태그 추가
   layer_tags = {

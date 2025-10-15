@@ -9,10 +9,10 @@ PetClinic AWS 마이그레이션 프로젝트의 Terraform 레이어들을 올�
 
 #### 1. Network Layer (최우선)
 ```bash
-cd terraform/envs/dev/network
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/01-network
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: 모든 리소스가 VPC, 서브넷, 라우팅에 의존하므로 가장 먼저 실행
 
@@ -27,10 +27,10 @@ terraform apply
 
 #### 2. Security Layer
 ```bash
-cd terraform/envs/dev/security
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/02-security
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: 보안 그룹과 IAM 역할이 다른 서비스들에 필요
 
@@ -46,10 +46,10 @@ terraform apply
 
 #### 3. Database Layer
 ```bash
-cd terraform/envs/dev/database
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/03-database
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: 애플리케이션 서비스들이 데이터베이스에 의존
 
@@ -63,10 +63,10 @@ terraform apply
 
 #### 4. Parameter Store Layer
 ```bash
-cd terraform/envs/dev/parameter-store
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/04-parameter-store
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: 애플리케이션 설정이 Parameter Store에 저장됨
 
@@ -81,10 +81,10 @@ terraform apply
 
 #### 5. Cloud Map Layer
 ```bash
-cd terraform/envs/dev/cloud-map
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/05-cloud-map
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: ECS 서비스들이 서비스 디스커버리에 등록됨
 
@@ -96,10 +96,10 @@ terraform apply
 
 #### 6. Lambda GenAI Layer
 ```bash
-cd terraform/envs/dev/lambda-genai
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/06-lambda-genai
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: 독립적인 서버리스 서비스로 다른 서비스와 의존성 낮음
 
@@ -114,10 +114,10 @@ terraform apply
 
 #### 7. Application Layer
 ```bash
-cd terraform/envs/dev/application
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/07-application
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: ECS 서비스와 ALB가 네트워크, 보안, 데이터베이스에 의존
 
@@ -132,10 +132,10 @@ terraform apply
 
 #### 8. API Gateway Layer
 ```bash
-cd terraform/envs/dev/api-gateway
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/08-api-gateway
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: ALB와 Lambda 함수에 의존
 
@@ -151,10 +151,10 @@ terraform apply
 
 #### 9. Monitoring Layer
 ```bash
-cd terraform/envs/dev/monitoring
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/09-monitoring
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: 모든 서비스가 실행된 후 모니터링 설정
 
@@ -168,10 +168,10 @@ terraform apply
 
 #### 10. AWS Native Integration Layer
 ```bash
-cd terraform/envs/dev/aws-native
-terraform init
-terraform plan
-terraform apply
+cd terraform/layers/10-aws-native
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 **이유**: 모든 AWS 네이티브 서비스들 간의 통합과 오케스트레이션
 
@@ -202,19 +202,19 @@ terraform apply
 # 전체 레이어 순차 실행 스크립트
 
 LAYERS=(
-    "network"
-    "security" 
-    "database"
-    "parameter-store"
-    "cloud-map"
-    "lambda-genai"
-    "application"
-    "api-gateway"
-    "monitoring"
-    "aws-native"
+    "01-network"
+    "02-security"
+    "03-database"
+    "04-parameter-store"
+    "05-cloud-map"
+    "06-lambda-genai"
+    "07-application"
+    "08-api-gateway"
+    "09-monitoring"
+    "10-aws-native"
 )
 
-BASE_DIR="terraform/envs/dev"
+BASE_DIR="terraform/layers"
 
 for layer in "${LAYERS[@]}"; do
     echo "=========================================="
@@ -224,16 +224,16 @@ for layer in "${LAYERS[@]}"; do
     cd "$BASE_DIR/$layer"
     
     echo "terraform init 실행..."
-    terraform init
+    terraform init -backend-config=backend.config -reconfigure
     
     echo "terraform plan 실행..."
-    terraform plan
+    terraform plan -var-file=../../envs/dev.tfvars
     
     read -p "$layer 레이어를 apply하시겠습니까? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "terraform apply 실행..."
-        terraform apply -auto-approve
+        terraform apply -auto-approve -var-file=../../envs/dev.tfvars
     else
         echo "$layer 레이어 건너뜀"
     fi
@@ -248,19 +248,19 @@ done
 # 전체 레이어 순차 실행 스크립트 (PowerShell)
 
 $Layers = @(
-    "network",
-    "security", 
-    "database",
-    "parameter-store",
-    "cloud-map",
-    "lambda-genai",
-    "application",
-    "api-gateway",
-    "monitoring",
-    "aws-native"
+    "01-network",
+    "02-security",
+    "03-database",
+    "04-parameter-store",
+    "05-cloud-map",
+    "06-lambda-genai",
+    "07-application",
+    "08-api-gateway",
+    "09-monitoring",
+    "10-aws-native"
 )
 
-$BaseDir = "terraform\envs\dev"
+$BaseDir = "terraform\layers"
 
 foreach ($layer in $Layers) {
     Write-Host "==========================================" -ForegroundColor Cyan
@@ -271,15 +271,15 @@ foreach ($layer in $Layers) {
     Push-Location $layerPath
     
     Write-Host "terraform init 실행..." -ForegroundColor Yellow
-    terraform init
+    terraform init -backend-config=backend.config -reconfigure
     
     Write-Host "terraform plan 실행..." -ForegroundColor Yellow
-    terraform plan
+    terraform plan -var-file=..\..\envs\dev.tfvars
     
     $response = Read-Host "$layer 레이어를 apply하시겠습니까? (y/n)"
     if ($response -eq 'y' -or $response -eq 'Y') {
         Write-Host "terraform apply 실행..." -ForegroundColor Green
-        terraform apply -auto-approve
+        terraform apply -auto-approve -var-file=..\..\envs\dev.tfvars
     } else {
         Write-Host "$layer 레이어 건너뜀" -ForegroundColor Yellow
     }
@@ -305,9 +305,9 @@ foreach ($layer in $Layers) {
 **역순으로 실행해야 합니다**:
 ```bash
 # 정리 순서 (역순)
-aws-native → monitoring → api-gateway → 
-application → lambda-genai → cloud-map → parameter-store → 
-database → security → network
+10-aws-native → 09-monitoring → 08-api-gateway →
+07-application → 06-lambda-genai → 05-cloud-map → 04-parameter-store →
+03-database → 02-security → 01-network
 ```
 
 ### 4. 비용 관리

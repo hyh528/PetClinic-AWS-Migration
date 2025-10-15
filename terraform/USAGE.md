@@ -26,21 +26,21 @@ terraform/
 ```bash
 # 1. Network 레이어
 cd terraform/layers/01-network
-terraform init -backend-config="../backend.hcl" -backend-config="key=envs/dev/01-network/terraform.tfstate"
-terraform plan -var-file="../../envs/dev.tfvars"
-terraform apply -var-file="../../envs/dev.tfvars"
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 
 # 2. Security 레이어
 cd ../02-security
-terraform init -backend-config="../backend.hcl" -backend-config="key=envs/dev/02-security/terraform.tfstate"
-terraform plan -var-file="../../envs/dev.tfvars"
-terraform apply -var-file="../../envs/dev.tfvars"
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 
 # 3. Database 레이어
 cd ../03-database
-terraform init -backend-config="../backend.hcl" -backend-config="key=envs/dev/03-database/terraform.tfstate"
-terraform plan -var-file="../../envs/dev.tfvars"
-terraform apply -var-file="../../envs/dev.tfvars"
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 ### 2. 스테이징 환경 배포
@@ -48,9 +48,9 @@ terraform apply -var-file="../../envs/dev.tfvars"
 ```bash
 # Network 레이어
 cd terraform/layers/01-network
-terraform init -backend-config="../backend.hcl" -backend-config="key=envs/staging/01-network/terraform.tfstate"
-terraform plan -var-file="../../envs/staging.tfvars"
-terraform apply -var-file="../../envs/staging.tfvars"
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/staging.tfvars
+terraform apply -var-file=../../envs/staging.tfvars
 ```
 
 ### 3. 프로덕션 환경 배포
@@ -58,9 +58,9 @@ terraform apply -var-file="../../envs/staging.tfvars"
 ```bash
 # Network 레이어
 cd terraform/layers/01-network
-terraform init -backend-config="../backend.hcl" -backend-config="key=envs/prod/01-network/terraform.tfstate"
-terraform plan -var-file="../../envs/prod.tfvars"
-terraform apply -var-file="../../envs/prod.tfvars"
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/prod.tfvars
+terraform apply -var-file=../../envs/prod.tfvars
 ```
 
 ## 🔧 주요 특징

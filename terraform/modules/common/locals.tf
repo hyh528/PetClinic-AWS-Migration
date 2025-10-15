@@ -33,17 +33,7 @@ locals {
     cloudwatch     = "${var.project_name}-${var.environment}-cw"
     parameter      = "/${var.project_name}/${var.environment}"
   }
-}
 
-# S3 버킷 이름 고유성을 위한 랜덤 ID
-resource "random_id" "bucket_suffix" {
-  byte_length = 4
-}
-
-# ==========================================
-# 태그 표준화
-# ==========================================
-locals {
   # 필수 태그 (모든 리소스에 적용)
   mandatory_tags = {
     Project     = var.project_name
@@ -82,12 +72,7 @@ locals {
     local.technical_tags,
     var.additional_tags
   )
-}
 
-# ==========================================
-# 보안 표준
-# ==========================================
-locals {
   # 보안 그룹 명명 규칙
   security_group_names = {
     alb          = "${local.naming_convention.security_group}-alb"
@@ -104,12 +89,7 @@ locals {
     lambda_execution   = "${local.naming_convention.iam_role}-lambda-execution"
     cloudtrail         = "${local.naming_convention.iam_role}-cloudtrail"
   }
-}
 
-# ==========================================
-# 네트워크 표준
-# ==========================================
-locals {
   # 서브넷 명명 규칙
   subnet_names = {
     public_a      = "${local.naming_convention.resource_name}-public-a"
@@ -126,12 +106,7 @@ locals {
     private_app = "${local.naming_convention.resource_name}-rt-private-app"
     private_db  = "${local.naming_convention.resource_name}-rt-private-db"
   }
-}
 
-# ==========================================
-# 모니터링 표준
-# ==========================================
-locals {
   # CloudWatch 로그 그룹 명명 규칙
   log_group_names = {
     ecs_app     = "/ecs/${local.naming_convention.resource_name}-app"
@@ -147,4 +122,9 @@ locals {
     api  = "${local.naming_convention.cloudwatch}-api-dashboard"
     db   = "${local.naming_convention.cloudwatch}-db-dashboard"
   }
+}
+
+# S3 버킷 이름 고유성을 위한 랜덤 ID
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
 }

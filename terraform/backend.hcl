@@ -3,7 +3,7 @@
 # =============================================================================
 # 사용법: terraform init -backend-config="../backend.hcl"
 
-bucket         = "petclinic-yeonghyeon-test"
-region         = "ap-northeast-1"
+bucket         = "petclinic-tfstate-sydney-dev"
+region         = "ap-southeast-2"
 encrypt        = true
-dynamodb_table = "petclinic-yeonghyeon-test-locks"
+dynamodb_table = "petclinic-tf-locks-sydney-dev"
