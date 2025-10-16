@@ -18,18 +18,6 @@ locals {
   })
 }
 
-# =============================================================================
-# Data Sources - 표준화된 원격 상태 참조
-# =============================================================================
-
-data "terraform_remote_state" "api_gateway" {
-  backend = "s3"
-  config = {
-    bucket = var.backend_bucket
-    key    = "terraform/${var.environment}/08-api-gateway.tfstate"
-    region = var.aws_region
-  }
-}
 
 # =============================================================================
 # S3 Frontend Hosting 모듈
