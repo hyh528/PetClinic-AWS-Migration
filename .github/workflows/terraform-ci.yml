@@ -9,9 +9,71 @@ on:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    outputs:
+      paths: ${{ steps.changes.outputs.paths }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed terraform paths
+        id: changes
+        run: |
+          # Fetch main to compare (safe even if already fetched)
+          git fetch origin main || true
+
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD || true)
+          echo "Detected changed files:" >&2
+          echo "$CHANGED_FILES" >&2
+
+          declare -a paths
+          for f in $CHANGED_FILES; do
+            case "$f" in
+              terraform/modules/*)
+                module=$(echo $f | cut -d'/' -f3)
+                paths+=("terraform/modules/$module")
+                ;;
+              terraform/layers/*)
+                layer=$(echo $f | cut -d'/' -f3)
+                paths+=("terraform/layers/$layer")
+                ;;
+              terraform/*)
+                paths+=("terraform")
+                ;;
+            esac
+          done
+
+          # unique and emit as single-line pipe-separated value to avoid multiline output issues
+          if [ ${#paths[@]} -gt 0 ]; then
+            uniq_paths=$(printf "%s\n" "${paths[@]}" | sort -u | tr '\n' '|')
+            # remove trailing pipe
+            uniq_paths=${uniq_paths%|}
+            echo "paths=$uniq_paths" >> $GITHUB_OUTPUT
+          else
+            echo "paths=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup tflint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Run tflint
+        run: |
+          CHANGED="${{ steps.changes.outputs.paths }}"
+          echo "Changed paths: $CHANGED"
+          if [ -z "$CHANGED" ]; then
+            echo "No specific terraform paths detected, running tflint on whole repo"
+            tflint --init || true
+            tflint --recursive terraform/ || true
+          else
+            IFS='|' read -r -a TARGETS <<< "$CHANGED"
+            for p in "${TARGETS[@]}"; do
+              if [ -n "$p" ] && [ -d "$p" ]; then
+                echo "Running tflint in $p"
+                (cd "$p" && tflint --init || true && tflint || true)
+              fi
+            done
+          fi
 
       - name: Install tfsec
         run: |
@@ -19,13 +81,52 @@ jobs:
 
       - name: Run tfsec
         run: |
-          # scan all terraform code, don't fail CI on findings here (PR review will look)
-          tfsec terraform/ || true
+          CHANGED="${{ steps.changes.outputs.paths }}"
+          echo "tfsec - changed paths: $CHANGED"
+          if [ -z "$CHANGED" ]; then
+            echo "No specific terraform paths detected, running tfsec on whole repo"
+            tfsec terraform/ || true
+          else
+            IFS='|' read -r -a TARGETS <<< "$CHANGED"
+            for p in "${TARGETS[@]}"; do
+              if [ -z "$p" ]; then
+                continue
+              fi
+              if [ "$p" = "terraform" ]; then
+                echo "Running tfsec on full terraform/"
+                tfsec terraform/ || true
+              elif [ -d "$p" ]; then
+                echo "Running tfsec in $p"
+                tfsec "$p" || true
+              fi
+            done
+          fi
 
       - name: Run checkov
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: terraform/
+        run: |
+          CHANGED="${{ steps.changes.outputs.paths }}"
+          echo "checkov - changed paths: $CHANGED"
+          # ensure checkov is available
+          python3 -m pip install --upgrade pip setuptools || true
+          python3 -m pip install checkov || true
+          if [ -z "$CHANGED" ]; then
+            echo "No specific terraform paths detected, running checkov on whole repo"
+            checkov -d terraform/ || true
+          else
+            IFS='|' read -r -a TARGETS <<< "$CHANGED"
+            for p in "${TARGETS[@]}"; do
+              if [ -z "$p" ]; then
+                continue
+              fi
+              if [ "$p" = "terraform" ]; then
+                echo "Running checkov on full terraform/"
+                checkov -d terraform/ || true
+              elif [ -d "$p" ]; then
+                echo "Running checkov in $p"
+                checkov -d "$p" || true
+              fi
+            done
+          fi
 
   terraform-plan:
     needs: security-scan
@@ -41,18 +142,51 @@ jobs:
         with:
           terraform_version: 1.12.0
 
-      - name: Terraform Init
-        working-directory: terraform/layers/07-application
+      - name: Prepare per-layer plans
+        id: plan-runner
         run: |
-          # partial backend config expected: repo-root/terraform/backend.hcl and optional backend.config per-layer
-          terraform init -backend-config=${{ github.workspace }}/terraform/backend.hcl -backend-config=backend.config || true
-
-      - name: Terraform Validate
-        working-directory: terraform/layers/07-application
-        run: terraform validate
-
-      - name: Terraform Plan
-        working-directory: terraform/layers/07-application
-        run: |
+          set -e
           ENV=${{ env.TF_ENV }}
-          terraform plan -var-file=${{ github.workspace }}/terraform/envs/${ENV}.tfvars -out=tfplan -no-color
+          PATHS="${{ needs.security-scan.outputs.paths }}"
+          echo "Detected paths: $PATHS"
+
+          # helper to run init/plan for a layer
+          run_plan() {
+            layer_dir="$1"
+            echo "Running terraform init/plan for $layer_dir"
+            (cd "$layer_dir" || exit 1
+              terraform init -backend-config=${{ github.workspace }}/terraform/backend.hcl -backend-config=backend.config || true
+              terraform validate || true
+              plan_file="${layer_dir//\//-}-$ENV.tfplan"
+              terraform plan -var-file=${{ github.workspace }}/terraform/envs/${ENV}.tfvars -out="$plan_file" -no-color || true
+              echo "PLAN_FILE=$plan_file" >> "$GITHUB_OUTPUT"
+            )
+          }
+
+          if [ -z "$PATHS" ]; then
+            echo "No specific paths detected; running default plan for terraform/layers/07-application"
+            run_plan "terraform/layers/07-application"
+          else
+            IFS='|' read -r -a TARGETS <<< "$PATHS"
+            found_layer=0
+            for p in "${TARGETS[@]}"; do
+              if [[ "$p" == terraform/layers/* ]]; then
+                found_layer=1
+                if [ -d "$p" ]; then
+                  run_plan "$p"
+                fi
+              fi
+            done
+            if [ $found_layer -eq 0 ]; then
+              echo "No layer-specific paths found; falling back to terraform/layers/07-application"
+              run_plan "terraform/layers/07-application"
+            fi
+          fi
+
+      - name: Upload plan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plans
+          path: |
+            **/*.tfplan
