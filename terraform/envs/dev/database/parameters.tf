@@ -11,6 +11,7 @@ locals {
   common_parameters = {
     "spring.profiles.active" = "mysql,aws"
     "logging.level.root"     = "INFO"
+    "eureka.client.serviceUrl.defaultZone" = "http://discovery-server:8761/eureka/"
   }
 }
 
@@ -24,6 +25,7 @@ resource "aws_ssm_parameter" "common" {
     Category = "common"
   }
 }
+
 
 # Create server port parameters for each service.
 resource "aws_ssm_parameter" "server_port" {
