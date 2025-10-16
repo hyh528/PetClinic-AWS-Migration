@@ -1,0 +1,58 @@
+name: Terraform CI (tfsec + checkov + plan)
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-ci.yml'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tfsec
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+
+      - name: Run tfsec
+        run: |
+          # scan all terraform code, don't fail CI on findings here (PR review will look)
+          tfsec terraform/ || true
+
+      - name: Run checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+
+  terraform-plan:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    env:
+      TF_ENV: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Terraform Init
+        working-directory: terraform/layers/07-application
+        run: |
+          # partial backend config expected: repo-root/terraform/backend.hcl and optional backend.config per-layer
+          terraform init -backend-config=${{ github.workspace }}/terraform/backend.hcl -backend-config=backend.config || true
+
+      - name: Terraform Validate
+        working-directory: terraform/layers/07-application
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: terraform/layers/07-application
+        run: |
+          ENV=${{ env.TF_ENV }}
+          terraform plan -var-file=${{ github.workspace }}/terraform/envs/${ENV}.tfvars -out=tfplan -no-color

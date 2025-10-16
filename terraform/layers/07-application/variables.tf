@@ -100,3 +100,13 @@ variable "container_definitions" {
 ]
 EOF
 }
+
+variable "service_image_map" {
+  description = <<EOF
+Map of service key -> full image reference (including tag or digest).
+예: { customers = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-customers:sha-abc123" }
+CI에서 빌드 후 이 값을 생성하여 Terraform 실행에 전달하세요.
+EOF
+  type    = map(string)
+  default = {}
+}

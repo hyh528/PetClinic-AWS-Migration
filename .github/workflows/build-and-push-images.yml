@@ -1,0 +1,73 @@
+name: Build and push service images
+
+on:
+  push:
+    paths:
+      - 'spring-petclinic-*/**'
+      - '.github/workflows/build-and-push-images.yml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    env:
+      ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+      AWS_REGION: ap-southeast-2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & push customers-service
+        working-directory: ./spring-petclinic-customers-service
+        run: |
+          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}
+
+      - name: Build & push vets-service
+        working-directory: ./spring-petclinic-vets-service
+        run: |
+          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}
+
+      - name: Build & push visits-service
+        working-directory: ./spring-petclinic-visits-service
+        run: |
+          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}
+
+      - name: Build & push admin-server
+        working-directory: ./spring-petclinic-admin-server
+        run: |
+          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}
+
+
+      - name: Emit images mapping artifact
+        run: |
+          # Map service keys to image URIs expected by terraform variable `service_image_map`
+          echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}" >> images.properties
+          echo "vets-service=${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}" >> images.properties
+          echo "visits-service=${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}" >> images.properties
+          echo "admin-server=${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}" >> images.properties
+        shell: bash
+
+      - name: Upload images artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: images
+          path: images.properties

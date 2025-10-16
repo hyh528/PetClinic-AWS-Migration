@@ -79,33 +79,13 @@ module "ecr_services" {
   })
 }
 
-# =============================================================================
-# Docker 이미지 빌드 및 푸시 (모듈화된 접근 방식)
-# =============================================================================
+# Docker 이미지 관리는 CI 파이프라인으로 이동했습니다.
+# 이 레이어는 빌드된 이미지를 외부(예: CI)에서 전달받아 사용합니다.
+# 권장: GitHub Actions 등을 사용해 이미지 빌드 → ECR 푸시 → Terraform에는
+# immutable tag(예: git SHA 또는 digest)를 제공하세요.
 
-resource "null_resource" "build_and_push_images" {
-  for_each = local.services
-
-  depends_on = [module.ecr_services]
-
-  provisioner "local-exec" {
-    working_dir = "../../../"
-    command     = <<-EOT
-      echo "Building and pushing ${each.key} service image..."
-
-      # ECR 로그인 및 이미지 빌드/푸시
-      cd spring-petclinic-${local.service_directories[each.key]}
-      ../mvnw compile jib:build -Dimage=${module.ecr_services[each.key].repository_url}:latest
-
-      echo "${each.key} service image pushed successfully"
-    EOT
-  }
-
-  triggers = {
-    source_hash = filemd5("../../../spring-petclinic-${local.service_directories[each.key]}/pom.xml")
-    always_run  = timestamp()
-  }
-}
+# Terraform에서 사용할 서비스 이미지 매핑은 변수 `var.service_image_map` 를 통해 주입됩니다.
+# 예: { customers = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-customers:sha-abc123" }
 
 # =============================================================================
 # ALB 모듈 (공통 로드 밸런서)
@@ -215,7 +195,7 @@ resource "aws_ecs_task_definition" "services" {
   container_definitions = jsonencode([
     {
       name      = each.key
-      image     = "${module.ecr_services[each.key].repository_url}:latest"
+  image     = lookup(var.service_image_map, each.key, "${module.ecr_services[each.key].repository_url}:latest")
       cpu       = each.value.cpu
       memory    = each.value.memory
       essential = true
@@ -247,7 +227,7 @@ resource "aws_ecs_task_definition" "services" {
     Service = each.key
   })
 
-  depends_on = [null_resource.build_and_push_images]
+  # 빌드는 CI로 분리되어 있으므로 null_resource 의존성을 제거합니다.
 }
 
 resource "aws_ecs_service" "services" {
