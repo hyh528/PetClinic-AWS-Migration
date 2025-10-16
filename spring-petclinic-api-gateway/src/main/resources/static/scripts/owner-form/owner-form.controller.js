@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('ownerForm')
-    .controller('OwnerFormController', ["$http", '$state', '$stateParams', function ($http, $state, $stateParams) {
+    .controller('OwnerFormController', ["$http", '$state', '$stateParams', 'API_BASE_URL', function ($http, $state, $stateParams, API_BASE_URL) {
         var self = this;
 
         var ownerId = $stateParams.ownerId || 0;
@@ -9,7 +9,7 @@ angular.module('ownerForm')
         if (!ownerId) {
             self.owner = {};
         } else {
-            $http.get("api/customer/owners/" + ownerId).then(function (resp) {
+            $http.get(API_BASE_URL + "/customer/owners/" + ownerId).then(function (resp) {
                 self.owner = resp.data;
             });
         }
@@ -18,11 +18,11 @@ angular.module('ownerForm')
             var id = self.owner.id;
 
             if (id) {
-                $http.put('api/customer/owners/' + id, self.owner).then(function () {
+                $http.put(API_BASE_URL + '/customer/owners/' + id, self.owner).then(function () {
                     $state.go('ownerDetails', {ownerId: ownerId});
                 });
             } else {
-                $http.post('api/customer/owners', self.owner).then(function () {
+                $http.post(API_BASE_URL + '/customer/owners', self.owner).then(function () {
                     $state.go('owners');
                 });
             }

@@ -1,7 +1,0 @@
-server:
-  port: 8761
-
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://discovery-server:8761/eureka/

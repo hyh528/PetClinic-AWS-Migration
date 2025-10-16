@@ -185,6 +185,24 @@ terraform apply -var-file=../../envs/dev.tfvars
 
 ---
 
+#### 11. Frontend Hosting Layer
+```bash
+cd terraform/layers/11-frontend
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
+```
+**이유**: 프론트엔드 애플리케이션을 S3 + CloudFront로 호스팅 (API Gateway에 의존)
+
+**생성 리소스**:
+- S3 버킷 (프론트엔드 정적 파일 호스팅)
+- CloudFront 배포 (CDN 및 API 라우팅)
+- SPA 라우팅을 위한 CloudFront 함수
+- CORS 헤더 처리를 위한 Lambda@Edge
+- CloudWatch 모니터링 및 알람
+
+---
+
 
 **이유**: 다른 레이어들의 상태 관리를 위한 유틸리티 레이어
 
@@ -212,6 +230,7 @@ LAYERS=(
     "08-api-gateway"
     "09-monitoring"
     "10-aws-native"
+    "11-frontend"
 )
 
 BASE_DIR="terraform/layers"
@@ -257,7 +276,8 @@ $Layers = @(
     "07-application",
     "08-api-gateway",
     "09-monitoring",
-    "10-aws-native"
+    "10-aws-native",
+    "11-frontend"
 )
 
 $BaseDir = "terraform\layers"
@@ -305,7 +325,7 @@ foreach ($layer in $Layers) {
 **역순으로 실행해야 합니다**:
 ```bash
 # 정리 순서 (역순)
-10-aws-native → 09-monitoring → 08-api-gateway →
+11-frontend → 10-aws-native → 09-monitoring → 08-api-gateway →
 07-application → 06-lambda-genai → 05-cloud-map → 04-parameter-store →
 03-database → 02-security → 01-network
 ```
@@ -346,8 +366,9 @@ terraform output
 | api-gateway | 2-3분 | API 배포 |
 | monitoring | 2-3분 | 대시보드 생성 |
 | aws-native | 1-2분 | 통합 설정 |
+| frontend | 3-5분 | S3 + CloudFront 배포 |
 
 
-**총 예상 시간**: 30-45분
+**총 예상 시간**: 35-50분
 
 이 순서를 따라 실행하면 의존성 문제 없이 전체 인프라를 성공적으로 구축할 수 있습니다!

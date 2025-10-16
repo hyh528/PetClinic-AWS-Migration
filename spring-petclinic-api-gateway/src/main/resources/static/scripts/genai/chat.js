@@ -39,7 +39,7 @@ function sendMessage() {
     appendMessage(query, 'user');
 
     // Send the message to the backend
-    fetch('/api/genai/chatclient', {
+    fetch(window.location.origin + '/api/genai/chatclient', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

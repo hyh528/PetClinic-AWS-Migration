@@ -1,24 +1,24 @@
 'use strict';
 
 angular.module('petForm')
-    .controller('PetFormController', ['$http', '$state', '$stateParams', function ($http, $state, $stateParams) {
+    .controller('PetFormController', ['$http', '$state', '$stateParams', 'API_BASE_URL', function ($http, $state, $stateParams, API_BASE_URL) {
         var self = this;
         var ownerId = $stateParams.ownerId || 0;
 
-        $http.get('api/customer/petTypes').then(function (resp) {
+        $http.get(API_BASE_URL + '/customer/petTypes').then(function (resp) {
             self.types = resp.data;
         }).then(function () {
 
             var petId = $stateParams.petId || 0;
 
             if (petId) { // edit
-                $http.get("api/customer/owners/" + ownerId + "/pets/" + petId).then(function (resp) {
+                $http.get(API_BASE_URL + "/customer/owners/" + ownerId + "/pets/" + petId).then(function (resp) {
                     self.pet = resp.data;
                     self.pet.birthDate = new Date(self.pet.birthDate);
                     self.petTypeId = "" + self.pet.type.id;
                 });
             } else {
-                $http.get('api/customer/owners/' + ownerId).then(function (resp) {
+                $http.get(API_BASE_URL + '/customer/owners/' + ownerId).then(function (resp) {
                     self.pet = {
                         owner: resp.data.firstName + " " + resp.data.lastName
                     };
@@ -40,9 +40,9 @@ angular.module('petForm')
 
             var req;
             if (id) {
-                req = $http.put("api/customer/owners/" + ownerId + "/pets/" + id, data);
+                req = $http.put(API_BASE_URL + "/customer/owners/" + ownerId + "/pets/" + id, data);
             } else {
-                req = $http.post("api/customer/owners/" + ownerId + "/pets", data);
+                req = $http.post(API_BASE_URL + "/customer/owners/" + ownerId + "/pets", data);
             }
 
             req.then(function () {
