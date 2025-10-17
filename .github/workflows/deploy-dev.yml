@@ -9,6 +9,7 @@ on:
       - '.github/**'
       - 'docs/**'
       - 'README.md'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -101,6 +102,7 @@ jobs:
           }"
 
     - name: Terraform Apply
+      id: apply
       working-directory: terraform/layers/07-application
       run: |
         terraform apply -auto-approve -var-file=../../envs/dev.tfvars \
@@ -110,3 +112,64 @@ jobs:
             visits = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-visits@${{ steps.images.outputs.visits_digest }}\"
             admin = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-admin@${{ steps.images.outputs.admin_digest }}\"
           }"
+
+    - name: Health Check
+      run: |
+        echo "🔍 Performing health checks..."
+        ALB_DNS=$(cd terraform/layers/07-application && terraform output -raw alb_dns_name)
+        echo "ALB DNS: $ALB_DNS"
+
+        # Wait for services to be ready
+        for i in {1..30}; do
+          echo "Health check attempt $i/30..."
+          if curl -f -s "http://$ALB_DNS/actuator/health" > /dev/null 2>&1; then
+            echo "✅ All services are healthy!"
+            exit 0
+          fi
+          sleep 10
+        done
+
+        echo "❌ Health check failed after 5 minutes"
+        exit 1
+
+    - name: Rollback on Failure
+      if: failure() && steps.apply.outcome == 'success'
+      run: |
+        echo "🔄 Rolling back deployment..."
+        cd terraform/layers/07-application
+
+        # Get previous task definition
+        CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
+        for service in customers vets visits admin; do
+          SERVICE_NAME="petclinic-dev-$service"
+          echo "Rolling back $SERVICE_NAME..."
+
+          # Get current task definition ARN
+          CURRENT_TASK_ARN=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].taskDefinition' --output text)
+
+          # Find previous task definition (assuming it's the second most recent)
+          PREVIOUS_TASK_ARN=$(aws ecs list-task-definitions --family-prefix "petclinic-dev-$service" --sort DESC --max-items 2 --query 'taskDefinitionArns[1]' --output text)
+
+          if [ "$PREVIOUS_TASK_ARN" != "None" ] && [ -n "$PREVIOUS_TASK_ARN" ]; then
+            aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $PREVIOUS_TASK_ARN --force-new-deployment
+            echo "✅ Rolled back $SERVICE_NAME to $PREVIOUS_TASK_ARN"
+          else
+            echo "⚠️ No previous task definition found for $SERVICE_NAME"
+          fi
+        done
+
+    - name: Send Notification
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          MESSAGE="✅ Deployment to Dev environment successful!"
+        else
+          MESSAGE="❌ Deployment to Dev environment failed!"
+        fi
+
+        # Send notification to Slack (if webhook configured)
+        if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$MESSAGE\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+        fi

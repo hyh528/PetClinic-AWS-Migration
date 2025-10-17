@@ -1,0 +1,53 @@
+# =============================================================================
+# Parameter Store Layer - 로컬 값 정의
+# =============================================================================
+# 목적: Parameter Store 구성에 필요한 로컬 값들을 정의
+
+locals {
+  # Database 레이어에서 필요한 정보
+  aurora_endpoint = try(
+    data.terraform_remote_state.database.outputs.cluster_endpoint,
+    ""
+  )
+
+  # 의존성 검증
+  database_ready     = local.aurora_endpoint != "" && local.aurora_endpoint != null
+  dependencies_ready = local.database_ready
+
+  # Parameter Store 공통 설정
+  common_parameter_tags = merge(var.tags, {
+    Layer     = "04-parameter-store"
+    Component = "parameter-store"
+    Purpose   = "spring-config-replacement"
+  })
+
+  # 기본 공통 설정만 우선
+  basic_parameters = {
+    # Spring 프로파일 설정
+    "/petclinic/common/spring.profiles.active" = "mysql,aws"
+    "/petclinic/common/logging.level.root"     = "INFO"
+    # 서버 포트 설정
+    "/petclinic/${var.environment}/customers/server.port" = "8080"
+    "/petclinic/${var.environment}/vets/server.port"      = "8080"
+    "/petclinic/${var.environment}/visits/server.port"    = "8080"
+    "/petclinic/${var.environment}/admin/server.port"     = "9090"
+  }
+
+  # 데이터베이스 연결 정보 (data.tf에서 참조)
+  database_parameters = local.dependencies_ready ? {
+    "/petclinic/${var.environment}/customers/database.url"      = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_customers"
+    "/petclinic/${var.environment}/customers/database.username" = var.database_username
+    "/petclinic/${var.environment}/vets/database.url"           = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_vets"
+    "/petclinic/${var.environment}/vets/database.username"      = var.database_username
+    "/petclinic/${var.environment}/visits/database.url"         = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_visits"
+    "/petclinic/${var.environment}/visits/database.username"    = var.database_username
+  } : {}
+
+  # 민감한 정보 암호화 설정 (SecureString)
+  secure_parameters = local.dependencies_ready ? {
+    # 데이터베이스 비밀번호 (Secrets Manager에서 가져옴)
+    "/petclinic/${var.environment}/customers/database.password" = data.terraform_remote_state.database.outputs.master_username
+    "/petclinic/${var.environment}/vets/database.password"      = data.terraform_remote_state.database.outputs.master_username
+    "/petclinic/${var.environment}/visits/database.password"    = data.terraform_remote_state.database.outputs.master_username
+  } : {}
+}

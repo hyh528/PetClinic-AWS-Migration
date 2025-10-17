@@ -168,26 +168,31 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Lambda 함수 메인 핸들러"""
     try:
         logger.info(f"Lambda 함수 호출: {json.dumps(event, ensure_ascii=False)}")
-        
+
+        # Lambda 콘솔 테스트 이벤트 처리 (직접 호출)
+        if 'message' in event and 'httpMethod' not in event:
+            # Lambda 콘솔에서 직접 테스트하는 경우
+            return handle_chat_request(event)
+
         # HTTP 메서드 확인
         http_method = event.get('httpMethod', 'GET')
         path = event.get('path', '/')
-        
+
         # CORS preflight 요청 처리
         if http_method == 'OPTIONS':
             return create_response(200, {'message': 'CORS preflight'})
-        
+
         # 헬스체크 요청 처리
         if path.endswith('/health') or path.endswith('/actuator/health'):
             return handle_health_check()
-        
+
         # POST 요청만 처리 (채팅)
         if http_method != 'POST':
             return create_response(405, {
                 'error': 'POST 메서드만 지원됩니다',
                 'code': 'METHOD_NOT_ALLOWED'
             })
-        
+
         # 요청 본문 파싱
         try:
             if event.get('body'):
@@ -204,14 +209,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'error': '잘못된 JSON 형식입니다',
                 'code': 'INVALID_JSON'
             })
-        
+
         # 채팅 요청 처리
         return handle_chat_request(body)
-        
+
     except Exception as e:
         logger.error(f"Lambda 함수 실행 중 예상치 못한 오류: {str(e)}")
         logger.error(f"스택 트레이스: {traceback.format_exc()}")
-        
+
         return create_response(500, {
             'error': '내부 서버 오류가 발생했습니다',
             'code': 'INTERNAL_SERVER_ERROR',

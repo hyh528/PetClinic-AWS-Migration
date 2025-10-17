@@ -5,53 +5,6 @@
 # 의존성: 03-database 레이어(Aurora 엔드포인트)
 
 # =============================================================================
-# Local Values - 참조된 데이터 정리 및 검증
-# =============================================================================
-
-locals {
-  # Database 레이어에서 필요한 정보
-  aurora_endpoint = try(
-    data.terraform_remote_state.database.outputs.cluster_endpoint,
-    ""
-  )
-
-  # 의존성 검증
-  database_ready     = local.aurora_endpoint != "" && local.aurora_endpoint != null
-  dependencies_ready = local.database_ready
-
-  # Parameter Store 공통 설정
-  common_parameter_tags = merge(var.tags, {
-    Layer     = "04-parameter-store"
-    Component = "parameter-store"
-    Purpose   = "spring-config-replacement"
-  })
-}
-# =============================================================================
-# 애플리케이션 Parameter Store 설정 (기본 파라미터만 우선)
-# =============================================================================
-locals {
-  # 기본 공통 설정만 우선
-  basic_parameters = {
-    # Spring 프로파일 설정
-    "/petclinic/common/spring.profiles.active" = "mysql,aws"
-    "/petclinic/common/logging.level.root"     = "INFO"
-    # 서버 포트 설정
-    "/petclinic/${var.environment}/customers/server.port" = "8080"
-    "/petclinic/${var.environment}/vets/server.port"      = "8080"
-    "/petclinic/${var.environment}/visits/server.port"    = "8080"
-    "/petclinic/${var.environment}/admin/server.port"     = "9090"
-  }
-  # 데이터베이스 연결 정보 (data.tf에서 참조)
-  database_parameters = local.dependencies_ready ? {
-    "/petclinic/${var.environment}/customers/database.url"      = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_customers"
-    "/petclinic/${var.environment}/customers/database.username" = var.database_username
-    "/petclinic/${var.environment}/vets/database.url"           = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_vets"
-    "/petclinic/${var.environment}/vets/database.username"      = var.database_username
-    "/petclinic/${var.environment}/visits/database.url"         = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_visits"
-    "/petclinic/${var.environment}/visits/database.username"    = var.database_username
-  } : {}
-}
-# =============================================================================
 # Parameter Store 모듈 (애플리케이션용)
 # =============================================================================
 module "parameter_store" {
@@ -63,6 +16,8 @@ module "parameter_store" {
   # 애플리케이션 파라미터 설정 (모듈 변수명에 맞춤)
   common_parameters      = local.basic_parameters
   environment_parameters = local.database_parameters
+  # secure_parameters는 locals.tf에 정의되어 있음
+  secure_parameters      = local.secure_parameters
   # 기본 태그 설정
   tags = local.common_parameter_tags
   # 의존성 확인 (선택적 - 디버깅용)

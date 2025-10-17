@@ -8,61 +8,6 @@
 data "aws_caller_identity" "current" {}
 
 # 공통 로컬 변수 (공유 변수 활용)
-locals {
-  # Network 레이어에서 필요한 정보
-  vpc_id                 = data.terraform_remote_state.network.outputs.vpc_id
-  public_subnet_ids      = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
-  private_app_subnet_ids = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
-
-  # Security 레이어에서 필요한 정보
-  ecs_security_group_id = data.terraform_remote_state.security.outputs.ecs_security_group_id
-
-  # 공통 태그
-  layer_common_tags = merge(var.tags, {
-    Layer     = "07-application"
-    Component = "application-infrastructure"
-  })
-
-  # 서비스 정의 (환경별 설정 가능)
-  services = {
-    customers = {
-      name        = "customers-service"
-      port        = 8081
-      health_path = "/actuator/health"
-      cpu         = 256
-      memory      = 512
-    }
-    vets = {
-      name        = "vets-service"
-      port        = 8082
-      health_path = "/actuator/health"
-      cpu         = 256
-      memory      = 512
-    }
-    visits = {
-      name        = "visits-service"
-      port        = 8083
-      health_path = "/actuator/health"
-      cpu         = 256
-      memory      = 512
-    }
-    admin = {
-      name        = "admin-server"
-      port        = 9090
-      health_path = "/actuator/health"
-      cpu         = 256
-      memory      = 512
-    }
-  }
-
-  # 서비스별 디렉토리 매핑 (실제 디렉토리 이름과 매핑)
-  service_directories = {
-    customers = "customers-service"
-    vets      = "vets-service"
-    visits    = "visits-service"
-    admin     = "admin-server"
-  }
-}
 
 # =============================================================================
 # ECR 모듈 (각 서비스별 리포지토리)

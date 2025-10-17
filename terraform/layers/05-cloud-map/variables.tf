@@ -31,3 +31,18 @@ variable "tags" {
   description = "모든 리소스에 적용할 공통 태그"
   type        = map(string)
 }
+
+# =============================================================================
+# 백엔드 구성 변수 (bootstrap에서 상속)
+# =============================================================================
+
+variable "tfstate_bucket_name" {
+  description = "Terraform 상태 파일을 저장할 S3 버킷 이름"
+  type        = string
+}
+
+variable "tf_lock_table_name" {
+  description = "Terraform 상태 잠금을 위한 DynamoDB 테이블 이름"
+  type        = string
+  default     = "petclinic-tf-locks-sydney-dev"
+}

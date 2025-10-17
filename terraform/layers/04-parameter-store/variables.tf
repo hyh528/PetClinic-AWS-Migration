@@ -32,6 +32,18 @@ variable "tags" {
   type        = map(string)
 }
 
+# Backend 설정용 변수들
+variable "tfstate_bucket_name" {
+  description = "Terraform 상태 파일 저장 S3 버킷 이름"
+  type        = string
+}
+
+variable "shared_config" {
+  description = "공유 설정 정보"
+  type        = any
+  default     = {}
+}
+
 # =============================================================================
 # Parameter Store 레이어 전용 변수 (애플리케이션용)
 # =============================================================================
@@ -48,6 +60,7 @@ variable "database_username" {
   type        = string
   default     = "petclinic"
 }
+
 
 # 기본 파라미터만 우선 (복잡한 설정 제거)
 variable "enable_sql_logging" {

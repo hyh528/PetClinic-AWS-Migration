@@ -32,6 +32,11 @@ variable "tags" {
   type        = map(string)
 }
 
+variable "tfstate_bucket_name" {
+  description = "Terraform 상태 파일 저장 버킷 이름"
+  type        = string
+}
+
 # =============================================================================
 # Database Layer 전용 변수
 # =============================================================================

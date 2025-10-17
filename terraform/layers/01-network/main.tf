@@ -6,11 +6,6 @@
 
 # 공통 모듈에서 provider 설정 상속
 
-locals {
-  # 공통 모듈에서 태그 가져오기
-  common_network_tags = module.common.get_tags_for_layer
-}
-
 # 공통 모듈 (공통 변수들은 terraform plan/apply 시 -var-file로 전달됨)
 module "common" {
   source = "../../modules/common"
