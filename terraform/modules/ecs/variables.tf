@@ -53,7 +53,7 @@ variable "listener_priority" {
 variable "task_cpu" {
   description = "ECS Task에 할당할 CPU"
   type        = string
-  default     = "256"
+  default     = "256" # 0.25 vcpu
 }
 
 variable "task_memory" {
@@ -73,3 +73,19 @@ variable "cloudmap_service_arn" {
   type        = string
   default     = null # 모든 서비스가 Cloud Map을 사용하지 않을 수도 있으므로 optional로 설정
 }
+
+# secret manager 연동
+ variable "db_password_secret_arn" {                                                                
+   description = "The ARN of the secret in Secrets Manager for the DB password"                     
+   type        = string                                                                             
+ }                                                                                                  
+                                                                                                    
+ variable "db_url_parameter_path" {                                                                 
+   description = "The path in Parameter Store for the DB URL"                                       
+   type        = string                                                                             
+ }                                                                                                  
+                                                                                                    
+ variable "db_username_parameter_path" {                                                            
+   description = "The path in Parameter Store for the DB username"                                  
+   type        = string                                                                             
+ }                                                                                                  

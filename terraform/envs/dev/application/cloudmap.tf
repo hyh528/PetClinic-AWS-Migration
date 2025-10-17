@@ -12,6 +12,6 @@ module "cloudmap" {
     "customers-service" = "customer service"
     "vets-service"      = "vets-service"
     "visits-service"    = "visits-service"
-
+    "admin-server"      = "admin-server" 
   }
 } #Cloud Map 모듈

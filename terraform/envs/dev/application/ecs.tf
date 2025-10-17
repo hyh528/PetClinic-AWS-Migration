@@ -15,7 +15,12 @@ locals {
       container_port = 8080
       image_uri      = "${module.ecr.repository_urls["visits-service"]}:latest"
       priority       = 120
-    }
+    },
+    "admin-server" = {                                                       
+      container_port = 8080                                                  
+      image_uri      = "${module.ecr.repository_urls["admin-server"]}:latest"
+      priority       = 130                                                   
+     }                                                                        
   }
 }
 
@@ -42,4 +47,10 @@ module "ecs" {
 
   # 각 서비스의 이름(each.key)에 해당하는 Cloud Map 서비스의 ARN을 전달
   cloudmap_service_arn = module.cloudmap.service_arns[each.key]
+
+                                                                                                              
+  # --- DB 접근 정보 전달 ---                                                                               
+  db_password_secret_arn   = data.terraform_remote_state.security.outputs.db_password_secret_arn            
+  db_url_parameter_path    = data.terraform_remote_state.database.outputs.db_url_parameter_path             
+  db_username_parameter_path = data.terraform_remote_state.database.outputs.db_username_parameter_path      
 }

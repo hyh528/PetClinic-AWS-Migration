@@ -4,7 +4,8 @@ module "ecr" {
   repository_names = [
     "customers-service",
     "vets-service",    
-    "visits-service"
+    "visits-service",
+    "admin-server",
   ]
 
   tags = {

@@ -50,25 +50,43 @@ resource "aws_ecs_task_definition" "service" {
   memory                   = var.task_memory
   execution_role_arn       = var.ecs_task_execution_role_arn # application 레이어에서 전달받음
 
-  container_definitions = jsonencode([{
-    name      = var.service_name,
-    image     = var.image_uri,
-    cpu       = tonumber(var.task_cpu),
-    memory    = tonumber(var.task_memory),
-    essential = true,
-    portMappings = [{
-      containerPort = var.container_port,
-      hostPort      = var.container_port
-    }],
-    logConfiguration = {
-      logDriver = "awslogs",
-      options = {
-        "awslogs-group"         = aws_cloudwatch_log_group.service.name,
-        "awslogs-region"        = var.aws_region,
-        "awslogs-stream-prefix" = "ecs"
+  container_definitions = jsonencode([
+    {
+      name      = var.service_name,
+      image     = var.image_uri,
+        cpu       = tonumber(var.task_cpu),
+     memory    = tonumber(var.task_memory),
+     essential = true,
+      portMappings = [
+        {
+          containerPort = var.container_port,
+          hostPort      = var.container_port
+        }
+      ],
+      secrets = [                                     
+        {                                             
+          name      = "SPRING_DATASOURCE_PASSWORD",   
+          valueFrom = var.db_password_secret_arn      
+        },
+                {                                             
+          name      = "SPRING_DATASOURCE_URL",   
+          valueFrom = var.db_url_parameter_path      
+        },
+                {                                             
+          name      = "SPRING_DATASOURCE_USERNAME",   
+          valueFrom = var.db_username_parameter_path      
+        }                                                                                     
+      ],                                                                                     
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.service.name,
+          "awslogs-region"        = var.aws_region,
+          "awslogs-stream-prefix" = "ecs"
+        }
       }
     }
-  }])
+  ])
 }
 
 # 5. ECS Service (서비스 실행 및 관리)
