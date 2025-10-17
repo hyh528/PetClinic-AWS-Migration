@@ -3,7 +3,11 @@ spring:
     name: admin-server
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
-
+  boot:                                                                                  
+     admin:                                                                               
+       server:                                                                            
+         instance-discovery:                                                              
+           use-discovery-client: true # Discovery Client를 사용해 인스턴스를 찾도록 설정  
 
 ---
 spring:

@@ -3,10 +3,16 @@ spring:
     url: jdbc:mysql://host.docker.internal:3306/petclinic?useUnicode=true
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+  cloud:
+     aws:
+       region:
+         static: ap-northeast-2
+       servicediscovery:
+         enabled: true
+         namespace: petclinic.local
 eureka:
   client:
-    serviceUrl:
-      defaultZone: http://discovery-server:8761/eureka/
+    enabled: false
 management:
   endpoints:
     web:
