@@ -126,27 +126,27 @@ jobs:
           name: images
           path: images.properties
 
-      - name: Terraform 설치
-        uses: hashicorp/setup-terraform@v3
+      # - name: Terraform 설치
+      #   uses: hashicorp/setup-terraform@v3
 
-      - name: ECS에 배포
-        run: |
-          echo "🚀 ECS에 배포 중..."
+      # - name: ECS에 배포
+      #   run: |
+      #     echo "🚀 ECS에 배포 중..."
 
-          # Terraform 설정 (프로필 사용 안 함)
-          cd terraform/layers/07-application
-          terraform init -backend-config=backend.config -backend-config=../../backend.hcl -reconfigure
+      #     # Terraform 설정 (프로필 사용 안 함)
+      #     cd terraform/layers/07-application
+      #     terraform init -backend-config=backend.config -backend-config=../../backend.hcl -reconfigure
 
-          # 최신 이미지로 배포 (프로필 변수 무시)
-          terraform apply -auto-approve -var-file=../../envs/dev.tfvars \
-            -var="aws_profile=" \
-            -var="service_image_map={
-              customers-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest\"
-              vets-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest\"
-              visits-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest\"
-              admin-server = \"${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest\"
-            }"
+      #     # 최신 이미지로 배포 (프로필 변수 무시)
+      #     terraform apply -auto-approve -var-file=../../envs/dev.tfvars \
+      #       -var="aws_profile=" \
+      #       -var="service_image_map={
+      #         customers-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest\"
+      #         vets-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest\"
+      #         visits-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest\"
+      #         admin-server = \"${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest\"
+      #       }"
 
-          echo "✅ 배포 완료"
-        env:
-          AWS_PROFILE: ""
+      #     echo "✅ 배포 완료"
+      #   env:
+      #     AWS_PROFILE: ""
