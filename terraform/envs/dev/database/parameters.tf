@@ -1,61 +1,54 @@
+# 이 데이터 소스는 aws_rds_cluster 리소스가 자동으로 생성한 
+# 마스터 비밀번호의 최신 버전을 Secrets Manager에서 읽어옵니다.
+data "aws_secretsmanager_secret_version" "master_password" {
+  secret_id = aws_rds_cluster.petclinic_aurora_cluster.master_user_secret[0].secret_arn
+}
+
 locals {
-  # Define parameters that vary per service.
-  service_configs = {
-    "admin"     = { server_port = "9090" }
-    "customers" = { server_port = "8080" }
-    "vets"      = { server_port = "8080" }
-    "visits"    = { server_port = "8080" }
+  # 모든 서비스가 공통으로 사용할 DB 관련 파라미터
+  db_parameters = {
+    "database.url"      = "jdbc:mysql://${aws_rds_cluster.petclinic_aurora_cluster.endpoint}:3306/${var.db_name}"
+    "database.username" = jsondecode(data.aws_secretsmanager_secret_version.master_password.secret_string)["username"]
   }
 
-  # Define common parameters applicable to most services.
-  common_parameters = {
-    "spring.profiles.active" = "mysql,aws"
-    "logging.level.root"     = "INFO"
-    "eureka.client.serviceUrl.defaultZone" = "http://discovery-server:8761/eureka/"
+  # 기타 공통 파라미터
+  other_common_parameters = {
+    "spring.profiles.active"                 = "mysql,aws",
+    "spring.datasource.initialization-mode"  = "always",
+    "spring.jpa.hibernate.ddl-auto"          = "update", # 'ddl' 보다 안전한 'update' 옵션 사용
+    "spring.jpa.show-sql"                    = "true",
+    "eureka.client.serviceUrl.defaultZone"   = "http://discovery-server:8761/eureka/"
+  }
+
+  # 각 서비스별 포트 번호
+  service_ports = {
+    "admin"     = "9090",
+    "customers" = "8081", # 포트 충돌 방지를 위해 변경
+    "vets"      = "8082",
+    "visits"    = "8083",
+    "gateway"   = "8080"
   }
 }
 
-# Create common parameters for all services using a loop.
+# /petclinic/common/ 경로에 모든 공통 파라미터를 생성합니다.
 resource "aws_ssm_parameter" "common" {
-  for_each = local.common_parameters
-  name     = "/petclinic/common/${each.key}"
-  type     = "String"
-  value    = each.value
+  for_each  = merge(local.db_parameters, local.other_common_parameters)
+  name      = "/petclinic/common/${each.key}"
+  type      = "String"
+  value     = each.value
+  overwrite = true # 이미 존재하면 덮어쓰기
   tags = {
     Category = "common"
   }
 }
 
-
-# Create server port parameters for each service.
+# /petclinic/dev/{서비스명}/ 경로에 각 서비스의 포트 번호 파라미터를 생성합니다.
 resource "aws_ssm_parameter" "server_port" {
-  for_each = local.service_configs
-  name     = "/petclinic/${var.environment}/${each.key}/server.port"
-  type     = "String"
-  value    = each.value.server_port
-  tags = {
-    Service = each.key
-  }
-}
-
-# Create database URL and username parameters for each service.
-resource "aws_ssm_parameter" "db_url" {
-  for_each = { for k, v in local.service_configs : k => v if k != "admin" }
-
-  name  = "/petclinic/${var.environment}/${each.key}/database.url"
-  type  = "String"
-  value = "jdbc:mysql://aurora-endpoint:3306/petclinic_${each.key}" # Placeholder, will be replaced by actual Aurora endpoint.
-  tags = {
-    Service = each.key
-  }
-}
-
-resource "aws_ssm_parameter" "db_user" {
-  for_each = { for k, v in local.service_configs : k => v if k != "admin" }
-
-  name  = "/petclinic/${var.environment}/${each.key}/database.username"
-  type  = "String"
-  value = "petclinic"
+  for_each  = local.service_ports
+  name      = "/petclinic/${var.environment}/${each.key}/server.port"
+  type      = "String"
+  value     = each.value
+  overwrite = true # 이미 존재하면 덮어쓰기
   tags = {
     Service = each.key
   }
