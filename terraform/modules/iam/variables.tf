@@ -1,22 +1,17 @@
 variable "project_name" {
-  description = "리소스용 프로젝트 이름 접두사"
+  description = "The name of the project, used for naming resources."
   type        = string
   default     = "petclinic"
 }
 
 variable "team_members" {
-  description = "팀 멤버 이름 목록"
+  description = "A list of team member names to create IAM users for."
   type        = list(string)
-  default = [
-    "yeonghyeon",
-    "seokgyeom",
-    "junje",
-    "hwigwon"
-  ]
+  default     = []
 }
 
-variable "enable_role_based_policies" {
-  description = "AdministratorAccess 대신 역할 기반 정책 활성화"
-  type        = bool
-  default     = false
+variable "db_secret_arn" {
+  description = "The ARN of the database secret in Secrets Manager."
+  type        = string
+  default     = null
 }

@@ -22,3 +22,13 @@ output "group_membership_name" {
   description = "그룹 멤버십 리소스 이름"
   value       = aws_iam_group_membership.cli_users.name
 }
+
+output "api_gateway_cloudwatch_logs_role_arn" {
+  description = "API Gateway가 CloudWatch에 로그를 기록하기 위해 사용하는 역할의 ARN입니다."
+  value       = aws_iam_role.api_gateway_cloudwatch_logs_role.arn
+}
+
+output "ecs_task_role_arn" {
+  description = "ARN of the IAM role for ECS tasks"
+  value       = aws_iam_role.ecs_task_role.arn
+}
