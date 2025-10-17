@@ -1,13 +1,13 @@
-name: Build and push service images
+name: 서비스 이미지 빌드 및 배포
 
 on:
-  push:
-    paths:
-      - 'spring-petclinic-*/**'
-      - '.github/workflows/build-and-push-images.yml'
+   push:
+     paths:
+       - 'spring-petclinic-*/**'
+       - '.github/workflows/build-and-push-images.yml'
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -118,7 +118,7 @@ jobs:
 
           # Terraform 설정
           cd terraform/layers/07-application
-          terraform init -backend-config=backend.config -reconfigure
+          terraform init -backend-config=backend.config -backend-config=../backend.hcl -reconfigure
 
           # 최신 이미지로 배포
           terraform apply -auto-approve -var-file=../../envs/dev.tfvars \
