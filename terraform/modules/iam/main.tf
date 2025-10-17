@@ -61,3 +61,93 @@ resource "aws_iam_group_membership" "cli_users" {
 #     ]
 #   })
 # }
+
+# =================================================================================
+# API Gateway CloudWatch 로깅 역할
+# =================================================================================
+
+resource "aws_iam_role" "api_gateway_cloudwatch_logs_role" {
+  name = "ApiGatewayCloudWatchLogsRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "ApiGatewayCloudWatchLogsRole"
+    ManagedBy = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_logs_role_attachment" {
+  role       = aws_iam_role.api_gateway_cloudwatch_logs_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+# =================================================================================
+# ECS Task Role for Application
+# =================================================================================
+
+# ECS Task가 사용할 IAM 역할
+resource "aws_iam_role" "ecs_task_role" {
+  name = "${var.project_name}-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name      = "${var.project_name}-ecs-task-role"
+    ManagedBy = "terraform"
+  }
+}
+
+# DB 비밀번호 Secret을 읽을 수 있는 IAM 정책
+resource "aws_iam_policy" "ecs_db_secret_access_policy" {
+  # count를 사용하여 변수가 전달된 경우에만 정책을 생성
+  count = var.db_secret_arn != null ? 1 : 0
+
+  name        = "${var.project_name}-ecs-db-secret-access-policy"
+  description = "Allows ECS tasks to read the DB secret from Secrets Manager"
+
+  # 이 정책은 특정 Secret에 대한 접근만 허용합니다.
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ],
+        Effect   = "Allow",
+        Resource = var.db_secret_arn # 변수를 통해 Secret ARN을 전달받음
+      }
+    ]
+  })
+}
+
+# 생성한 정책을 ECS Task Role에 연결
+resource "aws_iam_role_policy_attachment" "ecs_task_role_db_secret_policy" {
+  # count를 사용하여 변수가 전달된 경우에만 연결
+  count = var.db_secret_arn != null ? 1 : 0
+
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = aws_iam_policy.ecs_db_secret_access_policy[0].arn
+}
