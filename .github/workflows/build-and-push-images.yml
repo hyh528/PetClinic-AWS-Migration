@@ -38,16 +38,16 @@ jobs:
 
       - name: Build all services
         run: |
-          echo "🔄 Building all services..."
+          echo "🔄 모든 서비스 빌드 중..."
           ./mvnw clean package -DskipTests -q -f spring-petclinic-customers-service/pom.xml
           ./mvnw clean package -DskipTests -q -f spring-petclinic-vets-service/pom.xml
           ./mvnw clean package -DskipTests -q -f spring-petclinic-visits-service/pom.xml
           ./mvnw clean package -DskipTests -q -f spring-petclinic-admin-server/pom.xml
-          echo "✅ All services built"
+          echo "✅ 모든 서비스 빌드 완료"
 
       - name: Build and push customers-service
         run: |
-          echo "🔄 Building and pushing customers-service..."
+          echo "🔄 customers-service 빌드 및 푸시 중..."
           cp spring-petclinic-customers-service/target/spring-petclinic-customers-service-*.jar spring-petclinic-customers-service/app.jar
           cd spring-petclinic-customers-service
           docker build -t customers-service .
@@ -55,11 +55,11 @@ jobs:
           docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${{ github.sha }}
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
-          echo "✅ customers-service pushed"
+          echo "✅ customers-service 푸시 완료"
 
       - name: Build and push vets-service
         run: |
-          echo "🔄 Building and pushing vets-service..."
+          echo "🔄 vets-service 빌드 및 푸시 중..."
           cp spring-petclinic-vets-service/target/spring-petclinic-vets-service-*.jar spring-petclinic-vets-service/app.jar
           cd spring-petclinic-vets-service
           docker build -t vets-service .
@@ -67,11 +67,11 @@ jobs:
           docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${{ github.sha }}
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
-          echo "✅ vets-service pushed"
+          echo "✅ vets-service 푸시 완료"
 
       - name: Build and push visits-service
         run: |
-          echo "🔄 Building and pushing visits-service..."
+          echo "🔄 visits-service 빌드 및 푸시 중..."
           cp spring-petclinic-visits-service/target/spring-petclinic-visits-service-*.jar spring-petclinic-visits-service/app.jar
           cd spring-petclinic-visits-service
           docker build -t visits-service .
@@ -79,11 +79,11 @@ jobs:
           docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${{ github.sha }}
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
-          echo "✅ visits-service pushed"
+          echo "✅ visits-service 푸시 완료"
 
       - name: Build and push admin-server
         run: |
-          echo "🔄 Building and pushing admin-server..."
+          echo "🔄 admin-server 빌드 및 푸시 중..."
           cp spring-petclinic-admin-server/target/spring-petclinic-admin-server-*.jar spring-petclinic-admin-server/app.jar
           cd spring-petclinic-admin-server
           docker build -t admin-server .
@@ -91,12 +91,12 @@ jobs:
           docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${{ github.sha }}
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
-          echo "✅ admin-server pushed"
+          echo "✅ admin-server 푸시 완료"
 
 
       - name: Emit images mapping artifact
         run: |
-          # Map service keys to image URIs expected by terraform variable `service_image_map`
+          # Terraform 변수 `service_image_map`에 필요한 이미지 URI 매핑
           echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${{ github.sha }}" >> images.properties
           echo "vets-service=${{ env.ECR_REGISTRY }}/petclinic-dev-vets@${{ github.sha }}" >> images.properties
           echo "visits-service=${{ env.ECR_REGISTRY }}/petclinic-dev-visits@${{ github.sha }}" >> images.properties
@@ -108,3 +108,22 @@ jobs:
         with:
           name: images
           path: images.properties
+
+      - name: ECS에 배포
+        run: |
+          echo "🚀 ECS에 배포 중..."
+
+          # Terraform 설정
+          cd terraform/layers/07-application
+          terraform init -backend-config=backend.config -reconfigure
+
+          # 최신 이미지로 배포
+          terraform apply -auto-approve -var-file=../../envs/dev.tfvars \
+            -var="service_image_map={
+              customers-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest\"
+              vets-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest\"
+              visits-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest\"
+              admin-server = \"${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest\"
+            }"
+
+          echo "✅ 배포 완료"
