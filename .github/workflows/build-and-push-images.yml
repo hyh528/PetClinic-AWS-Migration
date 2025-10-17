@@ -48,7 +48,7 @@ jobs:
       - name: Build and push customers-service
         run: |
           echo "🔄 Building and pushing customers-service..."
-          cp target/*.jar spring-petclinic-customers-service/app.jar
+          cp spring-petclinic-customers-service/target/spring-petclinic-customers-service-*.jar spring-petclinic-customers-service/app.jar
           cd spring-petclinic-customers-service
           docker build -t customers-service .
           docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}
@@ -58,7 +58,7 @@ jobs:
       - name: Build and push vets-service
         run: |
           echo "🔄 Building and pushing vets-service..."
-          cp target/spring-petclinic-vets-service-*.jar spring-petclinic-vets-service/app.jar
+          cp spring-petclinic-vets-service/target/spring-petclinic-vets-service-*.jar spring-petclinic-vets-service/app.jar
           cd spring-petclinic-vets-service
           docker build -t vets-service .
           docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}
@@ -68,7 +68,7 @@ jobs:
       - name: Build and push visits-service
         run: |
           echo "🔄 Building and pushing visits-service..."
-          cp target/spring-petclinic-visits-service-*.jar spring-petclinic-visits-service/app.jar
+          cp spring-petclinic-visits-service/target/spring-petclinic-visits-service-*.jar spring-petclinic-visits-service/app.jar
           cd spring-petclinic-visits-service
           docker build -t visits-service .
           docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}
@@ -78,7 +78,7 @@ jobs:
       - name: Build and push admin-server
         run: |
           echo "🔄 Building and pushing admin-server..."
-          cp target/spring-petclinic-admin-server-*.jar spring-petclinic-admin-server/app.jar
+          cp spring-petclinic-admin-server/target/spring-petclinic-admin-server-*.jar spring-petclinic-admin-server/app.jar
           cd spring-petclinic-admin-server
           docker build -t admin-server .
           docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}
