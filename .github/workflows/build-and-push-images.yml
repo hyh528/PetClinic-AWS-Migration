@@ -51,8 +51,8 @@ jobs:
           cp spring-petclinic-customers-service/target/spring-petclinic-customers-service-*.jar spring-petclinic-customers-service/app.jar
           cd spring-petclinic-customers-service
           docker build -t customers-service .
-          docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}
-          docker push ${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}
+          docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${{ github.sha }}
           echo "✅ customers-service pushed"
 
       - name: Build and push vets-service
@@ -61,8 +61,8 @@ jobs:
           cp spring-petclinic-vets-service/target/spring-petclinic-vets-service-*.jar spring-petclinic-vets-service/app.jar
           cd spring-petclinic-vets-service
           docker build -t vets-service .
-          docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}
-          docker push ${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}
+          docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${{ github.sha }}
           echo "✅ vets-service pushed"
 
       - name: Build and push visits-service
@@ -71,8 +71,8 @@ jobs:
           cp spring-petclinic-visits-service/target/spring-petclinic-visits-service-*.jar spring-petclinic-visits-service/app.jar
           cd spring-petclinic-visits-service
           docker build -t visits-service .
-          docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}
-          docker push ${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}
+          docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${{ github.sha }}
           echo "✅ visits-service pushed"
 
       - name: Build and push admin-server
@@ -81,18 +81,18 @@ jobs:
           cp spring-petclinic-admin-server/target/spring-petclinic-admin-server-*.jar spring-petclinic-admin-server/app.jar
           cd spring-petclinic-admin-server
           docker build -t admin-server .
-          docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}
-          docker push ${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}
+          docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${{ github.sha }}
           echo "✅ admin-server pushed"
 
 
       - name: Emit images mapping artifact
         run: |
           # Map service keys to image URIs expected by terraform variable `service_image_map`
-          echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-customers@${{ github.sha }}" >> images.properties
-          echo "vets-service=${{ env.ECR_REGISTRY }}/petclinic-vets@${{ github.sha }}" >> images.properties
-          echo "visits-service=${{ env.ECR_REGISTRY }}/petclinic-visits@${{ github.sha }}" >> images.properties
-          echo "admin-server=${{ env.ECR_REGISTRY }}/petclinic-admin@${{ github.sha }}" >> images.properties
+          echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${{ github.sha }}" >> images.properties
+          echo "vets-service=${{ env.ECR_REGISTRY }}/petclinic-dev-vets@${{ github.sha }}" >> images.properties
+          echo "visits-service=${{ env.ECR_REGISTRY }}/petclinic-dev-visits@${{ github.sha }}" >> images.properties
+          echo "admin-server=${{ env.ECR_REGISTRY }}/petclinic-dev-admin@${{ github.sha }}" >> images.properties
         shell: bash
 
       - name: Upload images artifact
