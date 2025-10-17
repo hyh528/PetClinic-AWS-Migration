@@ -52,7 +52,9 @@ jobs:
           cd spring-petclinic-customers-service
           docker build -t customers-service .
           docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${{ github.sha }}
+          docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
           echo "✅ customers-service pushed"
 
       - name: Build and push vets-service
@@ -62,7 +64,9 @@ jobs:
           cd spring-petclinic-vets-service
           docker build -t vets-service .
           docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${{ github.sha }}
+          docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
           echo "✅ vets-service pushed"
 
       - name: Build and push visits-service
@@ -72,7 +76,9 @@ jobs:
           cd spring-petclinic-visits-service
           docker build -t visits-service .
           docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${{ github.sha }}
+          docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
           echo "✅ visits-service pushed"
 
       - name: Build and push admin-server
@@ -82,7 +88,9 @@ jobs:
           cd spring-petclinic-admin-server
           docker build -t admin-server .
           docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${{ github.sha }}
+          docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
           echo "✅ admin-server pushed"
 
 
