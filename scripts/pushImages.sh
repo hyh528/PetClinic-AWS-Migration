@@ -9,9 +9,10 @@
 set -e  # 에러 발생 시 스크립트 중단
 
 # 환경 변수 설정 (기본값)
-AWS_REGION="${AWS_REGION:-ap-northeast-1}"
+AWS_REGION="${AWS_REGION:-ap-southeast-2}"
 VERSION="${VERSION:-latest}"
-AWS_PROFILE="${AWS_PROFILE:-petclinic-dev}"
+AWS_PROFILE="${AWS_PROFILE:-default}"
+ECR_REGISTRY="${ECR_REGISTRY:-897722691159.dkr.ecr.ap-southeast-2.amazonaws.com}"
 
 # 마이크로서비스 목록 (실제 배포할 서비스들)
 SERVICES=(
@@ -31,16 +32,11 @@ echo "서비스 개수: ${#SERVICES[@]}"
 # ==========================================
 echo ""
 echo "AWS ECR에 로그인 중..."
-if ! aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com; then
+if ! aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY; then
     echo "❌ ECR 로그인 실패!"
     exit 1
 fi
 echo "✅ ECR 로그인 성공"
-
-# ==========================================
-# 2. ECR 리포지토리 URL 구성
-# ==========================================
-ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com
 
 # ==========================================
 # 3. 서비스별 이미지 빌드 및 푸시
@@ -62,7 +58,7 @@ for service in "${SERVICES[@]}"; do
     echo "📦 [$service] Maven 빌드 중..."
     # 프로젝트 루트로 이동해서 Maven wrapper 실행
     pushd ../../../ > /dev/null
-    if ! powershell -Command "\$env:JAVA_HOME = 'C:\Program Files\Java\jdk-17'; & .\mvnw.cmd clean package -DskipTests -pl $service -am"; then
+    if ! ./mvnw clean package -DskipTests -pl $service -am -q; then
         echo "❌ [$service] Maven 빌드 실패!"
         popd > /dev/null
         exit 1
@@ -86,9 +82,24 @@ for service in "${SERVICES[@]}"; do
     echo "✅ [$service] Docker 이미지 빌드 성공"
 
     # ECR 리포지토리 이름 매핑 (환경 변수 또는 기본값 사용)
-    ECR_REPO_NAME="${ECR_REPO_PREFIX:-petclinic-dev}-${service#spring-petclinic-}"
-    ECR_REPO_NAME="${ECR_REPO_NAME%-service}"  # -service 접미사 제거
-    ECR_REPO_NAME="${ECR_REPO_NAME//-/_}"      # 하이픈을 언더스코어로 변경 (필요시)
+    case $service in
+        "spring-petclinic-customers-service")
+            ECR_REPO_NAME="petclinic-customers"
+            ;;
+        "spring-petclinic-vets-service")
+            ECR_REPO_NAME="petclinic-vets"
+            ;;
+        "spring-petclinic-visits-service")
+            ECR_REPO_NAME="petclinic-visits"
+            ;;
+        "spring-petclinic-admin-server")
+            ECR_REPO_NAME="petclinic-admin"
+            ;;
+        *)
+            ECR_REPO_NAME="${service#spring-petclinic-}"
+            ECR_REPO_NAME="${ECR_REPO_NAME%-service}"
+            ;;
+    esac
 
     # 태그 설정
     ECR_REPO_URL="$ECR_REGISTRY/$ECR_REPO_NAME"
@@ -118,15 +129,41 @@ echo "🎉 모든 마이크로서비스 이미지 푸시 완료!"
 echo ""
 echo "📋 푸시된 이미지들:"
 for service in "${SERVICES[@]}"; do
-    ECR_REPO_NAME="${ECR_REPO_PREFIX:-petclinic-dev}-${service#spring-petclinic-}"
-    ECR_REPO_NAME="${ECR_REPO_NAME%-service}"
-    ECR_REPO_NAME="${ECR_REPO_NAME//-/_}"
+    case $service in
+        "spring-petclinic-customers-service")
+            ECR_REPO_NAME="petclinic-customers"
+            ;;
+        "spring-petclinic-vets-service")
+            ECR_REPO_NAME="petclinic-vets"
+            ;;
+        "spring-petclinic-visits-service")
+            ECR_REPO_NAME="petclinic-visits"
+            ;;
+        "spring-petclinic-admin-server")
+            ECR_REPO_NAME="petclinic-admin"
+            ;;
+        *)
+            ECR_REPO_NAME="${service#spring-petclinic-}"
+            ECR_REPO_NAME="${ECR_REPO_NAME%-service}"
+            ;;
+    esac
     ECR_REPO_URL="$ECR_REGISTRY/$ECR_REPO_NAME"
     echo "  - $ECR_REPO_URL:$VERSION"
 done
 
+# Terraform에서 사용할 이미지 매핑 파일 생성
 echo ""
-echo "📋 다음 단계:"
+echo "📄 Terraform용 이미지 매핑 파일 생성 중..."
+cat > images.properties << EOF
+customers-service=$ECR_REGISTRY/petclinic-customers@$VERSION
+vets-service=$ECR_REGISTRY/petclinic-vets@$VERSION
+visits-service=$ECR_REGISTRY/petclinic-visits@$VERSION
+admin-server=$ECR_REGISTRY/petclinic-admin@$VERSION
+EOF
+echo "✅ images.properties 파일 생성 완료"
+
+echo ""
+echo " 다음 단계:"
 echo "1. terraform output ecr_repository_url 으로 URL 확인"
 echo "2. terraform output alb_dns_name 으로 ALB URL 확인"
 echo "3. ECS 서비스를 재시작하여 새 이미지를 사용"

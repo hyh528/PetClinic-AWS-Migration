@@ -36,25 +36,10 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build & push customers-service
-        working-directory: ./spring-petclinic-customers-service
+      - name: Build and push all images
         run: |
-          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}
-
-      - name: Build & push vets-service
-        working-directory: ./spring-petclinic-vets-service
-        run: |
-          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}
-
-      - name: Build & push visits-service
-        working-directory: ./spring-petclinic-visits-service
-        run: |
-          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}
-
-      - name: Build & push admin-server
-        working-directory: ./spring-petclinic-admin-server
-        run: |
-          ./mvnw -B -DskipTests package jib:build -Dimage=${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}
+          chmod +x scripts/pushImages.sh
+          ECR_REGISTRY=${{ env.ECR_REGISTRY }} VERSION=${{ github.sha }} ./scripts/pushImages.sh
 
 
       - name: Emit images mapping artifact
