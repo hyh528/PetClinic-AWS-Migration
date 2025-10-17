@@ -1,4 +1,6 @@
 name: Deploy to Dev Environment
+
+# Trigger workflow manually
 on:
   push:
     branches: [ develop ]
