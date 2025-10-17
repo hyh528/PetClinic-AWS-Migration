@@ -36,19 +36,54 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and push all images
+      - name: Build and push customers-service
         run: |
-          chmod +x scripts/pushImages.sh
-          ECR_REGISTRY=${{ env.ECR_REGISTRY }} VERSION=${{ github.sha }} ./scripts/pushImages.sh
+          echo "🔄 Building customers-service..."
+          cd spring-petclinic-customers-service
+          ../mvnw clean package -DskipTests -q
+          docker build -t customers-service .
+          docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}
+          echo "✅ customers-service pushed"
+
+      - name: Build and push vets-service
+        run: |
+          echo "🔄 Building vets-service..."
+          cd spring-petclinic-vets-service
+          ../mvnw clean package -DskipTests -q
+          docker build -t vets-service .
+          docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}
+          echo "✅ vets-service pushed"
+
+      - name: Build and push visits-service
+        run: |
+          echo "🔄 Building visits-service..."
+          cd spring-petclinic-visits-service
+          ../mvnw clean package -DskipTests -q
+          docker build -t visits-service .
+          docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}
+          echo "✅ visits-service pushed"
+
+      - name: Build and push admin-server
+        run: |
+          echo "🔄 Building admin-server..."
+          cd spring-petclinic-admin-server
+          ../mvnw clean package -DskipTests -q
+          docker build -t admin-server .
+          docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}
+          echo "✅ admin-server pushed"
 
 
       - name: Emit images mapping artifact
         run: |
           # Map service keys to image URIs expected by terraform variable `service_image_map`
-          echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-customers:${{ github.sha }}" >> images.properties
-          echo "vets-service=${{ env.ECR_REGISTRY }}/petclinic-vets:${{ github.sha }}" >> images.properties
-          echo "visits-service=${{ env.ECR_REGISTRY }}/petclinic-visits:${{ github.sha }}" >> images.properties
-          echo "admin-server=${{ env.ECR_REGISTRY }}/petclinic-admin:${{ github.sha }}" >> images.properties
+          echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-customers@${{ github.sha }}" >> images.properties
+          echo "vets-service=${{ env.ECR_REGISTRY }}/petclinic-vets@${{ github.sha }}" >> images.properties
+          echo "visits-service=${{ env.ECR_REGISTRY }}/petclinic-visits@${{ github.sha }}" >> images.properties
+          echo "admin-server=${{ env.ECR_REGISTRY }}/petclinic-admin@${{ github.sha }}" >> images.properties
         shell: bash
 
       - name: Upload images artifact
