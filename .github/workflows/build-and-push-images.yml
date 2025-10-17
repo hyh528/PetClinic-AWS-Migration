@@ -39,7 +39,10 @@ jobs:
       - name: Build all services
         run: |
           echo "🔄 Building all services..."
-          ./mvnw clean package -DskipTests -q -pl spring-petclinic-customers-service,spring-petclinic-vets-service,spring-petclinic-visits-service,spring-petclinic-admin-server -am
+          ./mvnw clean package -DskipTests -q -f spring-petclinic-customers-service/pom.xml
+          ./mvnw clean package -DskipTests -q -f spring-petclinic-vets-service/pom.xml
+          ./mvnw clean package -DskipTests -q -f spring-petclinic-visits-service/pom.xml
+          ./mvnw clean package -DskipTests -q -f spring-petclinic-admin-server/pom.xml
           echo "✅ All services built"
 
       - name: Build and push customers-service
