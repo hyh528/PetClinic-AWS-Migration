@@ -36,7 +36,7 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build all services
+      - name: 모든 서비스 빌드
         run: |
           echo "🔄 모든 서비스 빌드 중..."
           ./mvnw clean package -DskipTests -q -f spring-petclinic-customers-service/pom.xml
@@ -45,7 +45,7 @@ jobs:
           ./mvnw clean package -DskipTests -q -f spring-petclinic-admin-server/pom.xml
           echo "✅ 모든 서비스 빌드 완료"
 
-      - name: Build and push customers-service
+      - name: customers-service 빌드 및 푸시
         run: |
           echo "🔄 customers-service 빌드 및 푸시 중..."
           cp spring-petclinic-customers-service/target/spring-petclinic-customers-service-*.jar spring-petclinic-customers-service/app.jar
@@ -57,7 +57,7 @@ jobs:
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
           echo "✅ customers-service 푸시 완료"
 
-      - name: Build and push vets-service
+      - name: vets-service 빌드 및 푸시
         run: |
           echo "🔄 vets-service 빌드 및 푸시 중..."
           cp spring-petclinic-vets-service/target/spring-petclinic-vets-service-*.jar spring-petclinic-vets-service/app.jar
@@ -69,7 +69,7 @@ jobs:
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
           echo "✅ vets-service 푸시 완료"
 
-      - name: Build and push visits-service
+      - name: visits-service 빌드 및 푸시
         run: |
           echo "🔄 visits-service 빌드 및 푸시 중..."
           cp spring-petclinic-visits-service/target/spring-petclinic-visits-service-*.jar spring-petclinic-visits-service/app.jar
@@ -81,7 +81,7 @@ jobs:
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
           echo "✅ visits-service 푸시 완료"
 
-      - name: Build and push admin-server
+      - name: admin-server 빌드 및 푸시
         run: |
           echo "🔄 admin-server 빌드 및 푸시 중..."
           cp spring-petclinic-admin-server/target/spring-petclinic-admin-server-*.jar spring-petclinic-admin-server/app.jar
@@ -94,7 +94,7 @@ jobs:
           echo "✅ admin-server 푸시 완료"
 
 
-      - name: Emit images mapping artifact
+      - name: 이미지 매핑 아티팩트 생성
         run: |
           # Terraform 변수 `service_image_map`에 필요한 이미지 URI 매핑
           echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${{ github.sha }}" >> images.properties
@@ -103,11 +103,14 @@ jobs:
           echo "admin-server=${{ env.ECR_REGISTRY }}/petclinic-dev-admin@${{ github.sha }}" >> images.properties
         shell: bash
 
-      - name: Upload images artifact
+      - name: 이미지 아티팩트 업로드
         uses: actions/upload-artifact@v4
         with:
           name: images
           path: images.properties
+
+      - name: Terraform 설치
+        uses: hashicorp/setup-terraform@v3
 
       - name: ECS에 배포
         run: |
