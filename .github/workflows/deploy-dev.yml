@@ -28,8 +28,7 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
         aws-region: ap-southeast-2
 
     - name: Build and push Docker images
@@ -37,7 +36,7 @@ jobs:
         echo "🔄 Building and pushing Docker images..."
 
         # ECR 로그인
-        aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com
+        aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
         # 서비스 목록
         services=(
@@ -62,7 +61,7 @@ jobs:
           docker build -t "$service_name" .
 
           # ECR 리포지토리 URL
-          ecr_repo="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-$service_name"
+          ecr_repo="${{ secrets.ECR_REGISTRY }}/petclinic-dev-$service_name"
 
           # 태그 및 푸시
           docker tag "$service_name:latest" "$ecr_repo:latest"
@@ -95,10 +94,10 @@ jobs:
       run: |
         terraform plan -var-file=../../envs/dev.tfvars \
           -var="service_image_map={
-            customers = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-customers@${{ steps.images.outputs.customers_digest }}\"
-            vets = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-vets@${{ steps.images.outputs.vets_digest }}\"
-            visits = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-visits@${{ steps.images.outputs.visits_digest }}\"
-            admin = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-admin@${{ steps.images.outputs.admin_digest }}\"
+            customers = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-customers@${{ steps.images.outputs.customers_digest }}\"
+            vets = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-vets@${{ steps.images.outputs.vets_digest }}\"
+            visits = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-visits@${{ steps.images.outputs.visits_digest }}\"
+            admin = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-admin@${{ steps.images.outputs.admin_digest }}\"
           }"
 
     - name: Terraform Apply
@@ -107,10 +106,10 @@ jobs:
       run: |
         terraform apply -auto-approve -var-file=../../envs/dev.tfvars \
           -var="service_image_map={
-            customers = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-customers@${{ steps.images.outputs.customers_digest }}\"
-            vets = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-vets@${{ steps.images.outputs.vets_digest }}\"
-            visits = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-visits@${{ steps.images.outputs.visits_digest }}\"
-            admin = \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-dev-admin@${{ steps.images.outputs.admin_digest }}\"
+            customers = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-customers@${{ steps.images.outputs.customers_digest }}\"
+            vets = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-vets@${{ steps.images.outputs.vets_digest }}\"
+            visits = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-visits@${{ steps.images.outputs.visits_digest }}\"
+            admin = \"${{ secrets.ECR_REGISTRY }}/petclinic-dev-admin@${{ steps.images.outputs.admin_digest }}\"
           }"
 
     - name: Health Check
