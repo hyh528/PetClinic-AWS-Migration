@@ -61,6 +61,7 @@ for service in "${SERVICES[@]}"; do
     if ! ./mvnw clean package -DskipTests -pl $service -am -q; then
         echo "❌ [$service] Maven 빌드 실패!"
         popd > /dev/null
+        cd "$SERVICE_DIR"
         exit 1
     fi
     popd > /dev/null
