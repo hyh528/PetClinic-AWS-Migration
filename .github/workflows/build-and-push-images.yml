@@ -62,22 +62,14 @@ jobs:
             cd spring-petclinic-customers-service
             docker build -t customers-service .
 
-            # 여러 태그 적용
-            docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${{ github.sha }}
-            docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${SHORT_SHA}
-            docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${BRANCH_NAME}
-            docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${DATE_TAG}
+            # 의미 있는 단일 태그 적용
             docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
             docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
 
             # 푸시
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${{ github.sha }}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${SHORT_SHA}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${BRANCH_NAME}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${DATE_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
-            echo "✅ customers-service 푸시 완료 (태그: ${{ github.sha }}, ${SHORT_SHA}, ${BRANCH_NAME}, ${DATE_TAG}, ${COMBINED_TAG}, latest)"
+            echo "✅ customers-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
       - name: vets-service 빌드 및 푸시
@@ -96,22 +88,14 @@ jobs:
             cd spring-petclinic-vets-service
             docker build -t vets-service .
 
-            # 여러 태그 적용
-            docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${{ github.sha }}
-            docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${SHORT_SHA}
-            docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${BRANCH_NAME}
-            docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${DATE_TAG}
+            # 의미 있는 단일 태그 적용
             docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
             docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
 
             # 푸시
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${{ github.sha }}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${SHORT_SHA}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${BRANCH_NAME}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${DATE_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
-            echo "✅ vets-service 푸시 완료 (태그: ${{ github.sha }}, ${SHORT_SHA}, ${BRANCH_NAME}, ${DATE_TAG}, ${COMBINED_TAG}, latest)"
+            echo "✅ vets-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
       - name: visits-service 빌드 및 푸시
@@ -130,22 +114,14 @@ jobs:
             cd spring-petclinic-visits-service
             docker build -t visits-service .
 
-            # 여러 태그 적용
-            docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${{ github.sha }}
-            docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${SHORT_SHA}
-            docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${BRANCH_NAME}
-            docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${DATE_TAG}
+            # 의미 있는 단일 태그 적용
             docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
             docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
 
             # 푸시
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${{ github.sha }}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${SHORT_SHA}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${BRANCH_NAME}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${DATE_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
-            echo "✅ visits-service 푸시 완료 (태그: ${{ github.sha }}, ${SHORT_SHA}, ${BRANCH_NAME}, ${DATE_TAG}, ${COMBINED_TAG}, latest)"
+            echo "✅ visits-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
       - name: admin-server 빌드 및 푸시
@@ -164,22 +140,14 @@ jobs:
             cd spring-petclinic-admin-server
             docker build -t admin-server .
 
-            # 여러 태그 적용
-            docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${{ github.sha }}
-            docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${SHORT_SHA}
-            docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${BRANCH_NAME}
-            docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${DATE_TAG}
+            # 의미 있는 단일 태그 적용
             docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
             docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
 
             # 푸시
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${{ github.sha }}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${SHORT_SHA}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${BRANCH_NAME}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${DATE_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
-            echo "✅ admin-server 푸시 완료 (태그: ${{ github.sha }}, ${SHORT_SHA}, ${BRANCH_NAME}, ${DATE_TAG}, ${COMBINED_TAG}, latest)"
+            echo "✅ admin-server 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
 
