@@ -11,6 +11,8 @@ angular.module('ownerForm')
         } else {
             $http.get(API_BASE_URL + "/api/customers/owners/" + ownerId).then(function (resp) {
                 self.owner = resp.data;
+            }).catch(function (error) {
+                console.error('Error loading owner:', error);
             });
         }
 
@@ -20,10 +22,14 @@ angular.module('ownerForm')
             if (id) {
                 $http.put(API_BASE_URL + '/api/customers/owners/' + id, self.owner).then(function () {
                     $state.go('ownerDetails', {ownerId: ownerId});
+                }).catch(function (error) {
+                    console.error('Error updating owner:', error);
                 });
             } else {
                 $http.post(API_BASE_URL + '/api/customers/owners', self.owner).then(function () {
                     $state.go('owners');
+                }).catch(function (error) {
+                    console.error('Error creating owner:', error);
                 });
             }
         };

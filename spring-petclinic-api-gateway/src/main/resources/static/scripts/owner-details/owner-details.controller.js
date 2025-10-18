@@ -6,5 +6,7 @@ angular.module('ownerDetails')
 
         $http.get(API_BASE_URL + '/api/customers/owners/' + $stateParams.ownerId).then(function (resp) {
             self.owner = resp.data;
+        }).catch(function (error) {
+            console.error('Error loading owner details:', error);
         });
     }]);

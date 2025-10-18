@@ -6,5 +6,7 @@ angular.module('ownerList')
 
         $http.get(API_BASE_URL + '/api/customers/owners').then(function (resp) {
             self.owners = resp.data;
+        }).catch(function (error) {
+            console.error('Error loading owners:', error);
         });
     }]);
