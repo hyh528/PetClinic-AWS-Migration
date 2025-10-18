@@ -65,18 +65,18 @@ module "cloudfront" {
   price_class = var.price_class
 
   # SPA 라우팅
-  enable_spa_routing = var.enable_spa_routing
+  enable_spa_routing = true
 
   # CORS 헤더
-  enable_cors_headers = var.enable_cors_headers
+  enable_cors_headers = false
 
   # SSL/TLS 설정 (로컬 테스트용으로 HTTP 허용)
   use_default_certificate = var.use_default_certificate
   acm_certificate_arn     = var.acm_certificate_arn
 
   # 로깅 설정
-  enable_logging         = var.enable_cloudfront_logging
-  log_bucket_domain_name = var.log_bucket_domain_name
+  enable_logging         = false
+  log_bucket_domain_name = module.s3_frontend.bucket_regional_domain_name
   log_prefix             = var.log_prefix
 
   # WAF 설정

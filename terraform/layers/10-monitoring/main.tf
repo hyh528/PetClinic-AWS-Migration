@@ -6,10 +6,10 @@
 # 공통 로컬 변수
 locals {
   # 각 레이어에서 필요한 정보
-  api_gateway_name     = data.terraform_remote_state.aws_native.outputs.api_gateway_name
-  lambda_function_name = data.terraform_remote_state.aws_native.outputs.lambda_function_name
+  api_gateway_name     = "petclinic-api"  # 고정값 사용
+  lambda_function_name = "petclinic-dev-genai-function"  # 고정값 사용
   aurora_cluster_name  = data.terraform_remote_state.database.outputs.cluster_identifier
-  alb_name             = data.terraform_remote_state.application.outputs.alb_name
+  alb_name             = data.terraform_remote_state.application.outputs.alb_dns_name
 }
 
 # CloudWatch 모니터링 모듈 호출

@@ -30,17 +30,17 @@ module "aws_native_integration" {
   common_tags = local.layer_common_tags
 
   # API Gateway 설정 (data.tf에서 참조)
-  api_gateway_rest_api_id      = data.terraform_remote_state.api_gateway.outputs.rest_api_id
-  api_gateway_root_resource_id = data.terraform_remote_state.api_gateway.outputs.root_resource_id
-  api_gateway_execution_arn    = data.terraform_remote_state.api_gateway.outputs.execution_arn
-  api_gateway_api_name         = data.terraform_remote_state.api_gateway.outputs.api_name
-  api_gateway_stage_name       = data.terraform_remote_state.api_gateway.outputs.stage_name
-  api_gateway_domain_name      = data.terraform_remote_state.api_gateway.outputs.api_domain_name
-  api_gateway_stage_arn        = data.terraform_remote_state.api_gateway.outputs.stage_arn
+  api_gateway_rest_api_id      = data.terraform_remote_state.api_gateway.outputs.api_gateway_id
+  api_gateway_root_resource_id = "dy3iydgydc"  # root resource ID (실제 API Gateway에서 확인)
+  api_gateway_execution_arn    = data.terraform_remote_state.api_gateway.outputs.api_gateway_execution_arn
+  api_gateway_api_name         = "petclinic-api"  # 고정값
+  api_gateway_stage_name       = data.terraform_remote_state.api_gateway.outputs.api_gateway_stage_name
+  api_gateway_domain_name      = "placeholder"  # 실제로는 모듈에서 생성
+  api_gateway_stage_arn        = "placeholder"  # 실제로는 모듈에서 생성
 
   # Lambda GenAI 설정 (data.tf에서 참조)
-  lambda_genai_invoke_arn    = data.terraform_remote_state.lambda_genai.outputs.invoke_arn
-  lambda_genai_function_name = data.terraform_remote_state.lambda_genai.outputs.function_name
+  lambda_genai_invoke_arn    = data.terraform_remote_state.lambda_genai.outputs.lambda_function_invoke_arn
+  lambda_genai_function_name = data.terraform_remote_state.lambda_genai.outputs.lambda_function_name
 
   # 기능 활성화 플래그
   enable_genai_integration     = var.enable_genai_integration

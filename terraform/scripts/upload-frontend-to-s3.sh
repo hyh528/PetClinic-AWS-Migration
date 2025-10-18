@@ -6,7 +6,7 @@
 set -e
 
 # Default values
-SOURCE_PATH="spring-petclinic-api-gateway/src/main/resources/static"
+SOURCE_PATH="../../spring-petclinic-api-gateway/src/main/resources/static"
 PROFILE_NAME="default"
 FORCE=false
 
@@ -113,11 +113,8 @@ print_info "Uploading files with public-read ACL..."
 
 if aws s3 cp "$SOURCE_PATH" "s3://$BUCKET_NAME/" \
     --recursive \
-    --acl public-read \
     --profile "$PROFILE_NAME" \
-    --cache-control "max-age=86400" \  # 로컬 테스트용으로 캐시 시간 단축
-    --exclude "*.DS_Store" \
-    --exclude "*.git*"; then
+    --cache-control "max-age=86400"; then
 
     print_success "Upload completed successfully!"
 

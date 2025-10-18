@@ -124,3 +124,7 @@ state_config = {
   region      = "ap-southeast-2"
   profile     = "petclinic-dev"
 }
+
+# 서비스 이미지 매핑 (CI/CD 파이프라인에서 동적으로 설정)
+# 실제 배포 시 GitHub Actions 등에서 이 값을 덮어쓰거나 환경변수로 전달
+service_image_map = {}

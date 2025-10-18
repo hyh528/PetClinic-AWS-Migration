@@ -32,6 +32,11 @@ variable "tags" {
   type        = map(string)
 }
 
+variable "tfstate_bucket_name" {
+  description = "Terraform 상태 파일을 저장할 S3 버킷 이름"
+  type        = string
+}
+
 # =============================================================================
 # Monitoring Layer 전용 변수
 # =============================================================================
@@ -39,7 +44,7 @@ variable "tags" {
 variable "alert_email" {
   description = "알람 알림을 받을 이메일 주소"
   type        = string
-  default     = "admin@petclinic.local"
+  default     = "2501340070@office.kopo.ac.kr"
 }
 
 variable "sns_topic_arn" {

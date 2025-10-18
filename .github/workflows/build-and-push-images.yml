@@ -154,10 +154,15 @@ jobs:
       - name: 이미지 매핑 아티팩트 생성
         run: |
           # Terraform 변수 `service_image_map`에 필요한 이미지 URI 매핑
-          echo "customers-service=${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${{ github.sha }}" >> images.properties
-          echo "vets-service=${{ env.ECR_REGISTRY }}/petclinic-dev-vets@${{ github.sha }}" >> images.properties
-          echo "visits-service=${{ env.ECR_REGISTRY }}/petclinic-dev-visits@${{ github.sha }}" >> images.properties
-          echo "admin-server=${{ env.ECR_REGISTRY }}/petclinic-dev-admin@${{ github.sha }}" >> images.properties
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          DATE_TAG=$(date +%Y-%m-%d)
+          COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
+
+          echo "customers=${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}" >> images.properties
+          echo "vets=${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}" >> images.properties
+          echo "visits=${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}" >> images.properties
+          echo "admin=${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}" >> images.properties
         shell: bash
 
       - name: 이미지 아티팩트 업로드
@@ -166,27 +171,23 @@ jobs:
           name: images
           path: images.properties
 
-      # - name: Terraform 설치
-      #   uses: hashicorp/setup-terraform@v3
+      - name: Application Layer 배포
+        run: |
+          echo "🚀 Application Layer 배포 중..."
 
-      # - name: ECS에 배포
-      #   run: |
-      #     echo "🚀 ECS에 배포 중..."
+          # 이미지 태그 생성 (CI 워크플로우와 동일)
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          DATE_TAG=$(date +%Y-%m-%d)
+          IMAGE_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-      #     # Terraform 설정 (프로필 사용 안 함)
-      #     cd terraform/layers/07-application
-      #     terraform init -backend-config=backend.config -backend-config=../../backend.hcl -reconfigure
+          # Terraform 설치 (직접 설치로 권한 문제 해결)
+          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com jammy main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install -y terraform
 
-      #     # 최신 이미지로 배포 (프로필 변수 무시)
-      #     terraform apply -auto-approve -var-file=../../envs/dev.tfvars \
-      #       -var="aws_profile=" \
-      #       -var="service_image_map={
-      #         customers-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest\"
-      #         vets-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest\"
-      #         visits-service = \"${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest\"
-      #         admin-server = \"${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest\"
-      #       }"
+          # 배포 스크립트 실행
+          chmod +x ./terraform/scripts/deploy-application.sh
+          ./terraform/scripts/deploy-application.sh dev $IMAGE_TAG
 
-      #     echo "✅ 배포 완료"
-      #   env:
-      #     AWS_PROFILE: ""
+          echo "✅ Application Layer 배포 완료"

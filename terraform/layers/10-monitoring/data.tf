@@ -51,12 +51,12 @@ data "terraform_remote_state" "application" {
   }
 }
 
-# 10-aws-native 레이어 상태 참조
+# 09-aws-native 레이어 상태 참조 (필수)
 data "terraform_remote_state" "aws_native" {
   backend = "s3"
   config = {
     bucket  = var.tfstate_bucket_name
-    key     = "${var.environment}/10-aws-native/terraform.tfstate"
+    key     = "${var.environment}/09-aws-native/terraform.tfstate"
     region  = var.aws_region
     profile = var.aws_profile
   }

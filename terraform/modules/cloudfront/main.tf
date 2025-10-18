@@ -24,13 +24,14 @@ resource "aws_cloudfront_distribution" "frontend" {
     for_each = var.enable_api_gateway_integration ? [1] : []
 
     content {
-      domain_name = var.api_gateway_domain_name
+      domain_name = trimsuffix(replace(var.api_gateway_domain_name, "https://", ""), "/v1")
+      origin_path = "/v1"
       origin_id   = "API-Gateway"
 
       custom_origin_config {
         http_port              = 80
         https_port             = 443
-        origin_protocol_policy = "http-only" # 로컬 테스트용으로 HTTP 허용
+        origin_protocol_policy = "https-only"
         origin_ssl_protocols   = ["TLSv1.2"]
       }
     }
@@ -77,7 +78,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
       forwarded_values {
         query_string = true
-        headers      = ["Authorization", "Content-Type", "X-Amz-Date", "X-Amz-Security-Token", "X-Api-Key"]
+        headers      = ["Authorization", "Content-Type", "X-Api-Key"]
         cookies {
           forward = "all"
         }
@@ -100,6 +101,7 @@ resource "aws_cloudfront_distribution" "frontend" {
       }
     }
   }
+
 
   # 사용자 지정 에러 페이지 (SPA용)
   custom_error_response {

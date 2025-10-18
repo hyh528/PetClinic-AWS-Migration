@@ -1,7 +1,7 @@
 # =============================================================================
-# Network Layer - Provider Configuration
+# Frontend Hosting Layer - Provider Configuration
 # =============================================================================
-# 목적: Network 레이어에서 사용할 AWS Provider 설정
+# 목적: Frontend 레이어에서 사용할 AWS Provider 설정
 # 베스트 프랙티스: 루트 모듈에서 provider 정의
 
 terraform {
@@ -27,7 +27,7 @@ provider "aws" {
       ManagedBy   = "terraform"
       Owner       = "team-petclinic"
       CostCenter  = "training"
-      Layer       = "08-api-gateway"
+      Layer       = "11-frontend"
     }
   }
 }

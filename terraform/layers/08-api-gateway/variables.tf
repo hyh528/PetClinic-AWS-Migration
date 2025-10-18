@@ -147,3 +147,12 @@ variable "integration_latency_threshold" {
   type        = number
   default     = 1500
 }
+
+# =============================================================================
+# Remote State 참조를 위한 변수
+# =============================================================================
+
+variable "tfstate_bucket_name" {
+  description = "Terraform 상태 파일을 저장할 S3 버킷 이름"
+  type        = string
+}

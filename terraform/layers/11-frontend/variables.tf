@@ -20,6 +20,11 @@ variable "backend_bucket" {
   type        = string
 }
 
+variable "aws_profile" {
+  description = "AWS CLI 프로파일"
+  type        = string
+}
+
 variable "tags" {
   description = "리소스에 적용할 공통 태그"
   type        = map(string)

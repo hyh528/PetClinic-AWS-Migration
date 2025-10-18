@@ -12,7 +12,7 @@ data "terraform_remote_state" "api_gateway" {
   backend = "s3"
   config = {
     bucket = var.backend_bucket
-    key    = "terraform/${var.environment}/08-api-gateway.tfstate"
+    key    = "${var.environment}/08-api-gateway/terraform.tfstate"
     region = var.aws_region
   }
 }
