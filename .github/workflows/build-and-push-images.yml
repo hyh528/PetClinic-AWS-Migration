@@ -171,9 +171,9 @@ jobs:
           name: images
           path: images.properties
 
-      - name: Application Layer 배포
+      - name: Application Layer 배포 정보 생성
         run: |
-          echo "🚀 Application Layer 배포 중..."
+          echo "📝 Application Layer 배포 정보 생성..."
 
           # 이미지 태그 생성 (CI 워크플로우와 동일)
           BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
@@ -181,13 +181,24 @@ jobs:
           DATE_TAG=$(date +%Y-%m-%d)
           IMAGE_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-          # Terraform 설치 (직접 설치로 권한 문제 해결)
-          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com jammy main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt update && sudo apt install -y terraform
+          # 환경변수로 service_image_map 설정
+          echo "SERVICE_IMAGE_MAP=customers=\"${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${IMAGE_TAG}\",vets=\"${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${IMAGE_TAG}\",visits=\"${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${IMAGE_TAG}\",admin=\"${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${IMAGE_TAG}\"" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
 
-          # 배포 스크립트 실행
-          chmod +x ./terraform/scripts/deploy-application.sh
-          ./terraform/scripts/deploy-application.sh dev $IMAGE_TAG
+          echo "✅ 배포 정보 생성 완료"
+          echo "이미지 태그: ${IMAGE_TAG}"
 
-          echo "✅ Application Layer 배포 완료"
+      - name: Application Layer 배포 (수동)
+        run: |
+          echo "🚀 Application Layer 배포 준비 완료"
+          echo "다음 명령어로 수동 배포하세요:"
+          echo ""
+          echo "cd terraform/layers/07-application"
+          echo "terraform init -backend-config=\"../../backend.hcl\" -backend-config=\"backend.config\" -reconfigure"
+          echo "TF_VAR_service_image_map='${SERVICE_IMAGE_MAP}' terraform plan -var-file=\"../../envs/dev.tfvars\""
+          echo "TF_VAR_service_image_map='${SERVICE_IMAGE_MAP}' terraform apply -auto-approve -var-file=\"../../envs/dev.tfvars\""
+          echo ""
+          echo "또는 배포 스크립트 사용:"
+          echo "./terraform/scripts/deploy-application.sh dev ${IMAGE_TAG}"
+          echo ""
+          echo "✅ GitHub Actions에서 빌드 및 이미지 푸시는 완료됨"
