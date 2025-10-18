@@ -140,7 +140,7 @@ resource "aws_ecs_task_definition" "services" {
   container_definitions = jsonencode([
     {
       name      = each.key
-  image     = lookup(var.service_image_map, each.key, "${module.ecr_services[each.key].repository_url}:latest")
+  image     = lookup(var.service_image_map, each.key, "${module.ecr_services[each.key].repository_url}:develop-2025-10-18-03e0fe0")
       cpu       = each.value.cpu
       memory    = each.value.memory
       essential = true
