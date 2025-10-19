@@ -59,13 +59,11 @@ jobs:
             cd spring-petclinic-customers-service
             docker build -t customers-service .
 
-            # 의미 있는 단일 태그 적용
+            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
             docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
-            docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
 
-            # 푸시
+            # 푸시 (불변 태그만 사용)
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
             echo "✅ customers-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
@@ -83,13 +81,11 @@ jobs:
             cd spring-petclinic-vets-service
             docker build -t vets-service .
 
-            # 의미 있는 단일 태그 적용
+            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
             docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
-            docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
 
-            # 푸시
+            # 푸시 (불변 태그만 사용)
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
             echo "✅ vets-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
@@ -107,13 +103,11 @@ jobs:
             cd spring-petclinic-visits-service
             docker build -t visits-service .
 
-            # 의미 있는 단일 태그 적용
+            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
             docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
-            docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
 
-            # 푸시
+            # 푸시 (불변 태그만 사용)
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
             echo "✅ visits-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
@@ -131,13 +125,11 @@ jobs:
             cd spring-petclinic-admin-server
             docker build -t admin-server .
 
-            # 의미 있는 단일 태그 적용
+            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
             docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
-            docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
 
-            # 푸시
+            # 푸시 (불변 태그만 사용)
             docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
             echo "✅ admin-server 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
           fi
 
@@ -150,10 +142,16 @@ jobs:
           DATE_TAG=$(date +%Y-%m-%d)
           COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-          echo "customers=${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}" >> images.properties
-          echo "vets=${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}" >> images.properties
-          echo "visits=${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}" >> images.properties
-          echo "admin=${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}" >> images.properties
+          # SHA256 다이제스트 조회 및 저장
+          CUSTOMERS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-customers --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          VETS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-vets --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          VISITS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-visits --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          ADMIN_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-admin --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+
+          echo "customers=${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${CUSTOMERS_DIGEST}" >> images.properties
+          echo "vets=${{ env.ECR_REGISTRY }}/petclinic-dev-vets@${VETS_DIGEST}" >> images.properties
+          echo "visits=${{ env.ECR_REGISTRY }}/petclinic-dev-visits@${VISITS_DIGEST}" >> images.properties
+          echo "admin=${{ env.ECR_REGISTRY }}/petclinic-dev-admin@${ADMIN_DIGEST}" >> images.properties
         shell: bash
 
       - name: 이미지 아티팩트 업로드
@@ -172,8 +170,13 @@ jobs:
           DATE_TAG=$(date +%Y-%m-%d)
           IMAGE_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-          # 환경변수로 service_image_map 설정
-          echo "SERVICE_IMAGE_MAP=customers=\"${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${IMAGE_TAG}\",vets=\"${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${IMAGE_TAG}\",visits=\"${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${IMAGE_TAG}\",admin=\"${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${IMAGE_TAG}\"" >> $GITHUB_ENV
+          # SHA256 다이제스트 조회 및 환경변수 설정
+          CUSTOMERS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-customers --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          VETS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-vets --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          VISITS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-visits --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          ADMIN_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-admin --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+
+          echo "SERVICE_IMAGE_MAP=customers=\"${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${CUSTOMERS_DIGEST}\",vets=\"${{ env.ECR_REGISTRY }}/petclinic-dev-vets@${VETS_DIGEST}\",visits=\"${{ env.ECR_REGISTRY }}/petclinic-dev-visits@${VISITS_DIGEST}\",admin=\"${{ env.ECR_REGISTRY }}/petclinic-dev-admin@${ADMIN_DIGEST}\"" >> $GITHUB_ENV
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
 
           echo "✅ 배포 정보 생성 완료"

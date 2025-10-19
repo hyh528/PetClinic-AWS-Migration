@@ -8,7 +8,7 @@
 # ECR 리포지토리 생성
 resource "aws_ecr_repository" "this" {
   name                 = var.repository_name
-  image_tag_mutability = var.image_tag_mutability
+  image_tag_mutability = "IMMUTABLE"
 
   # 보안: 이미지 푸시 시 자동 취약점 스캔
   image_scanning_configuration {
