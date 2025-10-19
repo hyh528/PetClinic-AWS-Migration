@@ -48,10 +48,7 @@ jobs:
       - name: customers-service 빌드 및 푸시
         run: |
           echo "🔄 customers-service 빌드 및 푸시 중..."
-          # 이미지가 이미 존재하는지 확인
-          if aws ecr describe-images --repository-name petclinic-dev-customers --image-ids imageTag=latest --region ap-southeast-2 >/dev/null 2>&1; then
-            echo "✅ customers-service 이미지가 이미 존재합니다. 건너뜁니다."
-          else
+          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
             # 태그 생성
             BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
@@ -75,9 +72,7 @@ jobs:
       - name: vets-service 빌드 및 푸시
         run: |
           echo "🔄 vets-service 빌드 및 푸시 중..."
-          if aws ecr describe-images --repository-name petclinic-dev-vets --image-ids imageTag=latest --region ap-southeast-2 >/dev/null 2>&1; then
-            echo "✅ vets-service 이미지가 이미 존재합니다. 건너뜁니다."
-          else
+          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
             # 태그 생성
             BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
@@ -101,9 +96,7 @@ jobs:
       - name: visits-service 빌드 및 푸시
         run: |
           echo "🔄 visits-service 빌드 및 푸시 중..."
-          if aws ecr describe-images --repository-name petclinic-dev-visits --image-ids imageTag=latest --region ap-southeast-2 >/dev/null 2>&1; then
-            echo "✅ visits-service 이미지가 이미 존재합니다. 건너뜁니다."
-          else
+          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
             # 태그 생성
             BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
@@ -127,9 +120,7 @@ jobs:
       - name: admin-server 빌드 및 푸시
         run: |
           echo "🔄 admin-server 빌드 및 푸시 중..."
-          if aws ecr describe-images --repository-name petclinic-dev-admin --image-ids imageTag=latest --region ap-southeast-2 >/dev/null 2>&1; then
-            echo "✅ admin-server 이미지가 이미 존재합니다. 건너뜁니다."
-          else
+          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
             # 태그 생성
             BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
