@@ -58,6 +58,20 @@ echo "  admin: $ADMIN_IMAGE"
 # Terraform 작업 디렉터리로 이동
 cd "$(dirname "$0")/../layers/07-application"
 
+# 동적 terraform.tfvars 파일 생성
+echo "📝 동적 terraform.tfvars 파일 생성 중..."
+cat > terraform.tfvars << EOF
+# 동적으로 생성된 서비스 이미지 맵
+service_image_map = {
+  customers = "$CUSTOMERS_IMAGE"
+  vets      = "$VETS_IMAGE"
+  visits    = "$VISITS_IMAGE"
+  admin     = "$ADMIN_IMAGE"
+}
+EOF
+
+echo "✅ terraform.tfvars 파일 생성 완료"
+
 # Terraform 초기화
 echo "🔧 Terraform 초기화 중..."
 terraform init -backend-config="../../backend.hcl" -backend-config="backend.config" -reconfigure
@@ -66,7 +80,7 @@ terraform init -backend-config="../../backend.hcl" -backend-config="backend.conf
 echo "📋 배포 계획 확인 중..."
 terraform plan \
     -var-file="../../envs/${ENVIRONMENT}.tfvars" \
-    -var="service_image_map={$SERVICE_IMAGE_MAP}" \
+    -var-file="terraform.tfvars" \
     -out=tfplan
 
 # Terraform 적용
