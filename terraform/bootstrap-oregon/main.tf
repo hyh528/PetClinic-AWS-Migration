@@ -1,5 +1,5 @@
 # ==========================================
-# Terraform 부트스트랩 구성
+# Terraform 부트스트랩 구성 (Oregon 리전)
 # ==========================================
 # 이 파일은 Terraform의 백엔드 인프라(S3 + DynamoDB)를 생성합니다.
 # Bootstrap은 Terraform이 Terraform을 관리하는 "부트스트래핑" 개념입니다.
@@ -20,7 +20,7 @@ resource "aws_s3_bucket" "tfstate" {
   # 리소스 태그 (식별과 관리용)
   tags = {
     Name        = var.tfstate_bucket_name
-    Description = "Petclinic용 Terraform 원격 상태 버킷"
+    Description = "Petclinic Terraform remote state bucket Oregon"
   }
 }
 
@@ -86,27 +86,15 @@ resource "aws_s3_bucket_policy" "tfstate" {
 }
 
 # ==========================================
-# Terraform 상태 잠금을 위한 DynamoDB 테이블
+# S3 네이티브 상태 잠금 (Terraform 1.10.0+)
 # ==========================================
-# 여러 사람이 동시에 Terraform 실행 시 충돌 방지를 위해 만드는 것.
+# DynamoDB 대신 S3의 네이티브 잠금 기능을 사용
+# 더 간단하고 비용 효율적임
 
-resource "aws_dynamodb_table" "tf_lock" {
-  name         = var.tf_lock_table_name
-  billing_mode = "PAY_PER_REQUEST" # 사용량만큼 비용 (저비용)
-
-  # 파티션 키 설정 (Terraform이 자동으로 사용)
-  hash_key = "LockID"
-
-  # 속성 정의
-  attribute {
-    name = "LockID" # 잠금 식별자
-    type = "S"      # 문자열 타입
-  }
-
-  # 리소스 태그
-  tags = {
-    Name        = var.tf_lock_table_name
-    Description = "Petclinic용 Terraform 상태 잠금 테이블"
+resource "aws_s3_bucket_versioning" "tfstate_locking" {
+  bucket = aws_s3_bucket.tfstate.id
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 

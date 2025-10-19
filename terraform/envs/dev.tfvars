@@ -6,19 +6,19 @@
 environment = "dev"
 
 # AWS 설정
-aws_region  = "ap-southeast-2"
+aws_region  = "us-west-2"
 aws_profile = "petclinic-dev"
 
 # Terraform 상태 관리
-tfstate_bucket_name = "petclinic-tfstate-sydney-dev"
+tfstate_bucket_name = "petclinic-tfstate-oregon-dev"
 
 # 네트워킹 설정
 name_prefix = "petclinic-dev"
 vpc_cidr    = "10.0.0.0/16"
 
 azs = [
-  "ap-southeast-2a",
-  "ap-southeast-2b"
+  "us-west-2a",
+  "us-west-2b"
 ]
 
 public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
@@ -48,7 +48,7 @@ vpc_endpoint_services = [
 # =============================================================================
 
 # Cross-Layer 통합 설정
-enable_alb_integration = false # Phase 1: false, Phase 2 (application 레이어 배포 후): true
+enable_alb_integration = true # Phase 1: false, Phase 2 (application 레이어 배포 후): true
 
 # IAM 설정
 team_members               = ["yeonghyeon", "seokgyeom", "junje", "hwigwon"]
@@ -99,7 +99,7 @@ tags = {
 shared_config = {
   name_prefix = "petclinic-dev"
   environment = "dev"
-  aws_region  = "ap-southeast-2"
+  aws_region  = "us-west-2"
   aws_profile = "petclinic-dev"
   common_name = "petclinic-dev"
   common_tags = {
@@ -113,18 +113,14 @@ shared_config = {
 
 network_config = {
   vpc_cidr                 = "10.0.0.0/16"
-  azs                      = ["ap-southeast-2a", "ap-southeast-2b"]
+  azs                      = ["us-west-2a", "us-west-2b"]
   public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
   private_app_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
   private_db_subnet_cidrs  = ["10.0.5.0/24", "10.0.6.0/24"]
 }
 
 state_config = {
-  bucket_name = "petclinic-tfstate-sydney-dev"
-  region      = "ap-southeast-2"
+  bucket_name = "petclinic-tfstate-oregon-dev"
+  region      = "us-west-2"
   profile     = "petclinic-dev"
 }
-
-# 서비스 이미지 매핑 (CI/CD 파이프라인에서 동적으로 설정)
-# 실제 배포 시 GitHub Actions 등에서 이 값을 덮어쓰거나 환경변수로 전달
-service_image_map = {}

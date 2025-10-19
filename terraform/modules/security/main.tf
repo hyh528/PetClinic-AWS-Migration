@@ -1,11 +1,11 @@
 # ECS 태스크 보안 그룹
 resource "aws_security_group" "ecs" {
-  name        = "${var.name_prefix}-ecs-sg"
+  name        = "${var.name_prefix}-ecs-security-group"
   description = "Security group for ECS tasks"
   vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-ecs-sg"
+    Name        = "${var.name_prefix}-ecs-security-group"
     Environment = var.environment
     Tier        = "app"
   })
@@ -59,12 +59,12 @@ resource "aws_vpc_security_group_egress_rule" "ecs_out_to_internet_443_ipv6" {
 
 # Aurora 클러스터 보안 그룹
 resource "aws_security_group" "rds" {
-  name        = "${var.name_prefix}-aurora-sg"
+  name        = "${var.name_prefix}-aurora-security-group"
   description = "Security group for Aurora MySQL cluster"
   vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-aurora-sg"
+    Name        = "${var.name_prefix}-aurora-security-group"
     Environment = var.environment
     Tier        = "db"
   })

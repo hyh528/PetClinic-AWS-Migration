@@ -136,11 +136,12 @@ resource "aws_ecs_task_definition" "services" {
   cpu                      = each.value.cpu
   memory                   = each.value.memory
   execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/petclinic-ecs-task-execution-role"
+  task_role_arn            = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/petclinic-ecs-task-execution-role"
 
   container_definitions = jsonencode([
     {
       name      = each.key
-  image     = lookup(var.service_image_map, each.key, null)
+      image     = lookup(var.service_image_map, each.key, null)
       cpu       = each.value.cpu
       memory    = each.value.memory
       essential = true
@@ -165,6 +166,9 @@ resource "aws_ecs_task_definition" "services" {
           value = "mysql,aws"
         }
       ]
+      # DNS 설정을 명시적으로 추가하여 Route 53 Resolver 강제 사용
+      dnsServers        = ["169.254.169.253"]
+      dnsSearchDomains  = ["ap-southeast-2.compute.internal"]
     }
   ])
 

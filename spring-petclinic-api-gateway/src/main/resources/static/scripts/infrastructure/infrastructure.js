@@ -1,7 +1,7 @@
 'use strict';
 
-// API Gateway URL 설정 (CloudFront에서 /api/* 경로를 API Gateway로 라우팅하므로 /api 접두사 제거)
-var API_GATEWAY_URL = window.location.origin;
+// API Gateway URL 설정 (실제 API Gateway 엔드포인트 사용)
+var API_GATEWAY_URL = 'https://jnscxvz0ha.execute-api.ap-southeast-2.amazonaws.com/v1';
 
 angular.module('infrastructure', [])
     .constant('API_BASE_URL', API_GATEWAY_URL);
