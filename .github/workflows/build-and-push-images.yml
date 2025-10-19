@@ -15,7 +15,7 @@ jobs:
       packages: write
     env:
       ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-      AWS_REGION: ap-southeast-2
+      AWS_REGION: us-west-2
 
     steps:
       - name: Checkout
@@ -135,10 +135,10 @@ jobs:
           COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
           # SHA256 다이제스트 조회 및 저장
-          CUSTOMERS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-customers --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
-          VETS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-vets --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
-          VISITS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-visits --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
-          ADMIN_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-admin --image-ids imageTag=${COMBINED_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          CUSTOMERS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-customers --image-ids imageTag=${COMBINED_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
+          VETS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-vets --image-ids imageTag=${COMBINED_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
+          VISITS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-visits --image-ids imageTag=${COMBINED_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
+          ADMIN_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-admin --image-ids imageTag=${COMBINED_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
 
           echo "customers=${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${CUSTOMERS_DIGEST}" >> images.properties
           echo "vets=${{ env.ECR_REGISTRY }}/petclinic-dev-vets@${VETS_DIGEST}" >> images.properties
@@ -163,10 +163,10 @@ jobs:
           IMAGE_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
           # SHA256 다이제스트 조회 및 환경변수 설정
-          CUSTOMERS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-customers --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
-          VETS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-vets --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
-          VISITS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-visits --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
-          ADMIN_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-admin --image-ids imageTag=${IMAGE_TAG} --region ap-southeast-2 --query 'imageDetails[0].imageDigest' --output text)
+          CUSTOMERS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-customers --image-ids imageTag=${IMAGE_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
+          VETS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-vets --image-ids imageTag=${IMAGE_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
+          VISITS_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-visits --image-ids imageTag=${IMAGE_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
+          ADMIN_DIGEST=$(aws ecr describe-images --repository-name petclinic-dev-admin --image-ids imageTag=${IMAGE_TAG} --region us-west-2 --query 'imageDetails[0].imageDigest' --output text)
 
           echo "SERVICE_IMAGE_MAP=customers=\"${{ env.ECR_REGISTRY }}/petclinic-dev-customers@${CUSTOMERS_DIGEST}\",vets=\"${{ env.ECR_REGISTRY }}/petclinic-dev-vets@${VETS_DIGEST}\",visits=\"${{ env.ECR_REGISTRY }}/petclinic-dev-visits@${VISITS_DIGEST}\",admin=\"${{ env.ECR_REGISTRY }}/petclinic-dev-admin@${ADMIN_DIGEST}\"" >> $GITHUB_ENV
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
