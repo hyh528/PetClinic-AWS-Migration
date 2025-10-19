@@ -39,6 +39,12 @@ variable "ecs_task_execution_role_arn" {
   type        = string
 }
 
+variable "task_role_arn" {                         
+  description = "ECS Task에 할당할 IAM 역할의 ARN" 
+  type        = string                             
+  default     = null                               
+}                                                  
+
 variable "listener_arn" {
   description = "연결할 ALB 리스너의 ARN"
   type        = string

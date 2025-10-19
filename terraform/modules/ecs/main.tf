@@ -49,7 +49,8 @@ resource "aws_ecs_task_definition" "service" {
   cpu                      = var.task_cpu
   memory                   = var.task_memory
   execution_role_arn       = var.ecs_task_execution_role_arn # application 레이어에서 전달받음
-
+  task_role_arn            = var.task_role_arn
+  
   container_definitions = jsonencode([
     {
       name      = var.service_name,

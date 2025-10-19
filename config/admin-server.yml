@@ -1,7 +1,12 @@
+spring:                   
+  cloud:                  
+    aws:                  
+      servicediscovery:   
+        enabled: true     
 eureka:
   client:
     serviceUrl:
-      defaultZone: http://discovery-server:8761/eureka/
+      enabled: false
 management:
   endpoints:
     web:

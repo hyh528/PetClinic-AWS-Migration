@@ -40,7 +40,8 @@ module "ecs" {
   cluster_id                  = aws_ecs_cluster.main.id
   ecs_task_execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
   listener_arn                = aws_lb_listener.http.arn
-
+  task_role_arn               = data.terraform_remote_state.security.outputs.ecs_task_role_arn   
+  
   # --- 서비스별 값 전달 ---
   service_name      = each.key
   image_uri         = each.value.image_uri
