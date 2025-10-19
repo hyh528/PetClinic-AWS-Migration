@@ -24,7 +24,7 @@ echo "이미지 태그: $IMAGE_TAG"
 
 # ECR 리포지토리 정보 가져오기
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --profile petclinic-dev)
-REGION=$(aws configure get region --profile petclinic-dev)
+REGION="ap-southeast-2"
 
 if [ -z "$ACCOUNT_ID" ] || [ -z "$REGION" ]; then
     echo "❌ AWS 프로필 설정을 확인해주세요"
