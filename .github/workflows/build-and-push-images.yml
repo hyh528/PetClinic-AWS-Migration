@@ -48,90 +48,82 @@ jobs:
       - name: customers-service 빌드 및 푸시
         run: |
           echo "🔄 customers-service 빌드 및 푸시 중..."
-          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
-            # 태그 생성
-            BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-            DATE_TAG=$(date +%Y-%m-%d)
-            COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
+          # 태그 생성
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          DATE_TAG=$(date +%Y-%m-%d)
+          COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-            cp spring-petclinic-customers-service/target/spring-petclinic-customers-service-*.jar spring-petclinic-customers-service/app.jar
-            cd spring-petclinic-customers-service
-            docker build -t customers-service .
+          cp spring-petclinic-customers-service/target/spring-petclinic-customers-service-*.jar spring-petclinic-customers-service/app.jar
+          cd spring-petclinic-customers-service
+          docker build -t customers-service .
 
-            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
-            docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
+          # 불변 태그 적용
+          docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
 
-            # 푸시 (불변 태그만 사용)
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
-            echo "✅ customers-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
-          fi
+          # 푸시 (불변 태그만 사용)
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
+          echo "✅ customers-service 푸시 완료 (태그: ${COMBINED_TAG})"
 
       - name: vets-service 빌드 및 푸시
         run: |
           echo "🔄 vets-service 빌드 및 푸시 중..."
-          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
-            # 태그 생성
-            BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-            DATE_TAG=$(date +%Y-%m-%d)
-            COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
+          # 태그 생성
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          DATE_TAG=$(date +%Y-%m-%d)
+          COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-            cp spring-petclinic-vets-service/target/spring-petclinic-vets-service-*.jar spring-petclinic-vets-service/app.jar
-            cd spring-petclinic-vets-service
-            docker build -t vets-service .
+          cp spring-petclinic-vets-service/target/spring-petclinic-vets-service-*.jar spring-petclinic-vets-service/app.jar
+          cd spring-petclinic-vets-service
+          docker build -t vets-service .
 
-            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
-            docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
+          # 불변 태그 적용
+          docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
 
-            # 푸시 (불변 태그만 사용)
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
-            echo "✅ vets-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
-          fi
+          # 푸시 (불변 태그만 사용)
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
+          echo "✅ vets-service 푸시 완료 (태그: ${COMBINED_TAG})"
 
       - name: visits-service 빌드 및 푸시
         run: |
           echo "🔄 visits-service 빌드 및 푸시 중..."
-          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
-            # 태그 생성
-            BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-            DATE_TAG=$(date +%Y-%m-%d)
-            COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
+          # 태그 생성
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          DATE_TAG=$(date +%Y-%m-%d)
+          COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-            cp spring-petclinic-visits-service/target/spring-petclinic-visits-service-*.jar spring-petclinic-visits-service/app.jar
-            cd spring-petclinic-visits-service
-            docker build -t visits-service .
+          cp spring-petclinic-visits-service/target/spring-petclinic-visits-service-*.jar spring-petclinic-visits-service/app.jar
+          cd spring-petclinic-visits-service
+          docker build -t visits-service .
 
-            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
-            docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
+          # 불변 태그 적용
+          docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
 
-            # 푸시 (불변 태그만 사용)
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
-            echo "✅ visits-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
-          fi
+          # 푸시 (불변 태그만 사용)
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
+          echo "✅ visits-service 푸시 완료 (태그: ${COMBINED_TAG})"
 
       - name: admin-server 빌드 및 푸시
         run: |
           echo "🔄 admin-server 빌드 및 푸시 중..."
-          # 코드 변경 시 항상 최신 이미지 빌드 (latest 태그 강제 업데이트)
-            # 태그 생성
-            BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-            DATE_TAG=$(date +%Y-%m-%d)
-            COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
+          # 태그 생성
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          DATE_TAG=$(date +%Y-%m-%d)
+          COMBINED_TAG="${BRANCH_NAME}-${DATE_TAG}-${SHORT_SHA}"
 
-            cp spring-petclinic-admin-server/target/spring-petclinic-admin-server-*.jar spring-petclinic-admin-server/app.jar
-            cd spring-petclinic-admin-server
-            docker build -t admin-server .
+          cp spring-petclinic-admin-server/target/spring-petclinic-admin-server-*.jar spring-petclinic-admin-server/app.jar
+          cd spring-petclinic-admin-server
+          docker build -t admin-server .
 
-            # 의미 있는 단일 태그 적용 (latest는 선택적 편의용)
-            docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
+          # 불변 태그 적용
+          docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
 
-            # 푸시 (불변 태그만 사용)
-            docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
-            echo "✅ admin-server 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
-          fi
+          # 푸시 (불변 태그만 사용)
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
+          echo "✅ admin-server 푸시 완료 (태그: ${COMBINED_TAG})"
 
 
       - name: 이미지 매핑 아티팩트 생성
