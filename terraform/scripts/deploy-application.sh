@@ -34,11 +34,18 @@ fi
 echo "AWS 계정: $ACCOUNT_ID"
 echo "리전: $REGION"
 
-# 서비스 이미지 맵 생성
-CUSTOMERS_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-customers:$IMAGE_TAG"
-VETS_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-vets:$IMAGE_TAG"
-VISITS_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-visits:$IMAGE_TAG"
-ADMIN_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-admin:$IMAGE_TAG"
+# SHA256 다이제스트 조회 및 서비스 이미지 맵 생성
+echo "🔍 SHA256 다이제스트 조회 중..."
+
+CUSTOMERS_DIGEST=$(aws ecr describe-images --repository-name "petclinic-$ENVIRONMENT-customers" --image-ids imageTag=$IMAGE_TAG --region $REGION --profile "petclinic-$ENVIRONMENT" --query 'imageDetails[0].imageDigest' --output text)
+VETS_DIGEST=$(aws ecr describe-images --repository-name "petclinic-$ENVIRONMENT-vets" --image-ids imageTag=$IMAGE_TAG --region $REGION --profile "petclinic-$ENVIRONMENT" --query 'imageDetails[0].imageDigest' --output text)
+VISITS_DIGEST=$(aws ecr describe-images --repository-name "petclinic-$ENVIRONMENT-visits" --image-ids imageTag=$IMAGE_TAG --region $REGION --profile "petclinic-$ENVIRONMENT" --query 'imageDetails[0].imageDigest' --output text)
+ADMIN_DIGEST=$(aws ecr describe-images --repository-name "petclinic-$ENVIRONMENT-admin" --image-ids imageTag=$IMAGE_TAG --region $REGION --profile "petclinic-$ENVIRONMENT" --query 'imageDetails[0].imageDigest' --output text)
+
+CUSTOMERS_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-customers@$CUSTOMERS_DIGEST"
+VETS_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-vets@$VETS_DIGEST"
+VISITS_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-visits@$VISITS_DIGEST"
+ADMIN_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/petclinic-$ENVIRONMENT-admin@$ADMIN_DIGEST"
 
 SERVICE_IMAGE_MAP="customers=\"$CUSTOMERS_IMAGE\",vets=\"$VETS_IMAGE\",visits=\"$VISITS_IMAGE\",admin=\"$ADMIN_IMAGE\""
 
