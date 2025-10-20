@@ -116,6 +116,18 @@ for service in "${SERVICES[@]}"; do
     fi
     echo "✅ [$service] ECR 푸시 성공"
 
+    # Also push latest tag
+    if [ "$VERSION" != "latest" ]; then
+        echo "📤 [$service] ECR에 latest 태그 푸시 중..."
+        docker tag $service:latest $ECR_REPO_URL:latest
+        if ! docker push $ECR_REPO_URL:latest; then
+            echo "❌ [$service] ECR latest 태그 푸시 실패!"
+            cd ..
+            exit 1
+        fi
+        echo "✅ [$service] ECR latest 태그 푸시 성공"
+    fi
+
     echo "📍 [$service] 완료: $ECR_REPO_URL:$VERSION"
 
     # 원래 디렉토리로 돌아가기

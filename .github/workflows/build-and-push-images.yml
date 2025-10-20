@@ -63,7 +63,11 @@ jobs:
 
           # 푸시 (불변 태그만 사용)
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:${COMBINED_TAG}
-          echo "✅ customers-service 푸시 완료 (태그: ${COMBINED_TAG})"
+
+          # latest 태그도 푸시
+          docker tag customers-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-customers:latest
+          echo "✅ customers-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
 
       - name: vets-service 빌드 및 푸시
         run: |
@@ -83,7 +87,11 @@ jobs:
 
           # 푸시 (불변 태그만 사용)
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:${COMBINED_TAG}
-          echo "✅ vets-service 푸시 완료 (태그: ${COMBINED_TAG})"
+
+          # latest 태그도 푸시
+          docker tag vets-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-vets:latest
+          echo "✅ vets-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
 
       - name: visits-service 빌드 및 푸시
         run: |
@@ -103,7 +111,11 @@ jobs:
 
           # 푸시 (불변 태그만 사용)
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:${COMBINED_TAG}
-          echo "✅ visits-service 푸시 완료 (태그: ${COMBINED_TAG})"
+
+          # latest 태그도 푸시
+          docker tag visits-service:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-visits:latest
+          echo "✅ visits-service 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
 
       - name: admin-server 빌드 및 푸시
         run: |
@@ -123,7 +135,11 @@ jobs:
 
           # 푸시 (불변 태그만 사용)
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:${COMBINED_TAG}
-          echo "✅ admin-server 푸시 완료 (태그: ${COMBINED_TAG})"
+
+          # latest 태그도 푸시
+          docker tag admin-server:latest ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
+          docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
+          echo "✅ admin-server 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
 
 
       - name: 이미지 매핑 아티팩트 생성

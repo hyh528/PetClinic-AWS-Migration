@@ -124,3 +124,11 @@ state_config = {
   region      = "us-west-2"
   profile     = "petclinic-dev"
 }
+
+# Application Layer 설정
+service_image_map = {
+  customers = "897722691159.dkr.ecr.us-west-2.amazonaws.com/petclinic-dev-customers:latest"
+  vets      = "897722691159.dkr.ecr.us-west-2.amazonaws.com/petclinic-dev-vets:latest"
+  visits    = "897722691159.dkr.ecr.us-west-2.amazonaws.com/petclinic-dev-visits:latest"
+  admin     = "897722691159.dkr.ecr.us-west-2.amazonaws.com/petclinic-dev-admin:latest"
+}

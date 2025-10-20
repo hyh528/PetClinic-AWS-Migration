@@ -167,8 +167,8 @@ resource "aws_ecs_task_definition" "services" {
         }
       ]
       # DNS 설정을 명시적으로 추가하여 Route 53 Resolver 강제 사용
-      dnsServers        = ["169.254.169.253"]
-      dnsSearchDomains  = ["ap-southeast-2.compute.internal"]
+      # dnsServers        = ["169.254.169.253"]
+      # dnsSearchDomains  = ["us-west-2.compute.internal"]
     }
   ])
 
@@ -190,9 +190,9 @@ resource "aws_ecs_service" "services" {
   launch_type = "FARGATE"
 
   network_configuration {
-    subnets          = local.private_app_subnet_ids
+    subnets          = local.public_subnet_ids
     security_groups  = [local.ecs_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   load_balancer {
