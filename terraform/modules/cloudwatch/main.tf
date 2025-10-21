@@ -132,7 +132,7 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
-          query  = "SOURCE '/ecs/petclinic-app' | fields @timestamp, @message | filter @message like /actuator/health/ | stats count() by bin(5m)"
+          query  = "SOURCE '/ecs/${var.ecs_cluster_name}/${var.ecs_service_name}' | fields @timestamp, @message | filter @message like /actuator/health/ | stats count() by bin(5m)"
           region = var.aws_region
           title  = "Health Check Requests"
           view   = "table"
@@ -164,7 +164,7 @@ resource "aws_cloudwatch_log_group" "lambda_genai" {
 # CloudWatch 메트릭 필터 (비즈니스 메트릭 추출)
 resource "aws_cloudwatch_log_metric_filter" "error_count" {
   name           = "ErrorCount"
-  log_group_name = "/ecs/petclinic-app"
+  log_group_name = "/ecs/${var.ecs_cluster_name}/${var.ecs_service_name}"
   pattern        = "[timestamp, request_id, level=\"ERROR\", ...]"
 
   metric_transformation {
@@ -176,7 +176,7 @@ resource "aws_cloudwatch_log_metric_filter" "error_count" {
 
 resource "aws_cloudwatch_log_metric_filter" "response_time" {
   name           = "ResponseTime"
-  log_group_name = "/ecs/petclinic-app"
+  log_group_name = "/ecs/${var.ecs_cluster_name}/${var.ecs_service_name}"
   pattern        = "[timestamp, request_id, level, message, response_time]"
 
   metric_transformation {

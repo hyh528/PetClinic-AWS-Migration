@@ -21,8 +21,8 @@ module "cloudwatch" {
 
   # 각 레이어에서 가져온 리소스 정보 (의존성 역전)
   api_gateway_name     = local.api_gateway_name
-  ecs_cluster_name     = "${var.name_prefix}-${var.environment}-cluster"
-  ecs_service_name     = "${var.name_prefix}-app-service"
+  ecs_cluster_name     = "${var.name_prefix}-cluster"
+  ecs_service_name     = "${var.name_prefix}-customers"
   lambda_function_name = local.lambda_function_name
   aurora_cluster_name  = local.aurora_cluster_name
   alb_name             = local.alb_name
