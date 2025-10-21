@@ -81,7 +81,7 @@ variable "cloudmap_service_arn" {
 }
 
 # secret manager 연동
- variable "db_password_secret_arn" {                                                                
+ variable "db_master_user_secret_arn" {                                                                
    description = "The ARN of the secret in Secrets Manager for the DB password"                     
    type        = string                                                                             
  }                                                                                                  

@@ -38,7 +38,7 @@ module "ecs" {
   private_subnet_ids          = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
   ecs_service_sg_id           = data.terraform_remote_state.security.outputs.app_security_group_id
   cluster_id                  = aws_ecs_cluster.main.id
-  ecs_task_execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+  ecs_task_execution_role_arn = data.aws_iam_role.ecs_task_execution_role.arn
   listener_arn                = aws_lb_listener.http.arn
   task_role_arn               = data.terraform_remote_state.security.outputs.ecs_task_role_arn   
   
@@ -54,7 +54,7 @@ module "ecs" {
 
                                                                                                               
   # --- DB 접근 정보 전달 ---                                                                               
-  db_password_secret_arn   = data.terraform_remote_state.security.outputs.db_password_secret_arn            
-  db_url_parameter_path    = data.terraform_remote_state.database.outputs.db_url_parameter_path             
-  db_username_parameter_path = data.terraform_remote_state.database.outputs.db_username_parameter_path      
+  db_master_user_secret_arn   = data.terraform_remote_state.database.outputs.db_master_user_secret_arn
+  db_url_parameter_path    = data.terraform_remote_state.database.outputs.db_url_parameter_path
+  db_username_parameter_path = data.terraform_remote_state.database.outputs.db_username_parameter_path
 }
