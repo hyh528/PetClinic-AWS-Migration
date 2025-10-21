@@ -10,6 +10,7 @@ locals {
     "spring.jpa.hibernate.ddl-auto"          = "update",
     "spring.jpa.show-sql"                    = "true",
     "eureka.client.serviceUrl.defaultZone"   = "http://discovery-server:8761/eureka/"
+    "logging.level.root"                     = "INFO" 
   }
 
   # Port configurations for each service

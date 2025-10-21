@@ -13,3 +13,8 @@ output "db_master_user_secret_arn" {
   value       = aws_rds_cluster.petclinic_aurora_cluster.master_user_secret[0].secret_arn
   sensitive   = true
 }
+
+output "db_kms_key_arn" {
+  description = "The ARN of the KMS key used for DB secret encryption"
+  value       = aws_kms_key.aurora_secrets.arn
+}
