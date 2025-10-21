@@ -99,7 +99,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_logs_role_atta
 
 # ECS Task가 사용할 IAM 역할
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project_name}-ecs-task-role"
+  name = "${var.project_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -150,4 +150,35 @@ resource "aws_iam_role_policy_attachment" "ecs_task_role_db_secret_policy" {
 
   role       = aws_iam_role.ecs_task_role.name
   policy_arn = aws_iam_policy.ecs_db_secret_access_policy[0].arn
+}
+
+resource "aws_iam_policy" "ecs_secrets_policy" {
+  name        = "petclinic-ecs-secrets-policy-v2"
+  description = "Allow ECS tasks to access specific secrets and KMS keys"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "kms:Decrypt",
+          "ssm:GetParameters"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# ECR 접근 및 CloudWatch 로깅을 위한 표준 정책 연결
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# Secrets Manager 및 KMS 접근을 위한 커스텀 정책 연결
+resource "aws_iam_role_policy_attachment" "ecs_secrets_policy_attachment" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = aws_iam_policy.ecs_secrets_policy.arn
 }

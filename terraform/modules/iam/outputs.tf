@@ -32,3 +32,8 @@ output "ecs_task_role_arn" {
   description = "ARN of the IAM role for ECS tasks"
   value       = aws_iam_role.ecs_task_role.arn
 }
+
+output "ecs_secrets_policy_arn" {
+  description = "ARN of the policy for ECS to access secrets"
+  value       = aws_iam_policy.ecs_secrets_policy.arn
+}

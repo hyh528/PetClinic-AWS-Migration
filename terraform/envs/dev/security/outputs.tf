@@ -54,3 +54,8 @@ output "ecs_task_role_arn" {
   description = "ECS Task Role ARN"
   value       = module.iam.ecs_task_role_arn
 }
+
+output "ecs_secrets_policy_arn" {
+  description = "ARN of the policy for ECS to access secrets"
+  value       = module.iam.ecs_secrets_policy_arn
+}
