@@ -7,7 +7,7 @@ WORKDIR /app
 COPY target/*.jar app.jar
 
 # 애플리케이션이 실행되는 포트 노출
-EXPOSE 8080
+EXPOSE 8081
 
 # 애플리케이션 실행
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
