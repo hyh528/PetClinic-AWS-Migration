@@ -23,6 +23,23 @@ spring:
 spring:
   config:
     activate:
+      on-profile: mysql
+  sql:
+    init:
+      mode: always
+  jpa:
+    hibernate:
+      ddl-auto: create
+    database-platform: org.hibernate.dialect.MySQLDialect
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:petclinic}
+    username: ${DB_USERNAME}
+    password: ${aws:secretsmanager:/aws/rds/db/petclinic-dev-aurora-cluster:password}
+
+---
+spring:
+  config:
+    activate:
       on-profile: docker
   cloud:
     aws:
