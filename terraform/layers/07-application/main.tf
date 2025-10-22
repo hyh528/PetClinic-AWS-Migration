@@ -165,16 +165,30 @@ resource "aws_ecs_task_definition" "services" {
         "-c",
         "echo '=== ECR DNS Resolution Test ===' && nslookup us-west-2.dkr.ecr.us-west-2.amazonaws.com && echo '=== ECR API DNS Test ===' && nslookup api.ecr.us-west-2.amazonaws.com && echo '=== ECR Auth Test ===' && timeout 10 aws ecr get-login-password --region us-west-2 && echo '=== Auth Success ===' || echo '=== Auth Failed ===' && echo '=== Network Test ===' && curl -I --connect-timeout 5 https://google.com && echo '=== Tests Complete - Starting Application ===' && exec java -jar app.jar"
       ]
-      environment = [
-        {
-          name  = "SPRING_PROFILES_ACTIVE"
-          value = "mysql,aws"
-        },
-        {
-          name  = "AWS_ECR_DEBUG"
-          value = "true"
-        }
-      ]
+     environment = [
+       {
+         name  = "SPRING_PROFILES_ACTIVE"
+         value = "mysql,aws"
+       },
+       {
+         name  = "AWS_ECR_DEBUG"
+         value = "true"
+       }
+     ]
+     secrets = [
+       {
+         name      = "SPRING_DATASOURCE_URL"
+         valueFrom = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/db/url"
+       },
+       {
+         name      = "SPRING_DATASOURCE_USERNAME"
+         valueFrom = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/db/username"
+       },
+       {
+         name      = "SPRING_DATASOURCE_PASSWORD"
+         valueFrom = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/db/password"
+       }
+     ]
       # DNS 설정을 명시적으로 추가하여 Route 53 Resolver 강제 사용
       # dnsServers        = ["169.254.169.253"]  # awsvpc 모드에서는 지원되지 않음
       # dnsSearchDomains  = ["us-west-2.compute.internal"]
@@ -201,7 +215,7 @@ resource "aws_ecs_service" "services" {
   network_configuration {
     subnets          = local.private_app_subnet_ids
     security_groups  = [local.ecs_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   # Enable execute command for debugging

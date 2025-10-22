@@ -26,28 +26,23 @@ locals {
     # Spring 프로파일 설정
     "/petclinic/common/spring.profiles.active" = "mysql,aws"
     "/petclinic/common/logging.level.root"     = "INFO"
-    # 서버 포트 설정
-    "/petclinic/${var.environment}/customers/server.port" = "8080"
-    "/petclinic/${var.environment}/vets/server.port"      = "8080"
-    "/petclinic/${var.environment}/visits/server.port"    = "8080"
-    "/petclinic/${var.environment}/admin/server.port"     = "9090"
+    # 서버 포트 설정 (각 서비스별 실제 포트)
+    "/petclinic/${var.environment}/customers/server.port" = "8081"
+    "/petclinic/${var.environment}/vets/server.port"      = "8082"
+    "/petclinic/${var.environment}/visits/server.port"    = "8083"
+    "/petclinic/${var.environment}/admin/server.port"     = "8080"
   }
 
   # 데이터베이스 연결 정보 (data.tf에서 참조)
   database_parameters = local.dependencies_ready ? {
-    "/petclinic/${var.environment}/customers/database.url"      = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_customers"
-    "/petclinic/${var.environment}/customers/database.username" = var.database_username
-    "/petclinic/${var.environment}/vets/database.url"           = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_vets"
-    "/petclinic/${var.environment}/vets/database.username"      = var.database_username
-    "/petclinic/${var.environment}/visits/database.url"         = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic_visits"
-    "/petclinic/${var.environment}/visits/database.username"    = var.database_username
+    # 공통 데이터베이스 파라미터 (모든 서비스가 공유)
+    "/petclinic/${var.environment}/db/url"      = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic?useSSL=false&allowPublicKeyRetrieval=true"
+    "/petclinic/${var.environment}/db/username" = var.database_username
   } : {}
 
   # 민감한 정보 암호화 설정 (SecureString)
   secure_parameters = local.dependencies_ready ? {
-    # 데이터베이스 비밀번호 (Secrets Manager에서 가져옴)
-    "/petclinic/${var.environment}/customers/database.password" = data.terraform_remote_state.database.outputs.master_username
-    "/petclinic/${var.environment}/vets/database.password"      = data.terraform_remote_state.database.outputs.master_username
-    "/petclinic/${var.environment}/visits/database.password"    = data.terraform_remote_state.database.outputs.master_username
+    # 공통 데이터베이스 비밀번호 (모든 서비스가 공유)
+    "/petclinic/${var.environment}/db/password" = data.terraform_remote_state.database.outputs.master_username
   } : {}
 }
