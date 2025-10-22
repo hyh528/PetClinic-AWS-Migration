@@ -99,7 +99,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_logs_role_atta
 
 # ECS Task가 사용할 IAM 역할
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project_name}-ecs-task-execution-role"
+  name = "${var.project_name}-ecs-task-execution-role-v2"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
