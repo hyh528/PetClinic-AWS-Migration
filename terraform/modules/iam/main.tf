@@ -71,6 +71,12 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Parameter Store 읽기 권한 정책 연결
+resource "aws_iam_role_policy_attachment" "parameter_store_read" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = aws_iam_role_policy.parameter_store_read.arn
+}
+
 # Parameter Store 읽기 권한 추가
 resource "aws_iam_role_policy" "parameter_store_read" {
   name = "petclinic-parameter-store-read"
