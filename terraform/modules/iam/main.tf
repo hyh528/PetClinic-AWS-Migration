@@ -43,6 +43,55 @@ resource "aws_iam_group_membership" "cli_users" {
 #   })
 # }
 
+# ECS 태스크 실행 역할 생성
+resource "aws_iam_role" "ecs_task_execution" {
+  name = "petclinic-ecs-task-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "petclinic-ecs-task-execution-role"
+  }
+}
+
+# ECS 태스크 실행 역할 정책 연결
+resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# Parameter Store 읽기 권한 추가
+resource "aws_iam_role_policy" "parameter_store_read" {
+  name = "petclinic-parameter-store-read"
+  role = aws_iam_role.ecs_task_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/*"
+      }
+    ]
+  })
+}
+
 # resource "aws_iam_policy" "app_developer" {
 #   name        = "petclinic-app-developer"
 #   description = "애플리케이션 개발자 정책"
