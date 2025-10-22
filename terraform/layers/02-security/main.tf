@@ -18,14 +18,11 @@ module "security_groups" {
   tags                   = local.common_security_tags
 }
 
-# IAM 역할 및 정책 모듈 (Phase 2에서 활성화 예정)
-# Phase 1에서는 모든 팀 멤버가 Admin 권한을 가지므로 IAM 역할 생성 생략
-# Phase 2에서 역할 기반 정책을 활성화할 때 아래 모듈 사용
-#
-# module "iam_roles" {
-#   source = "../../modules/iam"
-#
-#   project_name               = var.name_prefix
-#   team_members               = var.team_members
-#   enable_role_based_policies = var.enable_role_based_policies
-# }
+# IAM 역할 및 정책 모듈 (ECS 태스크 실행 역할 필요)
+module "iam_roles" {
+  source = "../../modules/iam"
+
+  project_name               = var.name_prefix
+  team_members               = var.team_members
+  enable_role_based_policies = var.enable_role_based_policies
+}

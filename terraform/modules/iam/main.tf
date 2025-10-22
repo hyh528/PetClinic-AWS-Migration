@@ -71,13 +71,13 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Parameter Store 읽기 권한 정책 연결
-resource "aws_iam_role_policy_attachment" "parameter_store_read" {
-  role       = aws_iam_role.ecs_task_execution.name
-  policy_arn = aws_iam_role_policy.parameter_store_read.arn
-}
+# Parameter Store 읽기 권한 정책 연결 (aws_iam_role_policy는 arn 속성이 없으므로 제거)
+# resource "aws_iam_role_policy_attachment" "parameter_store_read" {
+#   role       = aws_iam_role.ecs_task_execution.name
+#   policy_arn = aws_iam_role_policy.parameter_store_read.arn
+# }
 
-# Parameter Store 읽기 권한 추가
+# Parameter Store 및 Secrets Manager 읽기 권한 추가
 resource "aws_iam_role_policy" "parameter_store_read" {
   name = "petclinic-parameter-store-read"
   role = aws_iam_role.ecs_task_execution.id
@@ -93,6 +93,20 @@ resource "aws_iam_role_policy" "parameter_store_read" {
           "ssm:GetParametersByPath"
         ]
         Resource = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "arn:aws:secretsmanager:us-west-2:897722691159:secret:rds!cluster-*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = "arn:aws:kms:us-west-2:897722691159:key/*"
       }
     ]
   })

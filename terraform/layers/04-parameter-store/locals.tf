@@ -42,7 +42,7 @@ locals {
 
   # 민감한 정보 암호화 설정 (SecureString)
   secure_parameters = local.dependencies_ready ? {
-    # 공통 데이터베이스 비밀번호 (모든 서비스가 공유)
-    "/petclinic/${var.environment}/db/password" = data.terraform_remote_state.database.outputs.master_username
+    # 공통 데이터베이스 비밀번호 (모든 서비스가 공유) - Secrets Manager 이름 저장
+    "/petclinic/${var.environment}/db/secrets-manager-name" = data.terraform_remote_state.database.outputs.master_user_secret_name
   } : {}
 }

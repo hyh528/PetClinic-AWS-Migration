@@ -51,6 +51,12 @@ output "master_username" {
   sensitive   = true
 }
 
+output "master_user_secret_name" {
+  description = "마스터 사용자 시크릿 이름"
+  value       = module.aurora_cluster.master_user_secret_name
+  sensitive   = true
+}
+
 # =============================================================================
 # 3. 인스턴스 정보
 # =============================================================================
