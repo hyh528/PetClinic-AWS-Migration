@@ -183,10 +183,6 @@ resource "aws_ecs_task_definition" "services" {
        {
          name      = "SPRING_DATASOURCE_USERNAME"
          valueFrom = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/${var.environment}/db/username"
-       },
-       {
-         name      = "SPRING_DATASOURCE_PASSWORD"
-         valueFrom = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/${var.environment}/db/password"
        }
      ]
       # DNS 설정을 명시적으로 추가하여 Route 53 Resolver 강제 사용
