@@ -8,6 +8,9 @@ resource "aws_rds_cluster" "petclinic_aurora_cluster" {
   master_username         = "admin"
   manage_master_user_password = true
   master_user_secret_kms_key_id = aws_kms_key.aurora_secrets.arn
+  
+
+   # [추가] 생성될 Secret의 이름 접두사를 지정합니다.
 
   db_subnet_group_name   = aws_db_subnet_group.petclinic_db_subnet_group.name
   vpc_security_group_ids = [data.terraform_remote_state.security.outputs.db_security_group_id]

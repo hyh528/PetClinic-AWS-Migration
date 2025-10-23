@@ -72,3 +72,20 @@ resource "aws_ssm_parameter" "server_port" {
     Service = each.key
   }
 }
+
+# --------------------------------------------------------------------
+# [추가할 내용] Aurora가 생성한 DB 비밀번호 Secret의 주소(ARN)를
+# Parameter Store에 저장하는 리소스입니다.
+# --------------------------------------------------------------------
+resource "aws_ssm_parameter" "database_secret_arn_parameter" {
+  name  = "/${var.project_name}/${var.environment}/database-secret-arn"
+  type  = "String"
+  
+  # aws_rds_cluster 리소스에서 출력되는 master_user_secret의 ARN 값을 가져옵니다.
+  value = aws_rds_cluster.petclinic_aurora_cluster.master_user_secret[0].secret_arn
+  
+  tags = {
+    Name    = "${var.project_name}-db-secret-arn-param"
+    Project = var.project_name
+  }
+}

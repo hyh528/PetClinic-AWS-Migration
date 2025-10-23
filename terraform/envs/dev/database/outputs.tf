@@ -18,3 +18,8 @@ output "db_kms_key_arn" {
   description = "The ARN of the KMS key used for DB secret encryption"
   value       = aws_kms_key.aurora_secrets.arn
 }
+
+output "test_ec2_security_group_id" {
+  description = "The ID of the security group for the test EC2 instance"
+  value       = aws_security_group.test_ec2_sg.id
+}
