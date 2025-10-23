@@ -328,8 +328,8 @@ resource "aws_lb_target_group" "services" {
     path                = each.value.health_path
     healthy_threshold   = 2
     unhealthy_threshold = 2
-    timeout             = 5
-    interval            = 30
+    timeout             = 30
+    interval            = 60
     matcher             = "200"
   }
 
@@ -451,8 +451,7 @@ resource "aws_ecs_task_definition" "services" {
         },
         {
           name      = "SPRING_DATASOURCE_PASSWORD"
-          valueFrom = "arn:aws:secretsmanager:us-west-2:897722691159:secret:rds!cluster-5b0f00bf-0fdd-49c7-93cc-80e45a006ec1-yzD4u2"
-          secretId  = "arn:aws:secretsmanager:us-west-2:897722691159:secret:rds!cluster-5b0f00bf-0fdd-49c7-93cc-80e45a006ec1-yzD4u2"
+          valueFrom = "arn:aws:secretsmanager:us-west-2:897722691159:secret:rds!cluster-a2e69195-87ba-46c7-beb9-f3cb45e32887-AOx2t1:password::"
         }
       ]
       # DNS 설정을 명시적으로 추가하여 Route 53 Resolver 강제 사용
@@ -486,6 +485,9 @@ resource "aws_ecs_service" "services" {
 
   # Enable execute command for debugging
   enable_execute_command = true
+
+  # 헬스 체크 그레이스 기간 증가 (Spring Boot 시작 시간 고려)
+  health_check_grace_period_seconds = 300
 
   load_balancer {
     target_group_arn = aws_lb_target_group.services[each.key].arn
