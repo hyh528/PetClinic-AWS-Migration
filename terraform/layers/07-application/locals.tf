@@ -10,7 +10,10 @@ locals {
   private_app_subnet_ids = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
 
   # Security 레이어에서 필요한 정보
-  ecs_security_group_id = data.terraform_remote_state.security.outputs.ecs_security_group_id
+  ecs_security_group_id          = data.terraform_remote_state.security.outputs.ecs_security_group_id
+  aurora_security_group_id       = data.terraform_remote_state.security.outputs.aurora_security_group_id
+  rds_secret_access_policy_arn   = data.terraform_remote_state.security.outputs.rds_secret_access_policy_arn
+  parameter_store_access_policy_arn = data.terraform_remote_state.security.outputs.parameter_store_access_policy_arn
 
   # 공통 태그
   layer_common_tags = merge(var.tags, {

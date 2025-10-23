@@ -32,9 +32,9 @@ spring:
       ddl-auto: create
     database-platform: org.hibernate.dialect.MySQLDialect
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:petclinic}
-    username: ${DB_USERNAME}
-    password: ${aws:secretsmanager:/aws/rds/db/petclinic-dev-aurora-cluster:password}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
 
 ---
 spring:
