@@ -38,13 +38,13 @@ function sendMessage() {
     // Display user message in the chatbox
     appendMessage(query, 'user');
 
-    // Send the message to the backend
-    fetch(window.location.origin + '/api/genai/chatclient', {
+    // Send the message to the backend (AWS Lambda GenAI via CloudFront -> API Gateway)
+    fetch(window.location.origin + '/api/genai', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(query),
+        body: JSON.stringify({ message: query }),
     })
         .then(response => response.text())
         .then(responseText => {

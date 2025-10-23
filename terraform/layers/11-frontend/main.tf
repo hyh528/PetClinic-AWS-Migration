@@ -88,3 +88,31 @@ module "cloudfront" {
   error_5xx_threshold   = var.error_5xx_threshold
   alarm_actions         = var.alarm_actions
 }
+
+# =============================================================================
+# Frontend 파일 업로드 자동화
+# =============================================================================
+resource "null_resource" "upload_frontend_files" {
+  # 프론트엔드 파일들을 S3 버킷에 업로드
+  provisioner "local-exec" {
+    command = "powershell.exe -File ../../scripts/upload-frontend-to-s3.ps1 -BucketName ${module.s3_frontend.bucket_name} -Force"
+    working_dir = path.module
+  }
+
+  # CloudFront 무효화 (새 파일 업로드 후 캐시 초기화)
+  provisioner "local-exec" {
+    command = "aws cloudfront create-invalidation --distribution-id ${module.cloudfront.distribution_id} --paths \"/*\" --region us-west-2"
+    working_dir = path.module
+  }
+
+  # S3 버킷과 CloudFront가 생성된 후에 실행
+  depends_on = [
+    module.s3_frontend,
+    module.cloudfront
+  ]
+
+  # 파일 변경 시 재실행을 위한 트리거
+  triggers = {
+    source_files_hash = filemd5("../../../spring-petclinic-api-gateway/src/main/resources/static/index.html")
+  }
+}

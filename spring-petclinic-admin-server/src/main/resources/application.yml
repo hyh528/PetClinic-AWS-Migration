@@ -4,7 +4,7 @@ spring:
   cloud:
     aws:
       region:
-        static: ${AWS_REGION:ap-northeast-2}
+        static: ${AWS_REGION:us-west-2}
       paramstore:
         enabled: true
         prefix: /petclinic
@@ -25,7 +25,7 @@ spring:
   cloud:
     aws:
       region:
-        static: ${AWS_REGION:ap-northeast-2}
+        static: ${AWS_REGION:us-west-2}
       paramstore:
         enabled: true
         prefix: /petclinic

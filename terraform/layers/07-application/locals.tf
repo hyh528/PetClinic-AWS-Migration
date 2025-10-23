@@ -25,21 +25,21 @@ locals {
   services = {
     customers = {
       name        = "customers-service"
-      port        = 8081
+      port        = 8080
       health_path = "/actuator/health"
       cpu         = 256
       memory      = 512
     }
     vets = {
       name        = "vets-service"
-      port        = 8082
+      port        = 8080
       health_path = "/actuator/health"
       cpu         = 256
       memory      = 512
     }
     visits = {
       name        = "visits-service"
-      port        = 8083
+      port        = 8080
       health_path = "/actuator/health"
       cpu         = 256
       memory      = 512

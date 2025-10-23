@@ -41,7 +41,7 @@ try {
 }
 
 # Check if bucket exists
-$bucketExists = aws s3 ls "s3://$BucketName" --profile $ProfileName 2>$null
+$bucketExists = aws s3 ls "s3://$BucketName" --profile $ProfileName --region us-west-2 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Bucket '$BucketName' does not exist or you don't have access to it."
     exit 1
@@ -66,14 +66,14 @@ Write-Host "Uploading files with public-read ACL..." -ForegroundColor Green
 
 # Upload files recursively
 try {
-    aws s3 cp $SourcePath "s3://$BucketName/" --recursive --acl public-read --profile $ProfileName --cache-control "max-age=86400" --exclude "*.DS_Store" --exclude "*.git*"  # 로컬 테스트용으로 캐시 시간 단축
+    aws s3 cp $SourcePath "s3://$BucketName/" --recursive --acl public-read --profile $ProfileName --cache-control "max-age=86400" --exclude "*.DS_Store" --exclude "*.git*" --region us-west-2  # 로컬 테스트용으로 캐시 시간 단축
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Upload completed successfully!" -ForegroundColor Green
 
         # Verify upload by listing some files
         Write-Host "Verifying upload..." -ForegroundColor Cyan
-        $uploadedFiles = aws s3 ls "s3://$BucketName/" --profile $ProfileName --recursive | Measure-Object | Select-Object -ExpandProperty Count
+        $uploadedFiles = aws s3 ls "s3://$BucketName/" --profile $ProfileName --region us-west-2 --recursive | Measure-Object | Select-Object -ExpandProperty Count
         Write-Host "Total files in bucket: $uploadedFiles" -ForegroundColor Green
 
         # Show bucket website URL if configured

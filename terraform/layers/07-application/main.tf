@@ -201,6 +201,20 @@ resource "aws_security_group_rule" "aurora_allow_ecs" {
   description = "Allow MySQL access from ECS tasks"
 }
 
+# ECS 태스크용 보안 그룹에 ALB 접근 허용 규칙 추가
+resource "aws_security_group_rule" "alb_to_ecs" {
+  for_each = local.services
+
+  type                     = "ingress"
+  from_port                = each.value.port
+  to_port                  = each.value.port
+  protocol                 = "tcp"
+  security_group_id        = local.ecs_security_group_id
+  source_security_group_id = module.alb.alb_security_group_id
+
+  description = "Allow ALB to access ECS tasks on port ${each.value.port}"
+}
+
 # EC2용 IAM 역할
 resource "aws_iam_role" "db_debug" {
   name = "${var.name_prefix}-db-debug-role"
@@ -326,11 +340,12 @@ resource "aws_lb_target_group" "services" {
   health_check {
     enabled             = true
     path                = each.value.health_path
+    port                = 8080
     healthy_threshold   = 2
     unhealthy_threshold = 2
-    timeout             = 30
-    interval            = 60
-    matcher             = "200"
+    timeout             = 5
+    interval            = 30
+    matcher             = "200-399"
   }
 
   tags = merge(local.layer_common_tags, {
@@ -338,7 +353,7 @@ resource "aws_lb_target_group" "services" {
   })
 }
 
-# 리스너 규칙 (호스트 기반 라우팅)
+# 리스너 규칙 (경로 기반 라우팅)
 resource "aws_lb_listener_rule" "services" {
   for_each = local.services
 
@@ -351,8 +366,8 @@ resource "aws_lb_listener_rule" "services" {
   }
 
   condition {
-    host_header {
-      values = ["${each.key}.${var.name_prefix}.local"]
+    path_pattern {
+      values = each.key == "admin" ? ["/admin", "/admin/*"] : ["/api/${each.key}", "/api/${each.key}/*"]
     }
   }
 
@@ -480,14 +495,14 @@ resource "aws_ecs_service" "services" {
   network_configuration {
     subnets          = local.private_app_subnet_ids
     security_groups  = [local.ecs_security_group_id]
-    assign_public_ip = true
+    assign_public_ip = false
   }
 
   # Enable execute command for debugging
   enable_execute_command = true
 
   # 헬스 체크 그레이스 기간 증가 (Spring Boot 시작 시간 고려)
-  health_check_grace_period_seconds = 300
+  health_check_grace_period_seconds = 600
 
   load_balancer {
     target_group_arn = aws_lb_target_group.services[each.key].arn

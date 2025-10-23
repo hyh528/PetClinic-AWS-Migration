@@ -79,3 +79,25 @@ output "configuration_summary" {
     access_logging_enabled = var.enable_access_logging
   }
 }
+
+output "deployment_instructions" {
+  description = "프론트엔드 배포 후 확인사항"
+  value = <<EOT
+🎉 프론트엔드 호스팅 레이어 배포 완료!
+
+📋 다음 단계:
+1. 프론트엔드 URL: ${module.cloudfront.distribution_url}
+2. API Gateway URL: ${local.api_gateway_domain_name}
+3. S3 버킷: ${module.s3_frontend.bucket_name}
+
+🔍 확인사항:
+- 프론트엔드 페이지가 정상 로드되는지 확인
+- 챗봇 기능이 Lambda GenAI로 작동하는지 확인
+- 데이터베이스 CRUD 작업이 가능한지 확인
+
+⚠️  주의사항:
+- 프론트엔드 파일들은 Terraform apply 시 자동으로 S3에 업로드됩니다
+- 파일 변경 시 Terraform apply를 재실행하여 업데이트하세요
+- CloudFront 캐시로 인해 변경사항이 즉시 반영되지 않을 수 있습니다
+EOT
+}
