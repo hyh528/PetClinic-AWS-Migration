@@ -25,11 +25,12 @@ resource "aws_rds_cluster" "petclinic_aurora_cluster" {
 
 # RDS Aurora 클러스터 인스턴스
 resource "aws_rds_cluster_instance" "petclinic_aurora_instance" {
-  count              = 1
-  cluster_identifier = aws_rds_cluster.petclinic_aurora_cluster.id
-  instance_class     = "db.t3.medium"
-  engine             = aws_rds_cluster.petclinic_aurora_cluster.engine
-  engine_version     = aws_rds_cluster.petclinic_aurora_cluster.engine_version
+  count                           = 1
+  cluster_identifier              = aws_rds_cluster.petclinic_aurora_cluster.id
+  instance_class                  = "db.t3.medium"
+  engine                          = aws_rds_cluster.petclinic_aurora_cluster.engine
+  engine_version                  = aws_rds_cluster.petclinic_aurora_cluster.engine_version
+  apply_immediately               = true
 }
 
 # DB 서브넷 그룹

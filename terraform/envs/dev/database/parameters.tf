@@ -5,7 +5,6 @@
 locals {
   # Common parameters for Spring Boot applications
   spring_parameters = {
-    "spring.profiles.active"                 = "mysql,aws",
     "spring.datasource.initialization-mode"  = "always",
     "spring.jpa.hibernate.ddl-auto"          = "update",
     "spring.jpa.show-sql"                    = "true",
