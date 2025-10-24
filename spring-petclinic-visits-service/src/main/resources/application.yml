@@ -1,7 +1,3 @@
-server:
-  servlet:
-    context-path: /api/visits
-
 spring:
   application:
     name: visits-service
