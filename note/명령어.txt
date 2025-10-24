@@ -1,0 +1,21 @@
+# 이미지 빌드 시
+mvnw.cmd package -pl spring-petclinic-admin-server,spring-petclinic-customers-service,spring-petclinic-vets-service,spring-petclinic-visits-service -am -DskipTests
+
+# terraform 명령어
+terraform init -var-file=dev.tfvars
+terraform plan -var-file=dev.tfvars
+terraform apply -var-file=dev.tfvars
+terraform destroy -var-file=dev.tfvars
+
+# 하나만 실행
+terraform apply -target=module.ecr -var-file=dev.tfvars
+
+# ECR로 저장
+bash scripts/build.sh
+bash scripts/buildImages.sh
+bash scripts/tagImages.sh
+bash scripts/pushImages.sh
+
+# 로그인
+ecr에서 푸시명령 확인에서 복붙하기!
+

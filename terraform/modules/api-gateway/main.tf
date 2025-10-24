@@ -87,7 +87,7 @@ resource "aws_api_gateway_stage" "this" {
 
   # X-Ray 트레이싱 활성화 (설계서 9.4절 요구사항)
   xray_tracing_enabled = true
-
+/*
   # 액세스 로깅 설정 - 생성한 로그 그룹 참조
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
@@ -110,7 +110,7 @@ resource "aws_api_gateway_stage" "this" {
       extendedRequestId    = "$context.extendedRequestId"
     })
   }
-
+*/
   # 참고: 스로틀링 설정은 aws_api_gateway_usage_plan에서 관리
   # throttle_settings는 stage에서 지원되지 않음
 

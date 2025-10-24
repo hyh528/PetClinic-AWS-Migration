@@ -15,7 +15,7 @@
     </parent>
 
     <properties>
-        <docker.exposed.port>8081</docker.exposed.port>
+        <docker.image.exposed.port>8083</docker.image.exposed.port>
         <docker.image.dockerfile.dir>${basedir}/../docker</docker.image.dockerfile.dir>
     </properties>
 
@@ -39,14 +39,24 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Spring Cloud -->
+        <!-- Spring Cloud AWS -->
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-config</artifactId>
+            <groupId>io.awspring.cloud</groupId>
+            <artifactId>spring-cloud-aws-starter-parameter-store</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+            <groupId>io.awspring.cloud</groupId>
+            <artifactId>spring-cloud-aws-starter-secrets-manager</artifactId>
+        </dependency>
+        
+        <!-- AWS X-Ray -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-xray-recorder-sdk-spring</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-xray-recorder-sdk-sql-mysql</artifactId>
         </dependency>
 
         <!-- Third parties -->
