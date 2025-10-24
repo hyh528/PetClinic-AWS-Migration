@@ -1,3 +1,7 @@
+server:
+  servlet:
+    context-path: /api/vets
+
 spring:
   application:
     name: vets-service

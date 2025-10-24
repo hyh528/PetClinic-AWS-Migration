@@ -361,8 +361,16 @@ resource "aws_lb_listener_rule" "services" {
   priority     = 100 + index(keys(local.services), each.key)
 
   action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.services[each.key].arn
+    type = "forward"
+    forward {
+      target_group {
+        arn = aws_lb_target_group.services[each.key].arn
+      }
+      stickiness {
+        enabled  = false
+        duration = 1
+      }
+    }
   }
 
   condition {
@@ -373,6 +381,91 @@ resource "aws_lb_listener_rule" "services" {
 
   tags = merge(local.layer_common_tags, {
     Service = each.key
+  })
+}
+
+# 경로 재작성 규칙 (API Gateway에서 ALB로의 요청 경로 변환)
+resource "aws_lb_listener_rule" "path_rewrite_customers" {
+  listener_arn = module.alb.listener_http_arn
+  priority     = 200
+
+  action {
+    type = "forward"
+    forward {
+      target_group {
+        arn = aws_lb_target_group.services["customers"].arn
+      }
+      stickiness {
+        enabled  = false
+        duration = 1
+      }
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/customers", "/api/customers/*"]
+    }
+  }
+
+  tags = merge(local.layer_common_tags, {
+    Service = "customers-path-rewrite"
+  })
+}
+
+resource "aws_lb_listener_rule" "path_rewrite_vets" {
+  listener_arn = module.alb.listener_http_arn
+  priority     = 201
+
+  action {
+    type = "forward"
+    forward {
+      target_group {
+        arn = aws_lb_target_group.services["vets"].arn
+      }
+      stickiness {
+        enabled  = false
+        duration = 1
+      }
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/vets", "/api/vets/*"]
+    }
+  }
+
+  tags = merge(local.layer_common_tags, {
+    Service = "vets-path-rewrite"
+  })
+}
+
+resource "aws_lb_listener_rule" "path_rewrite_visits" {
+  listener_arn = module.alb.listener_http_arn
+  priority     = 202
+
+  action {
+    type = "forward"
+    forward {
+      target_group {
+        arn = aws_lb_target_group.services["visits"].arn
+      }
+      stickiness {
+        enabled  = false
+        duration = 1
+      }
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/visits", "/api/visits/*"]
+    }
+  }
+
+  tags = merge(local.layer_common_tags, {
+    Service = "visits-path-rewrite"
   })
 }
 
