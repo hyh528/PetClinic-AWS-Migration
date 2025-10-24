@@ -73,7 +73,8 @@ resource "aws_ecs_task_definition" "service" {
       secrets = [                                     
         {                                             
           name      = "SPRING_DATASOURCE_PASSWORD",   
-          valueFrom = var.db_master_user_secret_arn      
+          valueFrom = var.db_master_user_secret_arn,
+          json_key  = "password"
         },
                 {                                             
           name      = "SPRING_DATASOURCE_URL",   

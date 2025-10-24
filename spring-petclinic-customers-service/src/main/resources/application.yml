@@ -6,7 +6,7 @@ spring:
     import: [
       "aws-parameterstore:/petclinic/common/",
       "aws-parameterstore:/petclinic/dev/customers",
-      "aws-secretsmanager:rds!cluster-bfbb6ec3-3428-4242-a86c-c80fc933791c"
+      "aws-secretsmanager:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb"
     ]
   cloud:
     aws:
