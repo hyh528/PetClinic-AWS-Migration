@@ -10,8 +10,16 @@ variable "team_members" {
   default     = []
 }
 
+# DB 비밀번호 Secret ARN (ECS Task Role 정책에 사용)
 variable "db_secret_arn" {
-  description = "The ARN of the database secret in Secrets Manager."
+  description = "ECS Task Role에 연결될 DB 비밀번호 Secret의 ARN입니다."
+  type        = string
+  default     = null
+}
+
+# DB 비밀번호 암호화에 사용된 KMS 키의 ARN (ECS Task Role 정책에 사용)
+variable "db_secret_kms_key_arn" {
+  description = "DB 비밀번호 암호화에 사용된 KMS 키의 ARN입니다."
   type        = string
   default     = null
 }

@@ -138,6 +138,13 @@ resource "aws_iam_policy" "ecs_db_secret_access_policy" {
         ],
         Effect   = "Allow",
         Resource = var.db_secret_arn # 변수를 통해 Secret ARN을 전달받음
+      },
+      {
+        Action = [
+          "kms:Decrypt"
+        ],
+        Effect   = "Allow",
+        Resource = var.db_secret_kms_key_arn # DB 비밀번호 암호화에 사용된 KMS 키의 ARN
       }
     ]
   })

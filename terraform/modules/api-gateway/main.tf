@@ -197,12 +197,3 @@ resource "aws_cloudwatch_log_group" "api_gateway_logs" {
     ManagedBy   = "terraform"
   }
 }
-
-# API Gateway 계정 설정 (CloudWatch 로깅 역할 설정)
-# 이 리소스는 AWS 계정 당 리전별로 하나만 존재합니다.
-# cloudwatch_role_arn이 제공된 경우에만 생성됩니다.
-resource "aws_api_gateway_account" "this" {
-  count = var.cloudwatch_role_arn != null ? 1 : 0
-
-  cloudwatch_role_arn = var.cloudwatch_role_arn
-}

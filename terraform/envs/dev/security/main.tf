@@ -8,13 +8,14 @@ module "iam" {
   source = "../../../modules/iam"
 
   project_name = "petclinic"
-  # team_members = [] # 기존 사용자가 이미 있으므로, 여기서는 빈 리스트를 전달하여 사용자 생성을 건너뜁니다.
-
-  # database 레이어에서 생성한 DB 비밀번호 Secret의 ARN을 전달
   db_secret_arn = data.terraform_remote_state.database.outputs.db_master_user_secret_arn
+  db_secret_kms_key_arn = data.terraform_remote_state.database.outputs.db_kms_key_arn
 }
 
-
+# API Gateway CloudWatch Logs 계정 설정
+resource "aws_api_gateway_account" "this" {
+  cloudwatch_role_arn = module.iam.api_gateway_cloudwatch_logs_role_arn
+}
 # =================================================
 # 2) 보안 그룹 (Security Groups)
 # =================================================

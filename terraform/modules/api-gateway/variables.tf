@@ -30,10 +30,3 @@ variable "log_retention_days" {
     error_message = "로그 보존 기간은 AWS에서 지원하는 값이어야 합니다."
   }
 }
-
-# CloudWatch 로깅 역할 ARN
-variable "cloudwatch_role_arn" {
-  description = "API Gateway가 CloudWatch에 로그를 기록하기 위해 사용할 IAM 역할의 ARN입니다."
-  type        = string
-  default     = null # 기본값을 null로 설정하여, 역할이 전달되지 않아도 모듈 사용이 가능하도록 함
-}
