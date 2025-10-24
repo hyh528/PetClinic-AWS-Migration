@@ -36,7 +36,7 @@ import java.util.Optional;
  * @author Michael Isvy
  * @author Maciej Szarlinski
  */
-@RequestMapping("/owners")
+@RequestMapping("/api/customers")
 @RestController
 @Timed("petclinic.owner")
 class OwnerResource {

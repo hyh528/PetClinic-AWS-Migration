@@ -460,7 +460,7 @@ resource "aws_api_gateway_integration" "alb_service_integrations" {
 
   integration_http_method = "ANY"
   type                    = "HTTP_PROXY"
-  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/api/${each.value.path}" : "http://${var.alb_dns_name}/${each.value.path}"
+  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/${each.value.path}" : "http://${var.alb_dns_name}/${each.value.path}"
 
   connection_type      = "INTERNET"
   timeout_milliseconds = local.common_settings.timeout_ms
@@ -476,7 +476,7 @@ resource "aws_api_gateway_integration" "alb_service_proxy_integrations" {
 
   integration_http_method = "ANY"
   type                    = "HTTP_PROXY"
-  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/api/${each.value.path}/{proxy}" : "http://${var.alb_dns_name}/${each.value.path}/{proxy}"
+  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/${each.value.path}/{proxy}" : "http://${var.alb_dns_name}/${each.value.path}/{proxy}"
 
   connection_type = "INTERNET"
 

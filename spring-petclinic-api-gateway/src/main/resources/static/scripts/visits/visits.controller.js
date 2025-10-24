@@ -4,7 +4,7 @@ angular.module('visits')
     .controller('VisitsController', ['$http', '$state', '$stateParams', '$filter', 'API_BASE_URL', function ($http, $state, $stateParams, $filter, API_BASE_URL) {
         var self = this;
         var petId = $stateParams.petId || 0;
-        var url = API_BASE_URL + "/visit/owners/" + ($stateParams.ownerId || 0) + "/pets/" + petId + "/visits";
+        var url = API_BASE_URL + "/api/visits/owners/" + ($stateParams.ownerId || 0) + "/pets/" + petId + "/visits";
         self.date = new Date();
         self.desc = "";
 
