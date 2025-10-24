@@ -123,7 +123,7 @@ def handle_chat_request(event_body: Dict[str, Any]) -> Dict[str, Any]:
         result = invoke_bedrock_model(full_prompt)
         
         if result['success']:
-            return result['content']
+            return create_response(200, result['content'])
         else:
             return create_response(500, {
                 'error': 'AI 모델 호출 중 오류가 발생했습니다',
@@ -193,16 +193,26 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             if event.get('body'):
                 if event.get('isBase64Encoded', False):
                     import base64
-                    body = json.loads(base64.b64decode(event['body']).decode('utf-8'))
+                    decoded_body = base64.b64decode(event['body']).decode('utf-8')
+                    logger.info(f"Base64 디코딩된 본문: {decoded_body}")
+                    body = json.loads(decoded_body)
                 else:
                     body = json.loads(event['body'])
             else:
                 body = {}
         except json.JSONDecodeError as e:
             logger.error(f"JSON 파싱 오류: {str(e)}")
+            logger.error(f"원본 body: {event.get('body')}")
+            logger.error(f"isBase64Encoded: {event.get('isBase64Encoded')}")
             return create_response(400, {
                 'error': '잘못된 JSON 형식입니다',
                 'code': 'INVALID_JSON'
+            })
+        except Exception as e:
+            logger.error(f"본문 파싱 중 예상치 못한 오류: {str(e)}")
+            return create_response(400, {
+                'error': '요청 본문 처리 중 오류가 발생했습니다',
+                'code': 'BODY_PROCESSING_ERROR'
             })
 
         # 채팅 요청 처리

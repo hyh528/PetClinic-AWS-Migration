@@ -134,6 +134,8 @@ resource "aws_api_gateway_deployment" "petclinic" {
         api_key_source   = var.api_key_source
         disable_endpoint = var.disable_execute_api_endpoint
       }
+      # CORS 설정 추가 (강제 재배포 트리거)
+      cors_update = timestamp()
     }))
   }
 
@@ -290,6 +292,38 @@ resource "aws_api_gateway_method" "service_methods" {
   authorization = "NONE"
 }
 
+# 서비스별 메서드 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_method_response" "service_method_responses" {
+  for_each = local.all_services
+
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.services[each.key].id
+  http_method = aws_api_gateway_method.service_methods[each.key].http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+  }
+}
+
+# 서비스별 통합 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_integration_response" "service_integration_responses_cors" {
+  for_each = local.all_services
+
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.services[each.key].id
+  http_method = aws_api_gateway_method.service_methods[each.key].http_method
+  status_code = aws_api_gateway_method_response.service_method_responses[each.key].status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+  }
+}
+
 # 서비스별 프록시 메서드 생성 (동적)
 resource "aws_api_gateway_method" "service_proxy_methods" {
   for_each = local.all_services
@@ -301,6 +335,38 @@ resource "aws_api_gateway_method" "service_proxy_methods" {
 
   request_parameters = {
     "method.request.path.proxy" = true
+  }
+}
+
+# 서비스별 프록시 메서드 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_method_response" "service_proxy_method_responses" {
+  for_each = local.all_services
+
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.service_proxies[each.key].id
+  http_method = aws_api_gateway_method.service_proxy_methods[each.key].http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+  }
+}
+
+# 서비스별 프록시 통합 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_integration_response" "service_proxy_integration_responses_cors" {
+  for_each = local.all_services
+
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.service_proxies[each.key].id
+  http_method = aws_api_gateway_method.service_proxy_methods[each.key].http_method
+  status_code = aws_api_gateway_method_response.service_proxy_method_responses[each.key].status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
   }
 }
 
@@ -316,12 +382,68 @@ resource "aws_api_gateway_method" "global_proxy_method" {
   }
 }
 
+# 전역 프록시 메서드 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_method_response" "global_proxy_method_response" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.global_proxy.id
+  http_method = aws_api_gateway_method.global_proxy_method.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+  }
+}
+
+# 전역 프록시 통합 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_integration_response" "global_proxy_integration_response_cors" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.global_proxy.id
+  http_method = aws_api_gateway_method.global_proxy_method.http_method
+  status_code = aws_api_gateway_method_response.global_proxy_method_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+  }
+}
+
 # 루트 메서드
 resource "aws_api_gateway_method" "root_method" {
   rest_api_id   = aws_api_gateway_rest_api.petclinic.id
   resource_id   = aws_api_gateway_rest_api.petclinic.root_resource_id
   http_method   = "ANY"
   authorization = "NONE"
+}
+
+# 루트 메서드 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_method_response" "root_method_response" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_rest_api.petclinic.root_resource_id
+  http_method = aws_api_gateway_method.root_method.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+  }
+}
+
+# 루트 통합 응답 (CORS 헤더 추가)
+resource "aws_api_gateway_integration_response" "root_integration_response_cors" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_rest_api.petclinic.root_resource_id
+  http_method = aws_api_gateway_method.root_method.http_method
+  status_code = aws_api_gateway_method_response.root_method_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+  }
 }
 
 # ==========================================
@@ -449,7 +571,7 @@ locals {
   cors_headers = {
     allow_headers = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     allow_methods = "'GET,OPTIONS,POST,PUT,DELETE'"
-    allow_origin  = "'*'"
+    allow_origin  = "'https://d1z83lc8ht58i0.cloudfront.net'"
   }
 }
 

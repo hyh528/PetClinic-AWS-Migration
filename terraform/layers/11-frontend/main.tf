@@ -95,13 +95,13 @@ module "cloudfront" {
 resource "null_resource" "upload_frontend_files" {
   # 프론트엔드 파일들을 S3 버킷에 업로드
   provisioner "local-exec" {
-    command = "powershell.exe -File ../../scripts/upload-frontend-to-s3.ps1 -BucketName ${module.s3_frontend.bucket_name} -Force"
+    command = "powershell.exe -File ../../scripts/upload-frontend-to-s3.ps1 -BucketName ${module.s3_frontend.bucket_name} -SourcePath ../../../spring-petclinic-api-gateway/src/main/resources/static -Force"
     working_dir = path.module
   }
 
   # CloudFront 무효화 (새 파일 업로드 후 캐시 초기화)
   provisioner "local-exec" {
-    command = "aws cloudfront create-invalidation --distribution-id ${module.cloudfront.distribution_id} --paths \"/*\" --region us-west-2"
+    command = "aws cloudfront create-invalidation --distribution-id ${module.cloudfront.distribution_id} --paths \"/*\" --no-cli-pager"
     working_dir = path.module
   }
 

@@ -38,7 +38,7 @@ spring:
       mode: always
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: validate
     database-platform: org.hibernate.dialect.MySQLDialect
   datasource:
     url: ${SPRING_DATASOURCE_URL}
