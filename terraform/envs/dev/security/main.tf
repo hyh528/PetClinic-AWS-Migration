@@ -99,6 +99,34 @@ module "sg_db" {
 # 3) 네트워크 ACL (Network Access Control List)
 # =================================================
 
+# VPC Flow Logs를 위한 IAM 역할 및 정책
+resource "aws_iam_role" "vpc_flow_logs_role" {
+  name = "vpc-flow-logs-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "vpc_flow_logs_policy" {
+  role       = aws_iam_role.vpc_flow_logs_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess" # 최소 권한 원칙에 따라 세분화 필요
+}
+
+# VPC Flow Logs를 위한 CloudWatch Logs 그룹
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name = "/aws/vpc-flow-logs/petclinic"
+}
+
 # --- 3-1. Public Subnet NACL ---
 module "nacl_public" {
   source = "../../../modules/nacl"
@@ -109,6 +137,12 @@ module "nacl_public" {
   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
   nacl_type   = "public"
   subnet_ids  = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
+
+  enable_flow_logs           = true
+  flow_logs_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
+  flow_logs_log_group_arn    = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  flow_logs_log_group_name   = aws_cloudwatch_log_group.vpc_flow_logs.name
+  enable_security_monitoring = true
 }
 
 # --- 3-2. Private App Subnet NACL ---
@@ -121,6 +155,12 @@ module "nacl_private_app" {
   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
   nacl_type   = "private-app"
   subnet_ids  = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
+
+  enable_flow_logs           = true
+  flow_logs_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
+  flow_logs_log_group_arn    = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  flow_logs_log_group_name   = aws_cloudwatch_log_group.vpc_flow_logs.name
+  enable_security_monitoring = true
 }
 
 # --- 3-3. Private DB Subnet NACL ---
@@ -133,6 +173,12 @@ module "nacl_private_db" {
   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
   nacl_type   = "private-db"
   subnet_ids  = values(data.terraform_remote_state.network.outputs.private_db_subnet_ids)
+
+  enable_flow_logs           = true
+  flow_logs_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
+  flow_logs_log_group_arn    = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  flow_logs_log_group_name   = aws_cloudwatch_log_group.vpc_flow_logs.name
+  enable_security_monitoring = true
 }
 
 # =================================================
@@ -180,4 +226,84 @@ module "cognito" {
   environment           = var.environment
   cognito_callback_urls = ["http://localhost:8080/login"]
   cognito_logout_urls   = ["http://localhost:8080/logout"]
+}
+
+# =================================================
+# 6) CloudTrail (감사 및 로깅)
+# =================================================
+
+# CloudTrail을 위한 CloudWatch Logs 그룹
+resource "aws_cloudwatch_log_group" "cloudtrail" {
+  name = "/aws/cloudtrail/petclinic-trail-v2"
+}
+
+# CloudTrail이 CloudWatch Logs에 쓰기 위한 IAM 역할
+resource "aws_iam_role" "cloudtrail_to_cloudwatch" {
+  name = "cloudtrail-to-cloudwatch-role-v2"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# CloudTrail이 CloudWatch Logs에 쓰기 위한 IAM 정책
+resource "aws_iam_role_policy" "cloudtrail_to_cloudwatch" {
+  name = "cloudtrail-to-cloudwatch-policy-v2"
+  role = aws_iam_role.cloudtrail_to_cloudwatch.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Effect   = "Allow",
+        Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+      }
+    ]
+  })
+}
+
+# AWS 계정 ID를 가져오기 위한 데이터 소스
+data "aws_caller_identity" "current" {}
+
+module "cloudtrail" {
+  source = "../../../modules/cloudtrail"
+
+  trail_name     = "petclinic-trail"
+  s3_bucket_name = "petclinic-cloudtrail-logs-${data.aws_caller_identity.current.account_id}"
+
+  cloud_watch_logs_group_arn = aws_cloudwatch_log_group.cloudtrail.arn
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_to_cloudwatch.arn
+
+  tags = {
+    Project     = var.name_prefix
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# =================================================
+# 7) X-Ray (분산 추적)
+# =================================================
+
+# X-Ray 암호화를 위한 AWS 관리형 KMS 키의 ARN을 조회합니다.
+data "aws_kms_alias" "xray" {
+  name = "alias/aws/xray"
+}
+
+resource "aws_xray_encryption_config" "this" {
+  type = "KMS"
+  key_id = data.aws_kms_alias.xray.target_key_arn
 }
