@@ -1,10 +1,16 @@
-# 이 파일은 Aurora DB 테스트용 임시 EC2 인스턴스를 정의합니다.
-
 # 테스트 EC2 인스턴스용 보안 그룹
 resource "aws_security_group" "test_ec2_sg" {
   name        = "petclinic-test-ec2-sg-dev"
   description = "Security group for the test EC2 instance"
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
+
+  # SSH 접속을 위한 인바운드 규칙 (사용자 IP만 허용)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["112.76.111.10/32"]
+  }
 
   # 모든 아웃바운드 트래픽 허용
   egress {
@@ -74,6 +80,12 @@ resource "aws_iam_role_policy_attachment" "test_ec2_attach" {
   policy_arn = aws_iam_policy.test_ec2_policy.arn
 }
 
+# SSM 에이전트 작동을 위한 AWS 관리형 정책 추가 연결
+resource "aws_iam_role_policy_attachment" "test_ec2_ssm_core_attach" {
+  role       = aws_iam_role.test_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 resource "aws_iam_instance_profile" "test_ec2_profile" {
   name = "petclinic-test-ec2-profile-dev"
   role = aws_iam_role.test_ec2_role.name
@@ -102,7 +114,10 @@ resource "aws_instance" "db_test_instance" {
   
   key_name      = "pjj_petclinic_test"
 
-  subnet_id     = values(data.terraform_remote_state.network.outputs.private_db_subnet_ids)[0]
+  # 퍼블릭 IP 주소 할당
+  associate_public_ip_address = true
+
+  subnet_id     = values(data.terraform_remote_state.network.outputs.public_subnet_ids)[0]
   
   vpc_security_group_ids = [aws_security_group.test_ec2_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.test_ec2_profile.name

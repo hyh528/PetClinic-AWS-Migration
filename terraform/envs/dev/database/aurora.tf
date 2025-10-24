@@ -13,7 +13,8 @@ resource "aws_rds_cluster" "petclinic_aurora_cluster" {
    # [추가] 생성될 Secret의 이름 접두사를 지정합니다.
 
   db_subnet_group_name   = aws_db_subnet_group.petclinic_db_subnet_group.name
-  vpc_security_group_ids = [data.terraform_remote_state.security.outputs.db_security_group_id]
+  vpc_security_group_ids        = [data.terraform_remote_state.security.outputs.db_security_group_id]
+  db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.petclinic_aurora_pg.name
 
   skip_final_snapshot = true
 
@@ -40,3 +41,33 @@ resource "aws_db_subnet_group" "petclinic_db_subnet_group" {
     Name = "petclinic-db-subnet-group-dev"
   }
 }
+
+# Aurora 클러스터용 파라미터 그룹 (UTF8MB4 설정)
+resource "aws_rds_cluster_parameter_group" "petclinic_aurora_pg" {
+  name        = "petclinic-aurora-cluster-pg-dev"
+  family      = "aurora-mysql8.0"
+  description = "Parameter group for petclinic aurora cluster with utf8mb4 settings"
+
+  parameter {
+    name  = "character_set_client"
+    value = "utf8mb4"
+    apply_method = "immediate"
+  }
+
+  parameter {
+    name  = "character_set_connection"
+    value = "utf8mb4"
+    apply_method = "immediate"
+  }
+
+  parameter {
+    name  = "character_set_results"
+    value = "utf8mb4"
+    apply_method = "immediate"
+  }
+
+  tags = {
+    Name = "petclinic-aurora-cluster-pg-dev"
+  }
+}
+
