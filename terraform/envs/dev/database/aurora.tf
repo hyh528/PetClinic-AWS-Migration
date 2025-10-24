@@ -5,11 +5,10 @@ resource "aws_rds_cluster" "petclinic_aurora_cluster" {
   engine                  = "aurora-mysql"
   engine_version          = "8.0.mysql_aurora.3.10.1"
   database_name           = "petclinic"
-  master_username         = "admin"
+  master_username         = "petclinic"
   manage_master_user_password = true
   master_user_secret_kms_key_id = aws_kms_key.aurora_secrets.arn
   
-
    # [추가] 생성될 Secret의 이름 접두사를 지정합니다.
 
   db_subnet_group_name   = aws_db_subnet_group.petclinic_db_subnet_group.name
@@ -64,6 +63,30 @@ resource "aws_rds_cluster_parameter_group" "petclinic_aurora_pg" {
   parameter {
     name  = "character_set_results"
     value = "utf8mb4"
+    apply_method = "immediate"
+  }
+
+  parameter {
+    name  = "slow_query_log"
+    value = "1" # 0=OFF, 1=ON
+    apply_method = "immediate"
+  }
+
+  parameter {
+    name  = "long_query_time"
+    value = "1" # 1초
+    apply_method = "immediate"
+  }
+
+  parameter {
+    name  = "max_connections"
+    value = "500"
+    apply_method = "immediate"
+  }
+
+  parameter {
+    name  = "time_zone"
+    value = "Asia/Seoul"
     apply_method = "immediate"
   }
 
