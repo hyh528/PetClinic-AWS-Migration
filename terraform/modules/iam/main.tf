@@ -163,7 +163,8 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
         Action = [
           "secretsmanager:GetSecretValue",
           "kms:Decrypt",
-          "ssm:GetParameters"
+          "ssm:GetParameters",
+          "ssm:GetParameterByPath"
         ],
         Resource = "*"
       }
