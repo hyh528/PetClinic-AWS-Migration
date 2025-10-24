@@ -1,13 +1,51 @@
 spring:
   application:
     name: customers-service
-  config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
 
+  config:
+    import: [
+      "aws-parameterstore:/petclinic/common/",
+      "aws-parameterstore:/petclinic/dev/customers",
+      "aws-secretsmanager:rds!cluster-bfbb6ec3-3428-4242-a86c-c80fc933791c"
+    ]
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+  
+  
+---
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  sql:
+    init:
+      mode: always
+  jpa:
+    hibernate:
+      ddl-auto: create
+    database-platform: org.hibernate.dialect.MySQLDialect
+  datasource:
+    url: ${database.url}
+    username: ${username}
+    password: ${password}
 
 ---
 spring:
   config:
     activate:
       on-profile: docker
-    import: configserver:http://config-server:8888
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+      paramstore:
+        enabled: true
+        prefix: /petclinic
+        profile-separator: /
+        fail-fast: false
+      secretsmanager:
+        enabled: true
+        prefix: /petclinic
+        fail-fast: false

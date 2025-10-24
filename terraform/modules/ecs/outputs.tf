@@ -22,3 +22,18 @@ output "log_group_name" {
   description = "The name of the CloudWatch log group"
   value       = aws_cloudwatch_log_group.service.name
 }
+
+output "log_group_arn" {
+  description = "The ARN of the CloudWatch log group"
+  value       = aws_cloudwatch_log_group.service.arn
+}
+
+output "target_group_name" {
+  description = "The name of the ALB target group"
+  value       = aws_lb_target_group.service.name
+}
+
+output "listener_rule_arn" {
+  description = "The ARN of the ALB listener rule"
+  value       = aws_lb_listener_rule.service.arn
+}

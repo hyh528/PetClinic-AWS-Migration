@@ -94,4 +94,10 @@ variable "cloudmap_service_arn" {
  variable "db_username_parameter_path" {                                                            
    description = "The path in Parameter Store for the DB username"                                  
    type        = string                                                                             
- }                                                                                                  
+ }
+
+variable "environment_variables" {                                               
+  description = "A map of environment variables to pass to the container."       
+  type        = map(string)                                                      
+  default     = {}                                                               
+}

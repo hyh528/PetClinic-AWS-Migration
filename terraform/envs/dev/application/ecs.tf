@@ -48,6 +48,9 @@ module "ecs" {
   container_port    = each.value.container_port
   listener_priority = each.value.priority
 
+  environment_variables = {
+   "SPRING_PROFILES_ACTIVE" = "mysql,aws"
+  }
 
   # 각 서비스의 이름(each.key)에 해당하는 Cloud Map 서비스의 ARN을 전달
   cloudmap_service_arn = module.cloudmap.service_arns[each.key]

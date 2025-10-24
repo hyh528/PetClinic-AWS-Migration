@@ -3,7 +3,7 @@ resource "aws_ecs_cluster" "main" {
 }
 
 data "aws_iam_role" "ecs_task_execution_role" {
-  name = "petclinic-ecs-task-execution-role"
+  name = "petclinic-ecs-task-execution-role-v2"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {

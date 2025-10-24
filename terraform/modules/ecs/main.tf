@@ -64,6 +64,12 @@ resource "aws_ecs_task_definition" "service" {
           hostPort      = var.container_port
         }
       ],
+      environment = [
+        for k, v in var.environment_variables : {
+          name  = k,
+          value = v
+        }
+      ],
       secrets = [                                     
         {                                             
           name      = "SPRING_DATASOURCE_PASSWORD",   
