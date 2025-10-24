@@ -66,7 +66,7 @@ Write-Host "Uploading files with public-read ACL..." -ForegroundColor Green
 
 # Upload files recursively
 try {
-    aws s3 cp $SourcePath "s3://$BucketName/" --recursive --acl public-read --profile $ProfileName --cache-control "max-age=86400" --exclude "*.DS_Store" --exclude "*.git*" --region us-west-2  # 로컬 테스트용으로 캐시 시간 단축
+    aws s3 cp $SourcePath "s3://$BucketName/" --recursive --profile $ProfileName --cache-control "max-age=86400" --exclude "*.DS_Store" --exclude "*.git*" --region us-west-2  # 로컬 테스트용으로 캐시 시간 단축
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Upload completed successfully!" -ForegroundColor Green

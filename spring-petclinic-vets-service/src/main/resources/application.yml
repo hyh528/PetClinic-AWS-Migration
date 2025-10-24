@@ -19,6 +19,15 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:mysql,aws}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized
+
 ---
 spring:
   config:
