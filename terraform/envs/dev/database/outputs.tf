@@ -1,11 +1,11 @@
-output "db_url_parameter_path" {
-  description = "SSM 파라미터 스토어에 저장된 DB URL의 경로"
-  value       = aws_ssm_parameter.common_db_url.name
+output "db_url_parameter_arn" {
+  description = "SSM 파라미터 스토어에 저장된 DB URL의 ARN"
+  value       = aws_ssm_parameter.common_db_url.arn
 }
 
-output "db_username_parameter_path" {
-  description = "SSM 파라미터 스토어에 저장된 DB 사용자 이름의 경로"
-  value       = aws_ssm_parameter.common_db_username.name
+output "db_username_parameter_arn" {
+  description = "SSM 파라미터 스토어에 저장된 DB 사용자 이름의 ARN"
+  value       = aws_ssm_parameter.common_db_username.arn
 }
 
 output "db_master_user_secret_arn" {

@@ -5,12 +5,12 @@ resource "aws_security_group" "test_ec2_sg" {
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   # SSH 접속을 위한 인바운드 규칙 (사용자 IP만 허용)
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["112.76.111.10/32"]
-  }
+  # ingress {
+  #   from_port   = 22
+  #   to_port     = 22
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["112.76.111.10/32"]
+  # }
 
   # 모든 아웃바운드 트래픽 허용
   egress {
