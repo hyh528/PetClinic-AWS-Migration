@@ -123,12 +123,7 @@ def handle_chat_request(event_body: Dict[str, Any]) -> Dict[str, Any]:
         result = invoke_bedrock_model(full_prompt)
         
         if result['success']:
-            return create_response(200, {
-                'response': result['content'],
-                'model_id': result['model_id'],
-                'usage': result.get('usage', {}),
-                'timestamp': event_body.get('timestamp')
-            })
+            return result['content']
         else:
             return create_response(500, {
                 'error': 'AI 모델 호출 중 오류가 발생했습니다',
