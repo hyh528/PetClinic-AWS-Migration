@@ -26,7 +26,7 @@ angular.module('ownerForm')
                     console.error('Error updating owner:', error);
                 });
             } else {
-                $http.post(API_BASE_URL + '/api/customers/owners', self.owner).then(function () {
+                $http.post(API_BASE_URL + '/api/customers', self.owner).then(function () {
                     $state.go('owners');
                 }).catch(function (error) {
                     console.error('Error creating owner:', error);

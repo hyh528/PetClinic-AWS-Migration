@@ -101,11 +101,20 @@ resource "aws_api_gateway_deployment" "petclinic" {
     aws_api_gateway_resource.services,
     aws_api_gateway_resource.service_proxies,
     aws_api_gateway_resource.global_proxy,
+    aws_api_gateway_resource.customer_owners,
+    aws_api_gateway_resource.customer_owners_id,
+    aws_api_gateway_resource.customer_owners_pets,
+    aws_api_gateway_resource.customer_owners_pets_id,
     # 동적 메서드 의존성
     aws_api_gateway_method.service_methods,
     aws_api_gateway_method.service_proxy_methods,
     aws_api_gateway_method.global_proxy_method,
     aws_api_gateway_method.root_method,
+    aws_api_gateway_method.customer_owners_method,
+    aws_api_gateway_method.customer_owners_id_method,
+    aws_api_gateway_method.customer_owners_id_get,
+    aws_api_gateway_method.customer_owners_pets_method,
+    aws_api_gateway_method.customer_owners_pets_id_method,
     # 동적 통합 의존성
     aws_api_gateway_integration.alb_service_integrations,
     aws_api_gateway_integration.alb_service_proxy_integrations,
@@ -113,6 +122,16 @@ resource "aws_api_gateway_deployment" "petclinic" {
     aws_api_gateway_integration.lambda_service_proxy_integrations,
     aws_api_gateway_integration.global_proxy_integration,
     aws_api_gateway_integration.root_integration,
+    aws_api_gateway_integration.customer_owners_integration,
+    aws_api_gateway_integration.customer_owners_id_integration,
+    aws_api_gateway_integration.customer_owners_id_get_integration,
+    aws_api_gateway_integration.customer_owners_pets_integration,
+    aws_api_gateway_integration.customer_owners_pets_id_integration,
+    # CORS 관련 의존성 추가
+    aws_api_gateway_method.cors_options,
+    aws_api_gateway_integration.cors_integrations,
+    aws_api_gateway_method_response.cors_method_responses,
+    aws_api_gateway_integration_response.cors_integration_responses,
   ]
 
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
@@ -262,6 +281,62 @@ resource "aws_api_gateway_resource" "services" {
   path_part   = each.value.path
 }
 
+# 고객별 하위 리소스 생성 (owners, pets 등)
+resource "aws_api_gateway_resource" "customer_owners" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  parent_id   = aws_api_gateway_resource.services["customers"].id
+  path_part   = "owners"
+}
+
+resource "aws_api_gateway_resource" "customer_owners_id" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  parent_id   = aws_api_gateway_resource.customer_owners.id
+  path_part   = "{ownerId}"
+}
+
+# 고객 정보 조회용 메서드 (GET /api/customers/owners/{ownerId})
+resource "aws_api_gateway_method" "customer_owners_id_get" {
+  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
+  resource_id   = aws_api_gateway_resource.customer_owners_id.id
+  http_method   = "GET"
+  authorization = "NONE"
+
+  request_parameters = {
+    "method.request.path.ownerId" = true
+  }
+}
+
+# 고객 정보 조회용 통합 (GET /api/customers/owners/{ownerId})
+resource "aws_api_gateway_integration" "customer_owners_id_get_integration" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.customer_owners_id.id
+  http_method = aws_api_gateway_method.customer_owners_id_get.http_method
+
+  integration_http_method = "GET"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/api/customers/{ownerId}"
+
+  connection_type = "INTERNET"
+
+  request_parameters = {
+    "integration.request.path.ownerId" = "method.request.path.ownerId"
+  }
+
+  timeout_milliseconds = local.common_settings.timeout_ms
+}
+
+resource "aws_api_gateway_resource" "customer_owners_pets" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  parent_id   = aws_api_gateway_resource.customer_owners_id.id
+  path_part   = "pets"
+}
+
+resource "aws_api_gateway_resource" "customer_owners_pets_id" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  parent_id   = aws_api_gateway_resource.customer_owners_pets.id
+  path_part   = "{petId}"
+}
+
 # 서비스별 프록시 리소스 생성 (동적)
 resource "aws_api_gateway_resource" "service_proxies" {
   for_each = local.all_services
@@ -292,6 +367,51 @@ resource "aws_api_gateway_method" "service_methods" {
   authorization = "NONE"
 }
 
+# 고객 owners 메서드 생성
+resource "aws_api_gateway_method" "customer_owners_method" {
+  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
+  resource_id   = aws_api_gateway_resource.customer_owners.id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+# 고객 owners/{ownerId} 메서드 생성
+resource "aws_api_gateway_method" "customer_owners_id_method" {
+  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
+  resource_id   = aws_api_gateway_resource.customer_owners_id.id
+  http_method   = "ANY"
+  authorization = "NONE"
+
+  request_parameters = {
+    "method.request.path.ownerId" = true
+  }
+}
+
+# 고객 owners/{ownerId}/pets 메서드 생성
+resource "aws_api_gateway_method" "customer_owners_pets_method" {
+  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
+  resource_id   = aws_api_gateway_resource.customer_owners_pets.id
+  http_method   = "ANY"
+  authorization = "NONE"
+
+  request_parameters = {
+    "method.request.path.ownerId" = true
+  }
+}
+
+# 고객 owners/{ownerId}/pets/{petId} 메서드 생성
+resource "aws_api_gateway_method" "customer_owners_pets_id_method" {
+  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
+  resource_id   = aws_api_gateway_resource.customer_owners_pets_id.id
+  http_method   = "ANY"
+  authorization = "NONE"
+
+  request_parameters = {
+    "method.request.path.ownerId" = true
+    "method.request.path.petId"   = true
+  }
+}
+
 # 서비스별 메서드 응답 (CORS 헤더 추가)
 resource "aws_api_gateway_method_response" "service_method_responses" {
   for_each = local.all_services
@@ -319,9 +439,14 @@ resource "aws_api_gateway_integration_response" "service_integration_responses_c
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE,HEAD,PATCH'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Accept-Language,Content-Language'"
   }
+
+  depends_on = [
+    aws_api_gateway_integration.alb_service_integrations,
+    aws_api_gateway_integration.lambda_service_integrations
+  ]
 }
 
 # 서비스별 프록시 메서드 생성 (동적)
@@ -365,9 +490,18 @@ resource "aws_api_gateway_integration_response" "service_proxy_integration_respo
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE,HEAD,PATCH'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Accept-Language,Content-Language'"
   }
+
+  response_templates = {
+    "application/json" = ""
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.alb_service_proxy_integrations,
+    aws_api_gateway_integration.lambda_service_proxy_integrations
+  ]
 }
 
 # 전역 프록시 메서드 (기타 모든 경로)
@@ -405,9 +539,11 @@ resource "aws_api_gateway_integration_response" "global_proxy_integration_respon
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE,HEAD,PATCH'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Accept-Language,Content-Language'"
   }
+
+  depends_on = [aws_api_gateway_integration.global_proxy_integration]
 }
 
 # 루트 메서드
@@ -441,9 +577,11 @@ resource "aws_api_gateway_integration_response" "root_integration_response_cors"
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE,HEAD,PATCH'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Accept-Language,Content-Language'"
   }
+
+  depends_on = [aws_api_gateway_integration.root_integration]
 }
 
 # ==========================================
@@ -460,9 +598,81 @@ resource "aws_api_gateway_integration" "alb_service_integrations" {
 
   integration_http_method = "ANY"
   type                    = "HTTP_PROXY"
-  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/${each.value.path}" : "http://${var.alb_dns_name}/${each.value.path}"
+  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/${each.value.parent_path}/${each.value.path}" : "http://${var.alb_dns_name}/${each.value.path}"
 
   connection_type      = "INTERNET"
+  timeout_milliseconds = local.common_settings.timeout_ms
+}
+
+# ALB 통합 - 고객 owners 경로
+resource "aws_api_gateway_integration" "customer_owners_integration" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.customer_owners.id
+  http_method = aws_api_gateway_method.customer_owners_method.http_method
+
+  integration_http_method = "ANY"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/api/customers/owners"
+
+  connection_type      = "INTERNET"
+  timeout_milliseconds = local.common_settings.timeout_ms
+}
+
+# ALB 통합 - 고객 owners/{ownerId} 경로
+resource "aws_api_gateway_integration" "customer_owners_id_integration" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.customer_owners_id.id
+  http_method = aws_api_gateway_method.customer_owners_id_method.http_method
+
+  integration_http_method = "ANY"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/api/customers/owners/{ownerId}"
+
+  connection_type = "INTERNET"
+
+  request_parameters = {
+    "integration.request.path.ownerId" = "method.request.path.ownerId"
+  }
+
+  timeout_milliseconds = local.common_settings.timeout_ms
+}
+
+# ALB 통합 - 고객 owners/{ownerId}/pets 경로
+resource "aws_api_gateway_integration" "customer_owners_pets_integration" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.customer_owners_pets.id
+  http_method = aws_api_gateway_method.customer_owners_pets_method.http_method
+
+  integration_http_method = "ANY"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/api/customers/owners/{ownerId}/pets"
+
+  connection_type = "INTERNET"
+
+  request_parameters = {
+    "integration.request.path.ownerId" = "method.request.path.ownerId"
+  }
+
+  timeout_milliseconds = local.common_settings.timeout_ms
+}
+
+# ALB 통합 - 고객 owners/{ownerId}/pets/{petId} 경로
+resource "aws_api_gateway_integration" "customer_owners_pets_id_integration" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.customer_owners_pets_id.id
+  http_method = aws_api_gateway_method.customer_owners_pets_id_method.http_method
+
+  integration_http_method = "ANY"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/api/customers/owners/{ownerId}/pets/{petId}"
+
+  connection_type = "INTERNET"
+
+  request_parameters = {
+    "integration.request.path.ownerId" = "method.request.path.ownerId"
+    "integration.request.path.petId"   = "method.request.path.petId"
+  }
+
   timeout_milliseconds = local.common_settings.timeout_ms
 }
 
@@ -476,7 +686,7 @@ resource "aws_api_gateway_integration" "alb_service_proxy_integrations" {
 
   integration_http_method = "ANY"
   type                    = "HTTP_PROXY"
-  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/${each.value.path}/{proxy}" : "http://${var.alb_dns_name}/${each.value.path}/{proxy}"
+  uri                     = each.value.parent_path == "api" ? "http://${var.alb_dns_name}/${each.value.parent_path}/${each.value.path}/{proxy}" : "http://${var.alb_dns_name}/${each.value.path}/{proxy}"
 
   connection_type = "INTERNET"
 
@@ -559,19 +769,39 @@ resource "aws_api_gateway_integration" "root_integration" {
 # ==========================================
 
 locals {
-  # CORS 설정이 필요한 리소스들
-  cors_resources = var.enable_cors ? {
-    global_proxy = {
-      resource_id = aws_api_gateway_resource.global_proxy.id
-      description = "전역 프록시 CORS"
-    }
-  } : {}
+  # CORS 설정이 필요한 리소스들 (모든 서비스에 CORS 추가)
+  cors_resources = merge(
+    # 서비스별 메인 리소스
+    { for k, v in local.all_services : "service_${k}" => {
+      resource_id = aws_api_gateway_resource.services[k].id
+      description = "${k} 서비스 CORS"
+    }},
+    # 서비스별 프록시 리소스
+    { for k, v in local.all_services : "proxy_${k}" => {
+      resource_id = aws_api_gateway_resource.service_proxies[k].id
+      description = "${k} 프록시 CORS"
+    }},
+    # API 루트 리소스 (CORS 추가)
+    var.enable_cors ? {
+      api_root = {
+        resource_id = aws_api_gateway_resource.api.id
+        description = "API 루트 CORS"
+      }
+    } : {},
+    # 전역 프록시
+    var.enable_cors ? {
+      global_proxy = {
+        resource_id = aws_api_gateway_resource.global_proxy.id
+        description = "전역 프록시 CORS"
+      }
+    } : {}
+  )
 
   # CORS 헤더 설정
   cors_headers = {
     allow_headers = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     allow_methods = "'GET,OPTIONS,POST,PUT,DELETE'"
-    allow_origin  = "'https://d1z83lc8ht58i0.cloudfront.net'"
+    allow_origin  = "'*'"
   }
 }
 
@@ -593,13 +823,16 @@ resource "aws_api_gateway_integration" "cors_integrations" {
   resource_id = each.value.resource_id
   http_method = aws_api_gateway_method.cors_options[each.key].http_method
 
+  # 모든 리소스에 MOCK 타입 사용 (프록시 리소스에서도 작동)
   type = "MOCK"
 
+  # 수정된 request_templates - 올바른 JSON 형식
   request_templates = {
-    "application/json" = jsonencode({
-      statusCode = 200
-    })
+    "application/json" = "{\"statusCode\": 200}"
   }
+
+  # 패스스루 동작 설정
+  passthrough_behavior = "WHEN_NO_MATCH"
 }
 
 # CORS 메서드 응답 (동적 생성)
@@ -632,14 +865,16 @@ resource "aws_api_gateway_integration_response" "cors_integration_responses" {
   status_code = aws_api_gateway_method_response.cors_method_responses[each.key].status_code
 
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers.allow_headers
-    "method.response.header.Access-Control-Allow-Methods" = local.cors_headers.allow_methods
-    "method.response.header.Access-Control-Allow-Origin"  = local.cors_headers.allow_origin
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept,Accept-Language,Content-Language'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE,HEAD,PATCH'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
   }
 
   response_templates = {
-    "application/json" = ""
+    "application/json" = "{}"
   }
+
+  depends_on = [aws_api_gateway_integration.cors_integrations]
 }
 
 # ==========================================
