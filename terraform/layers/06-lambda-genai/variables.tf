@@ -32,11 +32,43 @@ variable "tags" {
   type        = map(string)
 }
 # =============================================================================
-# Lambda GenAI 모듈 변수들 (단순화됨)
+# 백엔드 설정 변수
 # =============================================================================
-# Bedrock 설정 (안정적인 기본값)
+
+variable "backend_bucket" {
+  description = "Terraform 상태 파일을 저장할 S3 버킷"
+  type        = string
+}
+
+# =============================================================================
+# Lambda GenAI 모듈 변수들
+# =============================================================================
+
+# Bedrock 설정
 variable "bedrock_model_id" {
   description = "사용할 Bedrock 모델 ID"
   type        = string
   default     = "anthropic.claude-3-sonnet-20240229-v1:0"
 }
+
+# 데이터베이스 설정
+variable "db_user" {
+  description = "데이터베이스 사용자명"
+  type        = string
+  default     = "petclinic"
+}
+
+variable "db_name" {
+  description = "데이터베이스 이름"
+  type        = string
+  default     = "petclinic"
+}
+
+variable "db_port" {
+  description = "데이터베이스 포트"
+  type        = string
+  default     = "3306"
+}
+
+# VPC 설정 변수들 (다른 레이어에서 가져오므로 여기서는 정의만)
+# 실제 값은 data source에서 가져옴

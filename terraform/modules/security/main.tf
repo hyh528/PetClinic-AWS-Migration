@@ -80,6 +80,18 @@ resource "aws_vpc_security_group_ingress_rule" "rds_in_from_ecs" {
   ip_protocol                  = "tcp"
 }
 
+# Lambda SG에서 Aurora 클러스터 인그레스 허용 (Lambda GenAI 함수용)
+resource "aws_vpc_security_group_ingress_rule" "rds_in_from_lambda" {
+  count = var.lambda_security_group_id != "" ? 1 : 0
+
+  security_group_id            = aws_security_group.rds.id
+  description                  = "Allow Aurora port from Lambda GenAI SG"
+  referenced_security_group_id = var.lambda_security_group_id
+  from_port                    = var.rds_port
+  to_port                      = var.rds_port
+  ip_protocol                  = "tcp"
+}
+
 # (선택 사항) ECS에서 Aurora로 송신 (상태 저장인 경우 엄격히 필요하지 않지만 최소 권한을 위해 강화)
 resource "aws_vpc_security_group_egress_rule" "ecs_out_to_rds" {
   security_group_id            = aws_security_group.ecs.id

@@ -129,7 +129,7 @@ output "dependency_validation" {
   description = "의존성 검증을 위한 간단한 체크"
   value = {
     total_layers = length(local.layer_dependencies)
-    max_order    = max([for config in local.layer_dependencies : config.order])
+    max_order    = max([for config in local.layer_dependencies : config.order]...)
 
     # 각 레이어가 의존하는 레이어 목록
     dependency_map = {

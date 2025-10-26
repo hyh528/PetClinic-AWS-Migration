@@ -64,7 +64,7 @@ enable_cloudtrail    = true
 
 # Aurora 클러스터 설정
 instance_class = "db.serverless" # Aurora Serverless v2
-engine_version = "8.0.mysql_aurora.3.04.0"
+engine_version = "8.0.mysql_aurora.3.08.0"
 
 # 데이터베이스 설정
 db_name     = "petclinic"

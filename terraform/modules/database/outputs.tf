@@ -59,3 +59,9 @@ output "master_user_secret_name" {
   value       = aws_rds_cluster.this.master_user_secret[0].secret_arn
   sensitive   = true
 }
+
+output "master_user_secret_arn" {
+  description = "마스터 사용자 시크릿 ARN"
+  value       = aws_rds_cluster.this.master_user_secret[0].secret_arn
+  sensitive   = true
+}

@@ -52,7 +52,7 @@ variable "vpc_security_group_ids" {
 variable "engine_version" {
   description = "Aurora MySQL 엔진 버전"
   type        = string
-  default     = "8.0.mysql_aurora.3.04.0"
+  default     = "8.0.mysql_aurora.3.07.0"
 }
 
 variable "instance_class" {

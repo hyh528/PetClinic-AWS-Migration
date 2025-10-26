@@ -1,11 +1,35 @@
-# Lambda GenAI 모듈 - GenAI ECS 서비스를 Lambda + Bedrock으로 대체 (단순화됨)
-# 기본 서버리스 AI 기능만 제공
+# Lambda GenAI 모듈
 
-# 현재 AWS 계정 정보
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
+resource "aws_lambda_function" "genai_function" {
+  function_name = "${var.name_prefix}-genai-function"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "index.handler"
+  runtime       = "python3.11"
+  timeout       = 60
+  memory_size   = 512
 
-# Lambda 함수 실행을 위한 IAM 역할
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  vpc_config {
+    subnet_ids         = var.private_subnet_ids
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+
+  environment {
+    variables = {
+      BEDROCK_MODEL_ID = var.bedrock_model_id
+      DB_HOST          = var.db_host
+      DB_USER          = var.db_user
+      DB_NAME          = var.db_name
+      DB_PORT          = var.db_port
+      DB_SECRET_ARN    = var.db_secret_arn
+    }
+  }
+
+  tags = var.tags
+}
+
 resource "aws_iam_role" "lambda_execution_role" {
   name = "${var.name_prefix}-lambda-genai-execution-role"
 
@@ -22,90 +46,51 @@ resource "aws_iam_role" "lambda_execution_role" {
     ]
   })
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-lambda-genai-execution-role"
-    Environment = var.environment
-    Type        = "iam-role"
-  })
+  tags = var.tags
 }
 
-# Lambda 기본 실행 정책 연결
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
   role       = aws_iam_role.lambda_execution_role.name
 }
 
-# Bedrock 모델 호출을 위한 IAM 정책
-resource "aws_iam_role_policy" "bedrock_invoke_policy" {
-  name = "${var.name_prefix}-lambda-bedrock-invoke-policy"
-  role = aws_iam_role.lambda_execution_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = "*"
-        Resource = "*"
-      }
-    ]
-  })
+resource "aws_iam_role_policy_attachment" "lambda_vpc_execution" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+  role       = aws_iam_role.lambda_execution_role.name
 }
 
-# CloudWatch Logs 그룹
-resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${var.name_prefix}-genai-function"
-  retention_in_days = 14
+resource "aws_security_group" "lambda_sg" {
+  name        = "${var.name_prefix}-lambda-genai-sg"
+  description = "Lambda GenAI function security group"
+  vpc_id      = var.vpc_id
 
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-lambda-genai-logs"
-    Environment = var.environment
-    Service     = "lambda-genai"
-  })
+  tags = var.tags
 }
 
-# Lambda 함수 코드를 위한 ZIP 파일 생성
+resource "aws_security_group_rule" "lambda_https_outbound" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.lambda_sg.id
+}
+
+resource "aws_security_group_rule" "lambda_mysql_outbound" {
+  type              = "egress"
+  from_port         = 3306
+  to_port           = 3306
+  protocol          = "tcp"
+  cidr_blocks       = ["10.0.0.0/16"]
+  security_group_id = aws_security_group.lambda_sg.id
+}
+
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/lambda_function.zip"
-
+  
   source {
-    content = templatefile("${path.module}/lambda_function.py", {
-      bedrock_model_id = var.bedrock_model_id
-      aws_region       = data.aws_region.current.name
-    })
-    filename = "lambda_function.py"
+    content  = "def handler(event, context): return {'statusCode': 200, 'body': 'Hello World'}"
+    filename = "index.py"
   }
-}
-
-# Lambda 함수 (기본 설정만)
-resource "aws_lambda_function" "genai_function" {
-  filename      = data.archive_file.lambda_zip.output_path
-  function_name = "${var.name_prefix}-genai-function"
-  role          = aws_iam_role.lambda_execution_role.arn
-  handler       = "lambda_function.lambda_handler"
-  runtime       = "python3.11"
-  timeout       = 30
-  memory_size   = 512
-
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-
-  environment {
-    variables = {
-      BEDROCK_MODEL_ID = var.bedrock_model_id
-      LOG_LEVEL        = "INFO"
-    }
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.lambda_basic_execution,
-    aws_cloudwatch_log_group.lambda_logs
-  ]
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-genai-function"
-    Environment = var.environment
-    Service     = "lambda-genai"
-    ManagedBy   = "terraform"
-  })
 }

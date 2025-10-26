@@ -3,6 +3,9 @@
 # =============================================================================
 # 목적: 재사용 가능한 Aurora MySQL 클러스터 모듈
 
+# 현재 AWS 리전 정보
+data "aws_region" "current" {}
+
 # 로컬 변수
 locals {
   # 환경별 설정
@@ -73,6 +76,9 @@ resource "aws_rds_cluster" "this" {
     max_capacity = local.is_production ? 4.0 : 1.0
   }
 
+  # RDS Data API는 Serverless v2에서 enable_http_endpoint 속성으로 활성화되지 않음
+  # 별도로 AWS CLI enable-http-endpoint 호출 필요
+
   # 암호화 설정
   storage_encrypted = var.storage_encrypted
   kms_key_id        = var.kms_key_id
@@ -81,6 +87,29 @@ resource "aws_rds_cluster" "this" {
     Name = "${var.name_prefix}-aurora-cluster"
     Type = "aurora-cluster"
   })
+}
+
+# =============================================================================
+# RDS Data API 활성화 (Aurora MySQL 3.08.0 + Serverless v2)
+# =============================================================================
+# Aurora Serverless v2에서는 enable_http_endpoint 속성이 동작하지 않으므로
+# 클러스터 생성 후 별도의 AWS CLI 호출로 활성화
+
+resource "null_resource" "enable_data_api" {
+  triggers = {
+    cluster_arn = aws_rds_cluster.this.arn
+    engine_version = aws_rds_cluster.this.engine_version
+  }
+
+  provisioner "local-exec" {
+    command = "aws rds enable-http-endpoint --resource-arn ${aws_rds_cluster.this.arn} --region ${data.aws_region.current.name}"
+  }
+
+  depends_on = [
+    aws_rds_cluster.this,
+    aws_rds_cluster_instance.writer,
+    aws_rds_cluster_instance.reader
+  ]
 }
 
 # =============================================================================

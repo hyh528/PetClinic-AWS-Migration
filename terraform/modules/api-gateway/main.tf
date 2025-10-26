@@ -1107,3 +1107,25 @@ resource "aws_cloudwatch_dashboard" "api_gateway" {
     ]
   })
 }
+
+# ==========================================
+# Lambda 권한 설정
+# ==========================================
+
+# Lambda 함수 호출 권한 (API Gateway에서 Lambda 호출 허용)
+resource "aws_lambda_permission" "api_gateway_lambda" {
+  count = var.enable_lambda_integration ? 1 : 0
+
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = element(split("/", var.lambda_function_invoke_arn), 3) # ARN에서 함수 이름 추출
+  principal     = "apigateway.amazonaws.com"
+
+  # API Gateway의 모든 경로에서 Lambda 호출 허용
+  source_arn = "${aws_api_gateway_rest_api.petclinic.execution_arn}/*/*"
+
+  depends_on = [
+    aws_api_gateway_rest_api.petclinic,
+    aws_api_gateway_deployment.petclinic
+  ]
+}

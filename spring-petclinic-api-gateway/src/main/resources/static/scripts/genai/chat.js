@@ -44,17 +44,31 @@ function sendMessage() {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: query }),
+        body: JSON.stringify({ question: query }),  // Lambda 함수에서 'question' 필드를 기대함
     })
-        .then(response => response.text())
-        .then(responseText => {
-            // Display the response from the server in the chatbox
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();  // JSON 응답으로 변경
+        })
+        .then(data => {
+            // Lambda 함수의 응답 구조에 맞게 수정
+            const responseText = data.answer || data.message || 'No response received';
             appendMessage(responseText, 'bot');
         })
         .catch(error => {
             console.error('Error:', error);
-            // Display the fallback message in the chatbox
-            appendMessage('Chat is currently unavailable', 'bot');
+            // 더 자세한 에러 메시지 표시
+            let errorMessage = 'Chat is currently unavailable';
+            if (error.message.includes('404')) {
+                errorMessage = 'GenAI service not found. Please check the API configuration.';
+            } else if (error.message.includes('500')) {
+                errorMessage = 'Server error occurred. Please try again later.';
+            } else if (error.message.includes('429')) {
+                errorMessage = 'Too many requests. Please wait a moment and try again.';
+            }
+            appendMessage(errorMessage, 'bot');
         });
 }
 

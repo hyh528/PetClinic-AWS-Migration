@@ -48,3 +48,10 @@ variable "aws_region" {
   description = "AWS 리전 (IAM 정책 ARN 생성용)"
   type        = string
 }
+
+# Lambda 보안 그룹 ID (선택사항)
+variable "lambda_security_group_id" {
+  description = "Lambda 함수 보안 그룹 ID (Aurora 접근 허용용). 비어 있으면 Lambda->RDS 규칙을 생성하지 않습니다."
+  type        = string
+  default     = ""
+}
