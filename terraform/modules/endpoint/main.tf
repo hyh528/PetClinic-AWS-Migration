@@ -31,7 +31,8 @@ locals {
         Action = [
           "ssm:GetParameters",
           "ssm:GetParameter",
-          "ssm:DescribeParameters"
+          "ssm:DescribeParameters",
+          "ssm:GetParametersByPath"
         ]
         Resource = "*"
         # Condition = {

@@ -127,6 +127,53 @@ resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name = "/aws/vpc-flow-logs/petclinic"
 }
 
+# VPC Flow Logs for NACL monitoring
+resource "aws_flow_log" "nacl_monitoring" {
+  iam_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  log_destination_type = "cloud-watch-logs"
+  traffic_type         = "ALL"
+  vpc_id               = data.terraform_remote_state.network.outputs.vpc_id
+
+  tags = {
+    Name        = "petclinic-dev-nacl-flow-logs"
+    Purpose     = "NACL traffic monitoring and security analysis"
+    Environment = var.environment
+  }
+}
+
+# CloudWatch 메트릭 필터 (보안 이벤트 감지)
+resource "aws_cloudwatch_log_metric_filter" "nacl_denies" {
+  name           = "petclinic-dev-nacl-denies"
+  log_group_name = aws_cloudwatch_log_group.vpc_flow_logs.name
+  pattern        = "[version, account, eni, source, destination, srcport, destport, protocol, packets, bytes, windowstart, windowend, action=\"REJECT\", flowlogstatus]"
+
+  metric_transformation {
+    name      = "NACLDeniedConnections"
+    namespace = "Security/NACL"
+    value     = "1"
+  }
+}
+
+# CloudWatch 알람 (보안 이벤트 알림)
+resource "aws_cloudwatch_metric_alarm" "nacl_security_alert" {
+  alarm_name          = "petclinic-dev-nacl-security-alert"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "NACLDeniedConnections"
+  namespace           = "Security/NACL"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = 10
+  alarm_description   = "This metric monitors NACL denied connections for security threats"
+  alarm_actions       = []
+
+  tags = {
+    Name        = "petclinic-dev-nacl-security-alert"
+    Environment = var.environment
+  }
+}
+
 # --- 3-1. Public Subnet NACL ---
 module "nacl_public" {
   source = "../../../modules/nacl"
@@ -137,12 +184,6 @@ module "nacl_public" {
   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
   nacl_type   = "public"
   subnet_ids  = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
-
-  enable_flow_logs           = true
-  flow_logs_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
-  flow_logs_log_group_arn    = aws_cloudwatch_log_group.vpc_flow_logs.arn
-  flow_logs_log_group_name   = aws_cloudwatch_log_group.vpc_flow_logs.name
-  enable_security_monitoring = true
 }
 
 # --- 3-2. Private App Subnet NACL ---
@@ -155,12 +196,6 @@ module "nacl_private_app" {
   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
   nacl_type   = "private-app"
   subnet_ids  = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
-
-  enable_flow_logs           = true
-  flow_logs_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
-  flow_logs_log_group_arn    = aws_cloudwatch_log_group.vpc_flow_logs.arn
-  flow_logs_log_group_name   = aws_cloudwatch_log_group.vpc_flow_logs.name
-  enable_security_monitoring = true
 }
 
 # --- 3-3. Private DB Subnet NACL ---
@@ -173,12 +208,6 @@ module "nacl_private_db" {
   vpc_cidr    = data.terraform_remote_state.network.outputs.vpc_cidr
   nacl_type   = "private-db"
   subnet_ids  = values(data.terraform_remote_state.network.outputs.private_db_subnet_ids)
-
-  enable_flow_logs           = true
-  flow_logs_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
-  flow_logs_log_group_arn    = aws_cloudwatch_log_group.vpc_flow_logs.arn
-  flow_logs_log_group_name   = aws_cloudwatch_log_group.vpc_flow_logs.name
-  enable_security_monitoring = true
 }
 
 # =================================================
@@ -234,7 +263,7 @@ module "cognito" {
 
 # CloudTrail을 위한 CloudWatch Logs 그룹
 resource "aws_cloudwatch_log_group" "cloudtrail" {
-  name = "/aws/cloudtrail/petclinic-trail-v2"
+  name = "petclinic-trail"
 }
 
 # CloudTrail이 CloudWatch Logs에 쓰기 위한 IAM 역할
@@ -284,8 +313,10 @@ module "cloudtrail" {
   trail_name     = "petclinic-trail"
   s3_bucket_name = "petclinic-cloudtrail-logs-${data.aws_caller_identity.current.account_id}"
 
-  cloud_watch_logs_group_arn = aws_cloudwatch_log_group.cloudtrail.arn
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
   cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_to_cloudwatch.arn
+
+  depends_on = [aws_iam_role_policy.cloudtrail_to_cloudwatch]
 
   tags = {
     Project     = var.name_prefix
