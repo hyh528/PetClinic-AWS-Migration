@@ -59,3 +59,9 @@ output "ecs_secrets_policy_arn" {
   description = "ARN of the policy for ECS to access secrets"
   value       = module.iam.ecs_secrets_policy_arn
 }
+
+# ECS SSM 접근 정책 ARN                                                    
+output "ecs_ssm_policy_arn" {                                              
+  description = "ECS 작업이 SSM 파라미터 스토어에 접근할 수 있도록 허용하는 IAM 정책의 ARN"                                                              
+  value       = aws_iam_policy.ecs_ssm_access_policy.arn                   
+}                                                                          

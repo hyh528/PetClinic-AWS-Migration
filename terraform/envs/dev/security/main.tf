@@ -338,3 +338,26 @@ resource "aws_xray_encryption_config" "this" {
   type = "KMS"
   key_id = data.aws_kms_alias.xray.target_key_arn
 }
+ # =================================================                  
+ # 8) IAM Policies (중앙 관리)                                        
+ # =================================================                  
+                                                                      
+ # --- 8-1. ECS SSM Parameter Store 접근 정책 ---                     
+ resource "aws_iam_policy" "ecs_ssm_access_policy" {                  
+   name        = "petclinic-ecs-ssm-access-policy"                    
+   description = "Allows ECS tasks to access specific SSM parameters" 
+   policy = jsonencode({                                              
+     Version = "2012-10-17",                                          
+     Statement = [                                                    
+       {                                                              
+         Effect = "Allow",                                            
+         Action = [                                                   
+           "ssm:GetParametersByPath",                                 
+           "ssm:GetParameters",                                       
+           "ssm:GetParameter"                                         
+         ],                                                           
+         Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/petclinic/*"  
+       }                                                              
+     ]                                                                
+   })                                                                 
+ }                      
