@@ -50,8 +50,7 @@ resource "aws_ecs_task_definition" "service" {
   memory                   = var.task_memory
   execution_role_arn       = var.ecs_task_execution_role_arn # application 레이어에서 전달받음
   task_role_arn            = var.task_role_arn
-  
-  container_definitions = jsonencode([
+    container_definitions = jsonencode([
     {
       name      = var.service_name,
       image     = var.image_uri,
@@ -71,19 +70,10 @@ resource "aws_ecs_task_definition" "service" {
         }
       ],
       secrets = [                                     
-        {                                             
-          name      = "SPRING_DATASOURCE_PASSWORD",   
-          valueFrom = var.db_master_user_secret_arn,
-          json_key  = "password"
-        },
-                {                                             
-          name      = "SPRING_DATASOURCE_URL",   
-          valueFrom = var.db_url_parameter_path      
-        },
-                {                                             
-          name      = "SPRING_DATASOURCE_USERNAME",   
-          valueFrom = var.db_username_parameter_path      
-        }                                                                                     
+        for k, v in var.secrets_variables : {
+          name  = k,
+          valueFrom = v
+        }                                                                              
       ],                                                                                     
       logConfiguration = {
         logDriver = "awslogs",

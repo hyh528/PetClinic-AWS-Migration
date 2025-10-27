@@ -55,6 +55,7 @@ variable "listener_priority" {
   type        = number
 }
 
+
 # --- 이하 CPU/Memory 등 나머지 변수는 이전과 동일 ---
 variable "task_cpu" {
   description = "ECS Task에 할당할 CPU"
@@ -86,18 +87,24 @@ variable "cloudmap_service_arn" {
    type        = string                                                                             
  }                                                                                                  
                                                                                                     
- variable "db_url_parameter_path" {                                                                 
-   description = "The path in Parameter Store for the DB URL"                                       
+ variable "db_url_parameter_arn" {                                                                 
+   description = "The ARN of the Parameter Store for the DB URL"                                       
    type        = string                                                                             
  }                                                                                                  
                                                                                                     
- variable "db_username_parameter_path" {                                                            
-   description = "The path in Parameter Store for the DB username"                                  
+ variable "db_username_parameter_arn" {                                                            
+   description = "The ARN of the Parameter Store for the DB username"
    type        = string                                                                             
  }
 
 variable "environment_variables" {                                               
   description = "A map of environment variables to pass to the container."       
+  type        = map(string)                                                      
+  default     = {}                                                               
+}
+
+variable "secrets_variables" {                                               
+  description = "A map of secrets variables to pass to the container."       
   type        = map(string)                                                      
   default     = {}                                                               
 }

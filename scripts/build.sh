@@ -16,8 +16,8 @@ aws ecr get-login-password --region "$REGION" \
 declare -A SRV=(
   [./spring-petclinic-admin-server]=admin-server
   [./spring-petclinic-customers-service]=customers-service
-  [./spring-petclinic-vets-service]=vets-service
-  [./spring-petclinic-visits-service]=visits-service
+  #[./spring-petclinic-vets-service]=vets-service
+  #[./spring-petclinic-visits-service]=visits-service
 )
 
 TAG="$(date +%Y%m%d-%H%M%S)"
@@ -31,7 +31,7 @@ for SERVICE_PATH in "${!SRV[@]}"; do
   || aws ecr create-repository --repository-name "$NAME" --region "$REGION"
 
   echo "==> Build $NAME from $SERVICE_PATH"
-  docker build -t "$REPO:latest" -t "$REPO:$TAG" "$SERVICE_PATH"
+  docker buildx build --platform linux/amd64 -t "$REPO:latest" -t "$REPO:$TAG" "$SERVICE_PATH"
 
   echo "==> Push $NAME"
   docker push "$REPO:latest"

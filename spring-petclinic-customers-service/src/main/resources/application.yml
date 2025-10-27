@@ -4,8 +4,8 @@ spring:
 
   config:
     import: [
-      "aws-parameterstore:/petclinic/common/",
-      "aws-parameterstore:/petclinic/dev/customers",
+      "optional:aws-parameterstore:/petclinic/common/", 
+      "optional:aws-parameterstore:/petclinic/dev/customers",      
       "aws-secretsmanager:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb"
     ]
   cloud:
@@ -27,9 +27,9 @@ spring:
       ddl-auto: create
     database-platform: org.hibernate.dialect.MySQLDialect
   datasource:
-    url: ${database.url}
-    username: ${username}
-    password: ${password}
+    url: jdbc:mysql://petclinic-aurora-cluster-dev.cluster-chayuwmicqjy.ap-northeast-2.rds.amazonaws.com:3306/petclinic
+    username: petclinic
+    password: 1b*!RrOjx2~AIim2e>Cx(>0~F77P
 
 ---
 spring:

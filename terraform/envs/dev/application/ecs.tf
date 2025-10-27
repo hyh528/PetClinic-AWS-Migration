@@ -48,8 +48,14 @@ module "ecs" {
   container_port    = each.value.container_port
   listener_priority = each.value.priority
 
+  secrets_variables = {
+    "SPRING_DATASOURCE_PASSWORD" = "arn:aws:secretsmanager:ap-northeast-2:897722691159:secret:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb-XmjB9d:password::",
+    "SPRING_DATASOURCE_URL"      = "/petclinic/common/database.url"
+    "SPRING_DATASOURCE_USERNAME" = "/petclinic/common/database.username"
+  }
+
   environment_variables = {
-   "SPRING_PROFILES_ACTIVE" = "mysql,aws"
+   "SPRING_PROFILES_ACTIVE" = "mysql,aws",
   }
 
   # 각 서비스의 이름(each.key)에 해당하는 Cloud Map 서비스의 ARN을 전달
@@ -58,6 +64,6 @@ module "ecs" {
                                                                                                               
   # --- DB 접근 정보 전달 ---                                                                               
   db_master_user_secret_arn   = data.terraform_remote_state.database.outputs.db_master_user_secret_arn
-  db_url_parameter_path    = data.terraform_remote_state.database.outputs.db_url_parameter_path
-  db_username_parameter_path = data.terraform_remote_state.database.outputs.db_username_parameter_path
+  db_url_parameter_arn    = data.terraform_remote_state.database.outputs.db_url_parameter_arn
+  db_username_parameter_arn = data.terraform_remote_state.database.outputs.db_username_parameter_arn
 }

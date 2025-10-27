@@ -16,3 +16,8 @@ resource "aws_iam_role_policy_attachment" "ecs_secrets_policy_attachment" {
   role       = data.aws_iam_role.ecs_task_execution_role.name
   policy_arn = data.terraform_remote_state.security.outputs.ecs_secrets_policy_arn
 }
+
+resource "aws_iam_role_policy_attachment" "ecs_ssm_policy_attachment" {
+  role       = data.aws_iam_role.ecs_task_execution_role.name
+  policy_arn = data.terraform_remote_state.security.outputs.ecs_ssm_policy_arn
+}
