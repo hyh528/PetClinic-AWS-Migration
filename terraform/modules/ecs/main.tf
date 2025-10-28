@@ -17,9 +17,9 @@ resource "aws_lb_target_group" "service" {
     protocol            = "HTTP"
     matcher             = "200"
     interval            = 30
-    timeout             = 5
+    timeout             = 10
     healthy_threshold   = 2
-    unhealthy_threshold = 2
+    unhealthy_threshold = 3
   }
 }
 
@@ -110,6 +110,8 @@ resource "aws_ecs_service" "service" {
     container_name   = var.service_name
     container_port   = var.container_port
   }
+
+  health_check_grace_period_seconds = var.health_check_grace_period
 
   depends_on = [aws_lb_listener_rule.service]
 }

@@ -16,8 +16,8 @@ aws ecr get-login-password --region "$REGION" \
 declare -A SRV=(
   [./spring-petclinic-admin-server]=admin-server
   [./spring-petclinic-customers-service]=customers-service
-  #[./spring-petclinic-vets-service]=vets-service
-  #[./spring-petclinic-visits-service]=visits-service
+  [./spring-petclinic-vets-service]=vets-service
+  [./spring-petclinic-visits-service]=visits-service
 )
 
 TAG="$(date +%Y%m%d-%H%M%S)"

@@ -108,3 +108,9 @@ variable "secrets_variables" {
   type        = map(string)                                                      
   default     = {}                                                               
 }
+
+variable "health_check_grace_period" {
+  description = "컨테이너 시작 후 헬스 체크 실패를 무시할 유예 기간(초)"
+  type = number
+  default = 150
+}

@@ -4,7 +4,7 @@ spring:
   config:
     import: [
       "optional:aws-parameterstore:/petclinic/common/", 
-      "optional:aws-parameterstore:/petclinic/dev/vets-service",
+      "optional:aws-parameterstore:/petclinic/dev/vets",
       "aws-secretsmanager:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb"
     ]
   cloud:
