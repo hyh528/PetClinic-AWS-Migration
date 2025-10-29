@@ -361,3 +361,41 @@ resource "aws_xray_encryption_config" "this" {
      ]                                                                
    })                                                                 
  }                      
+
+# =================================================
+# 9) CloudWatch Dashboard (모니터링)
+# =================================================
+
+# --- 데이터 소스: Application 레이어 상태 파일 ---
+data "terraform_remote_state" "application" {
+  backend = "s3"
+  config = {
+    bucket         = var.tfstate_bucket_name
+    key            = "dev/seokgyeom/application/terraform.tfstate"
+    region         = var.aws_region
+    dynamodb_table = var.tf_lock_table_name
+    encrypt        = var.encrypt_state
+    profile        = var.database_state_profile # Assuming same profile as database
+  }
+}
+
+# --- CloudWatch 대시보드 모듈 호출 ---
+module "cloudwatch_dashboard" {
+  source = "../../../modules/cloudwatch"
+
+  project_name = var.name_prefix
+  environment  = var.environment
+  aws_region   = data.aws_region.current.name
+
+  services = {
+    for k, v in data.terraform_remote_state.application.outputs.ecs_service_names : k => {
+      ecs_cluster_name          = data.terraform_remote_state.application.outputs.ecs_cluster_name
+      ecs_service_name          = v
+      alb_target_group_arn_suffix = data.terraform_remote_state.application.outputs.alb_target_group_arn_suffixes[k]
+    } if contains(["vets-service", "visits-service", "customers-service"], k)
+  }
+
+  tags = {
+    Service = "Monitoring"
+  }
+}
