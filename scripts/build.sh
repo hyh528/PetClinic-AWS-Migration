@@ -14,7 +14,7 @@ aws ecr get-login-password --region "$REGION" \
 
 # 서비스: 로컬경로 => ECR 리포지토리명
 declare -A SRV=(
-  [./spring-petclinic-admin-server]=admin-server
+  #[./spring-petclinic-admin-server]=admin-server
   [./spring-petclinic-customers-service]=customers-service
   [./spring-petclinic-vets-service]=vets-service
   [./spring-petclinic-visits-service]=visits-service

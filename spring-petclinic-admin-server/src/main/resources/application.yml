@@ -4,7 +4,7 @@ spring:
   
   config:                                                
     import: [                                            
-       optional:aws-parameterstore:/petclinic/common/",  
+      "optional:aws-parameterstore:/petclinic/common/",  
       "optional:aws-parameterstore:/petclinic/dev/admin" 
     ]                                                    
   cloud:

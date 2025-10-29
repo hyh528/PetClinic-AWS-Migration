@@ -1,5 +1,10 @@
 # 이미지 빌드 시
+#cmd
 mvnw.cmd package -DskipTests
+
+#powershell
+./mvnw.cmd package -DskipTests
+
 -pl spring-petclinic-admin-server,spring-petclinic-customers-service,spring-petclinic-vets-service,spring-petclinic-visits-service -am 
 
 # terraform 명령어
@@ -9,7 +14,7 @@ terraform apply -var-file=dev.tfvars
 terraform destroy -var-file=dev.tfvars
 
 # 하나만 실행
-terraform apply -target=module.ecs -var-file=dev.tfvars
+terraform apply -target=module.ecr -var-file=dev.tfvars
 terraform destroy -target=module.ecs -var-file=dev.tfvars
 
 # ECR로 저장

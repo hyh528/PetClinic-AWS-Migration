@@ -37,3 +37,9 @@ output "listener_rule_arn" {
   description = "The ARN of the ALB listener rule"
   value       = aws_lb_listener_rule.service.arn
 }
+
+# 모니터링용
+output "target_group_arn_suffix" {
+   description = "The ARN suffix of the ALB target group"
+   value       = aws_lb_target_group.service.arn_suffix
+}

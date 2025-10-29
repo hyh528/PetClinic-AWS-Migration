@@ -24,7 +24,7 @@ spring:
       mode: always
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     database-platform: org.hibernate.dialect.MySQLDialect
   datasource:
     url: ${database.url}

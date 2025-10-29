@@ -22,3 +22,17 @@ output "cloudmap_namespace" {
   description = "The name of the Cloud Map private DNS namespace"
   value       = module.cloudmap.namespace_name
 }
+
+output "ecs_service_names" {
+  description = "A map of ECS service names, keyed by service identifier"
+  value = {
+    for k, m in module.ecs : k => m.service_name
+  }
+}
+
+output "alb_target_group_arn_suffixes" {
+  description = "A map of ALB target group ARN suffixes, keyed by service identifier"
+  value = {
+    for k, m in module.ecs : k => m.target_group_arn_suffix
+  }
+}
