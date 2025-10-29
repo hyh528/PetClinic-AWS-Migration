@@ -25,7 +25,6 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
     description = "HTTPS from anywhere"
   }
-
   # 아웃바운드 규칙: 모든 트래픽을 허용
   egress {
     protocol    = "-1"
@@ -33,6 +32,8 @@ resource "aws_security_group" "alb" {
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+
 
   tags = merge(
     var.tags,
@@ -50,14 +51,7 @@ resource "aws_security_group" "app" {
   description = "Security group for Application (ECS)"
   vpc_id      = var.vpc_id
 
-  # 인바운드 규칙: ALB 보안 그룹으로부터의 모든 TCP 트래픽을 허용 (동적 포트 지원)
-  ingress {
-    protocol        = "tcp"
-    from_port       = 0
-    to_port         = 65535
-    security_groups = [var.alb_source_security_group_id]
-    description     = "All TCP traffic from ALB"
-  }
+
 
   # 아웃바운드 규칙: 모든 트래픽을 허용
   egress {

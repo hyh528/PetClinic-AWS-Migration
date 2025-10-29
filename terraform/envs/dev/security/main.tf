@@ -401,3 +401,31 @@ module "cloudwatch_dashboard" {
 
   db_cluster_identifier = data.terraform_remote_state.database.outputs.db_cluster_resource_id
 }
+
+# =================================================
+# 10) Security Group Rules (순환 종속성 해결)
+# =================================================
+
+resource "aws_security_group_rule" "app_from_alb" {
+  for_each = toset(["8080", "8081", "8082", "8083", "9090"])
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = tonumber(each.value)
+  to_port                  = tonumber(each.value)
+  source_security_group_id = module.sg_alb.security_group_id
+  security_group_id        = module.sg_app.security_group_id
+  description              = "Allow TCP on port ${each.value} from ALB SG"
+}
+
+resource "aws_security_group_rule" "alb_from_app" {
+  for_each = toset(["8080", "8081", "8082", "8083", "9090"])
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = tonumber(each.value)
+  to_port                  = tonumber(each.value)
+  source_security_group_id = module.sg_app.security_group_id
+  security_group_id        = module.sg_alb.security_group_id
+  description              = "Allow TCP on port ${each.value} from App SG"
+}
