@@ -50,13 +50,13 @@ resource "aws_security_group" "app" {
   description = "Security group for Application (ECS)"
   vpc_id      = var.vpc_id
 
-  # 인바운드 규칙: ALB 보안 그룹으로부터 8080 포트만 허용 (보안 강화)
+  # 인바운드 규칙: ALB 보안 그룹으로부터의 모든 TCP 트래픽을 허용 (동적 포트 지원)
   ingress {
     protocol        = "tcp"
-    from_port       = 8080
-    to_port         = 8080
+    from_port       = 0
+    to_port         = 65535
     security_groups = [var.alb_source_security_group_id]
-    description     = "HTTP traffic on port 8080 from ALB"
+    description     = "All TCP traffic from ALB"
   }
 
   # 아웃바운드 규칙: 모든 트래픽을 허용
