@@ -77,24 +77,99 @@ locals {
     ]
   ])
 
-  # 데이터베이스 플레이스홀더 위젯
-  db_placeholder_widget = {
-    type   = "text"
-    x      = 0
-    y      = length(var.services) * 8 # 마지막 서비스 섹션 다음에 위치
-    width  = 24
-    height = 2
-    properties = {
-      markdown = <<-EOT
-## Database Metrics
-
-*(Database resources are not yet defined. This section will be populated once the RDS module is implemented.)*
-      EOT
+  # DB 위젯 목록을 미리 정의
+  potential_db_widgets = [
+    # --- DB 섹션 헤더 ---
+    {
+      type   = "text",
+      x      = 0,
+      y      = length(var.services) * 8, # 서비스 섹션 다음에 위치
+      width  = 24,
+      height = 1,
+      properties = {
+        markdown = "## Database Metrics (Aurora)"
+      }
+    },
+    # --- DB 위젯 (CPU, Connections) ---
+    {
+      type   = "metric",
+      x      = 0,
+      y      = (length(var.services) * 8) + 1,
+      width  = 12,
+      height = 6,
+      properties = {
+        title   = "DB - CPU & Connections",
+        view    = "timeSeries",
+        stacked = false,
+        region  = var.aws_region,
+        metrics = [
+          ["AWS/RDS", "CPUUtilization", "DBClusterIdentifier", var.db_cluster_identifier],
+          [".", "DatabaseConnections", ".", ".", { "yAxis": "right" }]
+        ]
+      }
+    },
+    # --- DB 위젯 (Memory, Storage) ---
+    {
+      type   = "metric",
+      x      = 12,
+      y      = (length(var.services) * 8) + 1,
+      width  = 12,
+      height = 6,
+      properties = {
+        title   = "DB - Freeable Memory & Storage",
+        view    = "timeSeries",
+        stacked = false,
+        region  = var.aws_region,
+        metrics = [
+          ["AWS/RDS", "FreeableMemory", "DBClusterIdentifier", var.db_cluster_identifier],
+          ["AWS/Aurora", "FreeLocalStorage", "DBClusterIdentifier", var.db_cluster_identifier, { "yAxis": "right" }]
+        ]
+      }
+    },
+    # --- DB 위젯 (Throughput, Latency) ---
+    {
+      type   = "metric",
+      x      = 0,
+      y      = (length(var.services) * 8) + 7,
+      width  = 12,
+      height = 6,
+      properties = {
+        title   = "DB - Throughput & Latency (Select)",
+        view    = "timeSeries",
+        stacked = false,
+        region  = var.aws_region,
+        metrics = [
+          ["AWS/RDS", "SelectThroughput", "DBClusterIdentifier", var.db_cluster_identifier],
+          [".", "SelectLatency", ".", ".", { "yAxis": "right" }]
+        ]
+      }
+    },
+    {
+      type   = "metric",
+      x      = 12,
+      y      = (length(var.services) * 8) + 7,
+      width  = 12,
+      height = 6,
+      properties = {
+        title   = "DB - Throughput & Latency (DML)",
+        view    = "timeSeries",
+        stacked = false,
+        region  = var.aws_region,
+        metrics = [
+          ["AWS/RDS", "DMLThroughput", "DBClusterIdentifier", var.db_cluster_identifier],
+          [".", "DMLLatency", ".", ".", { "yAxis": "right" }]
+        ]
+      }
     }
-  }
+  ]
+
+  # db_cluster_identifier가 있을 때만 위젯을 생성
+  db_widgets = [
+    for widget in local.potential_db_widgets : widget if var.db_cluster_identifier != null
+  ]
 
   # 모든 위젯 결합
-  all_widgets = concat(local.service_widgets, [local.db_placeholder_widget])
+  all_widgets = concat(local.service_widgets, local.db_widgets)
 }
 
 resource "aws_cloudwatch_dashboard" "main" {

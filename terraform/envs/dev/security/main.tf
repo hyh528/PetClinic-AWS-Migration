@@ -398,4 +398,6 @@ module "cloudwatch_dashboard" {
   tags = {
     Service = "Monitoring"
   }
+
+  db_cluster_identifier = data.terraform_remote_state.database.outputs.db_cluster_resource_id
 }

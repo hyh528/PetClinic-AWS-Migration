@@ -29,3 +29,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "db_cluster_identifier" {
+  description = "모니터링할 RDS/Aurora 클러스터의 식별자"
+  type        = string
+  default     = null
+}
