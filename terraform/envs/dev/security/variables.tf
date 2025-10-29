@@ -1,11 +1,13 @@
 variable "aws_region" {
   description = "리소스용 AWS 리전"
   type        = string
+  default     = "ap-northeast-2"
 }
 
 variable "aws_profile" {
   description = "인증용 AWS 프로필"
   type        = string
+  default     = "petclinic-hwigwon"
 }
 
 variable "environment" {
@@ -23,6 +25,13 @@ variable "name_prefix" {
 variable "network_state_profile" {
   description = "프로젝트의 network 레이어 Terraform 상태를 읽어올 AWS 프로필"
   type        = string
+  default     = "petclinic-yeonghyeon"
+}
+
+variable "database_state_profile" {
+  description = "프로젝트의 database 레이어 Terraform 상태를 읽어올 AWS 프로필"
+  type        = string
+  default     = "petclinic-junje"
 }
 
 variable "tfstate_bucket_name" {
