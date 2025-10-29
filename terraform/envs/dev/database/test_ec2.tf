@@ -5,12 +5,12 @@ resource "aws_security_group" "test_ec2_sg" {
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   # SSH 접속을 위한 인바운드 규칙 (사용자 IP만 허용)
-  # ingress {
-  #   from_port   = 22
-  #   to_port     = 22
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["112.76.111.10/32"]
-  # }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["112.76.111.10/32"]
+  }
 
   # 모든 아웃바운드 트래픽 허용
   egress {
@@ -43,6 +43,9 @@ resource "aws_iam_role" "test_ec2_role" {
   })
 }
 
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 resource "aws_iam_policy" "test_ec2_policy" {
   name        = "petclinic-test-ec2-policy-dev"
   description = "Allow EC2 to read DB credentials"
@@ -64,12 +67,12 @@ resource "aws_iam_policy" "test_ec2_policy" {
       {
         Effect   = "Allow"
         Action   = "secretsmanager:GetSecretValue"
-        Resource = aws_rds_cluster.petclinic_aurora_cluster.master_user_secret[0].secret_arn
+        Resource = "*"
       },
       {
         Effect   = "Allow"
         Action   = "kms:Decrypt"
-        Resource = aws_kms_key.aurora_secrets.arn
+        Resource = "*"
       }
     ]
   })
