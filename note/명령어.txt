@@ -10,7 +10,7 @@ mvnw.cmd package -DskipTests
 # terraform 명령어
 terraform init -var-file=dev.tfvars
 terraform plan -var-file=dev.tfvars
-terraform apply -var-file=dev.tfvars
+terraform apply -var-file=dev.tfvars --auto-approve
 terraform destroy -var-file=dev.tfvars
 
 # 하나만 실행

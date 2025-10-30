@@ -43,13 +43,21 @@ output "api_gateway_name" {
   value       = module.api_gateway.name
 }
 
-output "alb_load_balancer_arn_suffix" {
-   description = "The ARN suffix of the main Application Load Balancer"
-   value       = aws_lb.main.arn_suffix
+ output "alb_arn_suffix" {                                                                                        
+  description = "The ARN suffix of the main Application Load Balancer (e.g., app/my-alb/1234567890abcdef)"       
+  value       = aws_lb.main.arn_suffix                                                                           
 }
+
 output "alb_target_group_ids" {
-   description = "A map of ALB target group IDs, keyed by service identifier"
-   value = {
-     for k, m in module.ecs : k => m.target_group_id
-   }
+  description = "A map of ALB target group IDs, keyed by service identifier"
+  value = {
+    for k, m in module.ecs : k => m.target_group_id
+  }
 }
+                                                                
+output "alb_target_group_arns" {                                              
+  description = "A map of ALB target group ARNs, keyed by service identifier" 
+  value = {                                                                   
+    for k, m in module.ecs : k => m.target_group_arn                          
+  }                                                                           
+}                                                                             
