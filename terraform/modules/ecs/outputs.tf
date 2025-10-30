@@ -18,6 +18,11 @@ output "target_group_arn" {
   value       = aws_lb_target_group.service.arn
 }
 
+output "target_group_id" {                             
+  description = "The ID of the ALB target group"       
+  value       = aws_lb_target_group.service.id         
+}                                                      
+
 output "log_group_name" {
   description = "The name of the CloudWatch log group"
   value       = aws_cloudwatch_log_group.service.name
@@ -43,3 +48,4 @@ output "target_group_arn_suffix" {
    description = "The ARN suffix of the ALB target group"
    value       = aws_lb_target_group.service.arn_suffix
 }
+                                                       

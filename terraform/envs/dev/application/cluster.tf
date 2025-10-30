@@ -1,5 +1,10 @@
 resource "aws_ecs_cluster" "main" {
   name = "petclinic-cluster"
+  
+  setting {                       
+    name  = "containerInsights"   
+    value = "enabled"             
+  }                                                              
 }
 
 data "aws_iam_role" "ecs_task_execution_role" {

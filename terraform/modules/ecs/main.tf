@@ -13,7 +13,7 @@ resource "aws_lb_target_group" "service" {
   target_type = "ip"
 
   health_check {
-    path                = "/actuator/health"
+    path                = "/actuator/health/liveness"
     protocol            = "HTTP"
     matcher             = "200"
     interval            = 30

@@ -36,3 +36,20 @@ output "alb_target_group_arn_suffixes" {
     for k, m in module.ecs : k => m.target_group_arn_suffix
   }
 }
+
+#모니터링
+output "api_gateway_name" {
+  description = "The name of the API Gateway"
+  value       = module.api_gateway.name
+}
+
+output "alb_load_balancer_arn_suffix" {
+   description = "The ARN suffix of the main Application Load Balancer"
+   value       = aws_lb.main.arn_suffix
+}
+output "alb_target_group_ids" {
+   description = "A map of ALB target group IDs, keyed by service identifier"
+   value = {
+     for k, m in module.ecs : k => m.target_group_id
+   }
+}
