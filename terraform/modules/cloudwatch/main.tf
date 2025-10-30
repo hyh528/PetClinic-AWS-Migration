@@ -48,8 +48,8 @@ locals {
           stacked = false
           region  = var.aws_region
           metrics = [
-            ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", var.services[service_key].alb_target_group_arn_suffix],
-            [".", "UnHealthyHostCount", ".", "."]
+            ["AWS/ApplicationELB", "HealthyHostCount", "LoadBalancer", var.services[service_key].alb_load_balancer_arn_suffix, "TargetGroup", "targetgroup/tg-${service_key}/${var.services[service_key].alb_target_group_id}"],
+            [".", "UnHealthyHostCount", ".", ".", ".", "."]
           ]
           yAxis = {
             left = { min = 0 }
@@ -69,8 +69,8 @@ locals {
           stacked = false
           region  = var.aws_region
           metrics = [
-            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "TargetGroup", var.services[service_key].alb_target_group_arn_suffix, { "stat": "Sum" }],
-            [".", "TargetResponseTime", ".", ".", { "yAxis": "right", "label": "Avg. Response Time" }]
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.services[service_key].alb_load_balancer_arn_suffix, "TargetGroup", "targetgroup/tg-${service_key}/${var.services[service_key].alb_target_group_id}", { "stat": "Sum" }],
+            [".", "TargetResponseTime", ".", ".", ".", ".", { "yAxis": "right", "label": "Avg. Response Time" }]
           ]
         }
       }

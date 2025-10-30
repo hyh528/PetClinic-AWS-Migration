@@ -133,6 +133,30 @@ locals {
       cidr_block = var.vpc_cidr # VPC 내부 응답 트래픽만 허용 (App 서버로의 응답)
       from_port  = 32768
       to_port    = 65535
+    },
+    "dns_udp_out" = {
+      rule_no   = 110
+      action    = "allow"
+      protocol  = "udp"
+      cidr_block = var.vpc_cidr # VPC 내부 DNS 질의 허용
+      from_port = 53
+      to_port   = 53
+    },
+    "dns_tcp_out" = {
+      rule_no   = 111
+      action    = "allow"
+      protocol  = "tcp"
+      cidr_block = var.vpc_cidr # VPC 내부 DNS 질의 허용
+      from_port = 53
+      to_port   = 53
+    },
+    "https_to_vpc_endpoints" = {
+      rule_no   = 120
+      action    = "allow"
+      protocol  = "tcp"
+      cidr_block = var.vpc_cidr # VPC Endpoint (KMS, S3 등) 통신 허용
+      from_port = 443
+      to_port   = 443
     }
   }
 

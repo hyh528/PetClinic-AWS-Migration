@@ -389,9 +389,10 @@ module "cloudwatch_dashboard" {
 
   services = {
     for k, v in data.terraform_remote_state.application.outputs.ecs_service_names : k => {
-      ecs_cluster_name          = data.terraform_remote_state.application.outputs.ecs_cluster_name
-      ecs_service_name          = v
-      alb_target_group_arn_suffix = data.terraform_remote_state.application.outputs.alb_target_group_arn_suffixes[k]
+      ecs_cluster_name           = data.terraform_remote_state.application.outputs.ecs_cluster_name
+      ecs_service_name           = v
+      alb_load_balancer_arn_suffix = data.terraform_remote_state.application.outputs.alb_load_balancer_arn_suffix
+      alb_target_group_id        = data.terraform_remote_state.application.outputs.alb_target_group_ids[k]
     } if contains(["vets-service", "visits-service", "customers-service"], k)
   }
 
@@ -418,14 +419,14 @@ resource "aws_security_group_rule" "app_from_alb" {
   description              = "Allow TCP on port ${each.value} from ALB SG"
 }
 
-resource "aws_security_group_rule" "alb_from_app" {
-  for_each = toset(["8080", "8081", "8082", "8083", "9090"])
+# resource "aws_security_group_rule" "alb_from_app" {
+#   for_each = toset(["8080", "8081", "8082", "8083", "9090"])
 
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = tonumber(each.value)
-  to_port                  = tonumber(each.value)
-  source_security_group_id = module.sg_app.security_group_id
-  security_group_id        = module.sg_alb.security_group_id
-  description              = "Allow TCP on port ${each.value} from App SG"
-}
+#   type                     = "ingress"
+#   protocol                 = "tcp"
+#   from_port                = tonumber(each.value)
+#   to_port                  = tonumber(each.value)
+#   source_security_group_id = module.sg_app.security_group_id
+#   security_group_id        = module.sg_alb.security_group_id
+#   description              = "Allow TCP on port ${each.value} from App SG"
+# }

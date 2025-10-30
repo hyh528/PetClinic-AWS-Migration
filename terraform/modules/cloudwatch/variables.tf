@@ -17,9 +17,10 @@ variable "aws_region" {
 variable "services" {
   description = "모니터링할 서비스 목록과 관련 리소스 이름"
   type = map(object({
-    ecs_cluster_name     = string
-    ecs_service_name     = string
-    alb_target_group_arn_suffix = string
+    ecs_cluster_name           = string
+    ecs_service_name           = string
+    alb_load_balancer_arn_suffix = string
+    alb_target_group_id        = string
   }))
   default = {}
 }
