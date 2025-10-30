@@ -19,7 +19,7 @@ variable "services" {
   type = map(object({
     ecs_cluster_name           = string
     ecs_service_name           = string
-    alb_load_balancer_arn_suffix = string
+    alb_arn_suffix = string
     alb_target_group_id        = string
   }))
   default = {}

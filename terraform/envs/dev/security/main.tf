@@ -326,6 +326,20 @@ module "cloudtrail" {
 }
 
 # =================================================
+# 7) ECS CloudWatch Logs (누락된 로그 그룹 생성)
+# =================================================
+
+resource "aws_cloudwatch_log_group" "ecs_petclinic_cluster" {
+  name              = "/ecs/petclinic/petclinic-cluster"
+  retention_in_days = 30 # 적절한 보존 기간으로 설정
+  tags = {
+    Name        = "petclinic-ecs-cluster-logs"
+    Environment = var.environment
+    Project     = var.name_prefix
+  }
+}
+
+# =================================================
 # 7) X-Ray (분산 추적)
 # =================================================
 
@@ -391,8 +405,8 @@ module "cloudwatch_dashboard" {
     for k, v in data.terraform_remote_state.application.outputs.ecs_service_names : k => {
       ecs_cluster_name           = data.terraform_remote_state.application.outputs.ecs_cluster_name
       ecs_service_name           = v
-      alb_load_balancer_arn_suffix = data.terraform_remote_state.application.outputs.alb_load_balancer_arn_suffix
-      alb_target_group_id        = data.terraform_remote_state.application.outputs.alb_target_group_ids[k]
+      alb_arn_suffix             = data.terraform_remote_state.application.outputs.alb_arn_suffix
+      alb_target_group_id        = split(":", data.terraform_remote_state.application.outputs.alb_target_group_arns[k])[5]
     } if contains(["vets-service", "visits-service", "customers-service"], k)
   }
 
