@@ -28,23 +28,6 @@ output "security_group_ids" {
   }
 }
 
-# =================================================
-# Database 레이어에서 필요한 추가 출력값들
-# =================================================
-
-# DB 비밀번호 Secret ARN
-output "db_password_secret_arn" {
-  description = "데이터베이스 비밀번호 Secrets Manager ARN"
-  value       = module.db_password_secret.secret_arn
-  sensitive   = true
-}
-
-# DB 비밀번호 Secret 이름
-output "db_password_secret_name" {
-  description = "데이터베이스 비밀번호 Secrets Manager 이름"
-  value       = module.db_password_secret.secret_name
-}
-
 # VPC Endpoint 보안 그룹 ID
 output "vpc_endpoint_security_group_id" {
   description = "VPC Endpoint 보안 그룹 ID"
@@ -61,3 +44,24 @@ output "cognito_user_pool_client_id" {
   description = "Cognito User Pool Client ID (나중에 사용)"
   value       = module.cognito.user_pool_client_id
 }
+
+output "api_gateway_cloudwatch_logs_role_arn" {
+  description = "API Gateway CloudWatch 로깅 역할 ARN"
+  value       = module.iam.api_gateway_cloudwatch_logs_role_arn
+}
+
+output "ecs_task_role_arn" {
+  description = "ECS Task Role ARN"
+  value       = module.iam.ecs_task_role_arn
+}
+
+output "ecs_secrets_policy_arn" {
+  description = "ARN of the policy for ECS to access secrets"
+  value       = module.iam.ecs_secrets_policy_arn
+}
+
+# ECS SSM 접근 정책 ARN                                                    
+output "ecs_ssm_policy_arn" {                                              
+  description = "ECS 작업이 SSM 파라미터 스토어에 접근할 수 있도록 허용하는 IAM 정책의 ARN"                                                              
+  value       = aws_iam_policy.ecs_ssm_access_policy.arn                   
+}                                                                          

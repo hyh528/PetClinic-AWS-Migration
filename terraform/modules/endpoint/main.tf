@@ -20,6 +20,47 @@ locals {
       }
     ]
   })
+
+  # SSM 전용 정책: GetParameters 등 필요한 권한만 명시적으로 허용
+  ssm_vpc_endpoint_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter",
+          "ssm:DescribeParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = "*"
+        # Condition = {
+        #   StringEquals = {
+        #     "aws:PrincipalVpc" = var.vpc_id
+        #   }
+        # }
+      }
+    ]
+  })
+
+  # ECR 전용 정책: ECS Task가 ECR에서 이미지를 가져오는 데 필요한 최소한의 권한을 명시적으로 허용
+  ecr_vpc_endpoint_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource  = "*"
+      }
+    ]
+  })
 }
 
 # ECR API VPC 엔드포인트 (Docker 이미지 메타데이터 관리)
@@ -30,7 +71,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   security_group_ids  = [var.vpc_endpoint_sg_id]
   service_name        = "com.amazonaws.${var.aws_region}.ecr.api"
   private_dns_enabled = true
-  policy              = local.vpc_endpoint_policy
+  policy              = local.ecr_vpc_endpoint_policy
 
   tags = {
     Name        = "${var.project_name}-ecr-api-vpce"
@@ -48,7 +89,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   security_group_ids  = [var.vpc_endpoint_sg_id]
   service_name        = "com.amazonaws.${var.aws_region}.ecr.dkr"
   private_dns_enabled = true
-  policy              = local.vpc_endpoint_policy
+  policy              = local.ecr_vpc_endpoint_policy
 
   tags = {
     Name        = "${var.project_name}-ecr-dkr-vpce"
@@ -66,7 +107,20 @@ resource "aws_vpc_endpoint" "cloudwatch_logs" {
   security_group_ids  = [var.vpc_endpoint_sg_id]
   service_name        = "com.amazonaws.${var.aws_region}.logs"
   private_dns_enabled = true
-  policy              = local.vpc_endpoint_policy
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Principal = "*",
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
 
   tags = {
     Name        = "${var.project_name}-cloudwatch-logs-vpce"
@@ -102,7 +156,7 @@ resource "aws_vpc_endpoint" "ssm" {
   security_group_ids  = [var.vpc_endpoint_sg_id]
   service_name        = "com.amazonaws.${var.aws_region}.ssm"
   private_dns_enabled = true
-  policy              = local.vpc_endpoint_policy
+  policy              = local.ssm_vpc_endpoint_policy
 
   tags = {
     Name        = "${var.project_name}-ssm-vpce"
@@ -120,7 +174,20 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   security_group_ids  = [var.vpc_endpoint_sg_id]
   service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
   private_dns_enabled = true
-  policy              = local.vpc_endpoint_policy
+  policy              = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 
   tags = {
     Name        = "${var.project_name}-secretsmanager-vpce"

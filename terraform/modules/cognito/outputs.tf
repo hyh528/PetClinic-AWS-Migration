@@ -24,7 +24,7 @@ output "user_pool_domain" {
 
 output "user_pool_hosted_ui_url" {
   description = "Cognito Hosted UI URL입니다."
-  value       = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.name}.amazoncognito.com"
+  value       = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.id}.amazoncognito.com"
 }
 
 # User Pool Client 관련 출력
@@ -54,21 +54,21 @@ output "identity_pool_arn" {
 output "oauth_endpoints" {
   description = "OAuth 엔드포인트 정보입니다."
   value = {
-    authorization = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.name}.amazoncognito.com/oauth2/authorize"
-    token         = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.name}.amazoncognito.com/oauth2/token"
-    userinfo      = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.name}.amazoncognito.com/oauth2/userInfo"
-    logout        = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.name}.amazoncognito.com/logout"
+    authorization = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.id}.amazoncognito.com/oauth2/authorize"
+    token         = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.id}.amazoncognito.com/oauth2/token"
+    userinfo      = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.id}.amazoncognito.com/oauth2/userInfo"
+    logout        = "https://${aws_cognito_user_pool_domain.this.domain}.auth.${data.aws_region.current.id}.amazoncognito.com/logout"
   }
 }
 
 output "jwks_uri" {
   description = "JSON Web Key Set URI입니다."
-  value       = "https://cognito-idp.${data.aws_region.current.name}.amazonaws.com/${aws_cognito_user_pool.this.id}/.well-known/jwks.json"
+  value       = "https://cognito-idp.${data.aws_region.current.id}.amazonaws.com/${aws_cognito_user_pool.this.id}/.well-known/jwks.json"
 }
 
 output "issuer" {
   description = "JWT 토큰 발급자 정보입니다."
-  value       = "https://cognito-idp.${data.aws_region.current.name}.amazonaws.com/${aws_cognito_user_pool.this.id}"
+  value       = "https://cognito-idp.${data.aws_region.current.id}.amazonaws.com/${aws_cognito_user_pool.this.id}"
 }
 
 # 현재 AWS 리전 정보

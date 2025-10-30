@@ -168,6 +168,22 @@ variable "create_identity_pool" {
   default     = false
 }
 
+# Identity Pool 인증된 사용자 역할 정책에 대한 변수
+variable "cognito_auth_role_policy_actions" {
+  description = "Identity Pool 인증된 사용자 역할이 허용할 AWS 액션 목록입니다."
+  type        = list(string)
+  default     = [
+    "mobileanalytics:PutEvents",
+    "cognito-sync:*",
+    "cognito-identity:*"] # 기본적으로 필요한 최소한의 권한
+}
+
+variable "cognito_auth_role_policy_resources" {
+  description = "Identity Pool 인증된 사용자 역할이 접근할 AWS 리소스 목록입니다."
+  type        = list(string)
+  default     = ["*"] # 초기에는 *로 설정하지만, 프로덕션에서는 세분화 필요
+}
+
 # 커스텀 도메인 (선택사항)
 variable "custom_domain" {
   description = "사용자 풀의 커스텀 도메인입니다 (선택사항)."
