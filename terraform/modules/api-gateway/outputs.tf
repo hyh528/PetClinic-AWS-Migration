@@ -1,3 +1,9 @@
+# API Gateway 이름 출력
+output "name" {
+  description = "The name of the API Gateway"
+  value       = aws_api_gateway_rest_api.this.name
+}
+
 # API Gateway REST API ID 출력
 output "rest_api_id" {
   description = "생성된 API Gateway REST API의 ID입니다."

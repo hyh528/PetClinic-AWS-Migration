@@ -88,3 +88,52 @@ resource "aws_ssm_parameter" "database_secret_arn_parameter" {
     Project = var.project_name
   }
 }
+
+# --------------------------------------------------------------------
+# [추가] Spring Boot Actuator의 Liveness/Readiness 프로브 활성화
+# --------------------------------------------------------------------
+resource "aws_ssm_parameter" "health_probes_enabled" {
+  name      = "/petclinic/common/management/health/probes/enabled"
+  type      = "String"
+  value     = "true"
+  overwrite = true
+  tags = {
+    Category = "common-actuator"
+  }
+}
+
+
+
+
+resource "aws_ssm_parameter" "hikari_settings" {
+  for_each = {
+    "spring.datasource.hikari.max-lifetime"        = "600000", # 10분
+    "spring.datasource.hikari.validation-timeout"  = "5000"    # 5초
+    }
+  name      = "/petclinic/common/${replace(each.key, ".", "/")}"
+  type      = "String"
+  value     = each.value
+  overwrite = true
+  tags = {
+    Category = "common-hikari"
+  }
+  
+}
+
+# [추가] 각 서비스에 Context Path 설정
+resource "aws_ssm_parameter" "service_context_paths" {
+  for_each = {
+    "admin"     = "/admin-server",
+    "customers" = "/customers-service",
+    "vets"      = "/vets-service",
+    "visits"    = "/visits-service"
+  }
+  name      = "/petclinic/${var.environment}/${each.key}/server.servlet.context-path"
+  type      = "String"
+  value     = each.value
+  overwrite = true
+  tags = {
+    Category = "context-path"
+    Service  = each.key
+  }
+}
