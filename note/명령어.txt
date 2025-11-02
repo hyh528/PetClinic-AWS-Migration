@@ -26,10 +26,6 @@ bash scripts/pushImages.sh
 # 로그인
 ecr에서 푸시명령 확인에서 복붙하기!
 
-#
-spring-petclinic-
 
-
-
-# 개인 git으로 올리기
-git push --force new-repo application/ksk-deploy:main
+# git으로 올리기
+git push <리모트이름> <로컬브랜치>:<원격브랜치>
