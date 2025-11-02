@@ -22,12 +22,10 @@ resource "aws_api_gateway_rest_api" "this" {
 # 라우팅 맵
 # --------------------------------------
 locals {
-  # 최상위 경로로 직접 노출될 서비스들 (예: /admin)
   direct_top_level_services = {
     admin = "admin-server"
   }
 
-  # /api/ 경로 아래에 노출될 서비스들 (예: /api/customers, /api/vets, /api/visits)
   api_sub_services = {
     customers = "customers-service"
     vets      = "vets-service"
@@ -51,6 +49,7 @@ resource "aws_api_gateway_integration" "root_alb" {
   http_method             = aws_api_gateway_method.root_any.http_method
   type                    = "HTTP_PROXY"
   integration_http_method = "ANY"
+  # [수정됨] for_each가 없으므로 each.value, each.key 제거
   uri                     = "http://${var.alb_dns_name}/"
 }
 
@@ -77,10 +76,7 @@ resource "aws_api_gateway_method" "direct_proxy_any" {
   resource_id   = aws_api_gateway_resource.direct_service_proxy[each.key].id
   http_method   = "ANY"
   authorization = "NONE"
-
-  request_parameters = {
-    "method.request.path.proxy" = true
-  }
+  request_parameters = { "method.request.path.proxy" = true }
 }
 
 resource "aws_api_gateway_integration" "direct_proxy_alb" {
@@ -90,17 +86,14 @@ resource "aws_api_gateway_integration" "direct_proxy_alb" {
   http_method             = aws_api_gateway_method.direct_proxy_any[each.key].http_method
   type                    = "HTTP_PROXY"
   integration_http_method = "ANY"
+  # [수정됨] 불필요한 each.key 제거
   uri                     = "http://${var.alb_dns_name}/${each.value}/{proxy}"
-
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
-
-  timeout_milliseconds = 29000
+  request_parameters      = { "integration.request.path.proxy" = "method.request.path.proxy" }        
+  timeout_milliseconds    = 29000
 }
 
 # --------------------------------------
-# 2) /api 및 하위 서비스 (예: /api/customers/{proxy+})
+# 2) /api 및 하위 서비스
 # --------------------------------------
 resource "aws_api_gateway_resource" "api_root" {
   rest_api_id = aws_api_gateway_rest_api.this.id
@@ -115,6 +108,28 @@ resource "aws_api_gateway_resource" "api_sub_service_root" {
   path_part   = each.key
 }
 
+# [신규 추가] /api/vets 와 같은 루트 경로 처리
+resource "aws_api_gateway_method" "api_sub_service_root_any" {
+  for_each      = local.api_sub_services
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.api_sub_service_root[each.key].id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+# [신규 추가] /api/vets -> /vets-service/vets 로 변환
+resource "aws_api_gateway_integration" "api_sub_service_root_alb" {
+  for_each                = local.api_sub_services
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.api_sub_service_root[each.key].id
+  http_method             = aws_api_gateway_method.api_sub_service_root_any[each.key].http_method     
+  type                    = "HTTP_PROXY"
+  integration_http_method = "ANY"
+  # [핵심 로직] /api/vets -> http://.../vets-service/vets
+  uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}"
+}
+
+# [기존] /api/vets/{proxy+} 와 같은 하위 경로 처리
 resource "aws_api_gateway_resource" "api_sub_service_proxy" {
   for_each    = local.api_sub_services
   rest_api_id = aws_api_gateway_rest_api.this.id
@@ -128,12 +143,10 @@ resource "aws_api_gateway_method" "api_sub_service_proxy_any" {
   resource_id   = aws_api_gateway_resource.api_sub_service_proxy[each.key].id
   http_method   = "ANY"
   authorization = "NONE"
-
-  request_parameters = {
-    "method.request.path.proxy" = true
-  }
+  request_parameters = { "method.request.path.proxy" = true }
 }
 
+# [기존] /api/vets/{proxy+} -> /vets-service/vets/{proxy+} 로 변환
 resource "aws_api_gateway_integration" "api_sub_service_proxy_alb" {
   for_each                = local.api_sub_services
   rest_api_id             = aws_api_gateway_rest_api.this.id
@@ -141,13 +154,10 @@ resource "aws_api_gateway_integration" "api_sub_service_proxy_alb" {
   http_method             = aws_api_gateway_method.api_sub_service_proxy_any[each.key].http_method
   type                    = "HTTP_PROXY"
   integration_http_method = "ANY"
-  uri                     = "http://${var.alb_dns_name}/${each.value}/{proxy}"
-
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
-
-  timeout_milliseconds = 29000
+  # [핵심 로직] /api/vets/1 -> http://.../vets-service/vets/1
+  uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}/{proxy}"
+  request_parameters      = { "integration.request.path.proxy" = "method.request.path.proxy" }        
+  timeout_milliseconds    = 29000
 }
 
 # --------------------------------------
@@ -288,6 +298,9 @@ resource "aws_api_gateway_deployment" "this" {
 
       # /api 및 하위
       aws_api_gateway_resource.api_root.id,
+      values(aws_api_gateway_resource.api_sub_service_root)[*].id, # 추가된 부분
+      values(aws_api_gateway_method.api_sub_service_root_any)[*].id, # 추가된 부분
+      values(aws_api_gateway_integration.api_sub_service_root_alb)[*].id, # 추가된 부분
       values(aws_api_gateway_resource.api_sub_service_proxy)[*].id,
       values(aws_api_gateway_method.api_sub_service_proxy_any)[*].id,
       values(aws_api_gateway_integration.api_sub_service_proxy_alb)[*].id,
@@ -303,10 +316,6 @@ resource "aws_api_gateway_deployment" "this" {
       values(aws_api_gateway_integration.api_sub_service_proxy_options)[*].id,
       values(aws_api_gateway_method_response.api_sub_service_proxy_options)[*].id,
       values(aws_api_gateway_integration_response.api_sub_service_proxy_options)[*].id,
-
-      # [추가] /api 하위 서비스 루트 경로 리소스                            
-      values(aws_api_gateway_method.api_sub_service_root_any)[*].id,    
-      values(aws_api_gateway_integration.api_sub_service_root_alb)[*].id
     ]))
   }
 
@@ -331,7 +340,7 @@ resource "aws_api_gateway_stage" "this" {
   # (선택) 액세스 로그 설정을 사용하려면 아래 주석 해제 및 IAM 권한 구성 필요
   # access_log_settings {
   #   destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
-  #   format          = jsonencode({ requestId = "$context.requestId", ip = "$context.identity.sourceIp", requestTime = "$context.requestTime", httpMethod = "$context.httpMethod", path = "$context.path", status = "$context.status", protocol = "$context.protocol", responseLength = "$context.responseLength", integrationError = "$context.integration.error" })
+  #   format          = jsonencode({ requestId = "$context.requestId", ip = "$context.identity.sourceIp", requestTime = "$context.requestTime", httpMethod = "$context.httpMethod", path = "$context.path", status = "$context.status", protocol = "$context.protocol", responseLength = "$context.responseLength", integrationError = "$context.integration.error" }))
   # }
 }
 
@@ -350,22 +359,3 @@ resource "aws_cloudwatch_log_group" "api_gateway_logs" {
     ManagedBy   = "terraform"
   }
 }
-
-# /api/customers 와 같은 서비스 루트 경로 처리를 위한 리소스                         
-resource "aws_api_gateway_method" "api_sub_service_root_any" {                       
-  for_each      = local.api_sub_services                                             
-  rest_api_id   = aws_api_gateway_rest_api.this.id                                   
-  resource_id   = aws_api_gateway_resource.api_sub_service_root[each.key].id         
-  http_method   = "ANY"                                                              
-  authorization = "NONE"                                                             
-}                                                                                    
-                                                                                     
-resource "aws_api_gateway_integration" "api_sub_service_root_alb" {                  
-  for_each                = local.api_sub_services                                   
-  rest_api_id             = aws_api_gateway_rest_api.this.id                         
-  resource_id = aws_api_gateway_resource.api_sub_service_root[each.key].id                                                              
-  http_method = aws_api_gateway_method.api_sub_service_root_any[each.key].http_method
-  type                    = "HTTP_PROXY"           
-  integration_http_method = "ANY"                                                    
-  uri                     = "http://${var.alb_dns_name}/${each.value}/"              
-}                                                                                    
