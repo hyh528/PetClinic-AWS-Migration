@@ -38,3 +38,6 @@ GEMINI.md
 # terraform.tfstate (민감 정보 및 상태)
 *.tfstate
 *.tfstate.*
+
+#png
+/png/

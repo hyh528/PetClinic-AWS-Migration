@@ -137,3 +137,14 @@ resource "aws_ssm_parameter" "service_context_paths" {
     Service  = each.key
   }
 }
+
+# [추가] 분산 추적 기능 비활성화
+resource "aws_ssm_parameter" "tracing_disabled" {
+  name      = "/petclinic/common/management/tracing/enabled"
+  type      = "String"
+  value     = "false"
+  overwrite = true
+  tags = {
+    Category = "common-tracing"
+  }
+}
