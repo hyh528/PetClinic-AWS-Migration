@@ -17,7 +17,7 @@ module "parameter_store" {
   common_parameters      = local.basic_parameters
   environment_parameters = local.database_parameters
   # secure_parameters는 locals.tf에 정의되어 있음
-  secure_parameters      = local.secure_parameters
+  secure_parameters = local.secure_parameters
   # 기본 태그 설정
   tags = local.common_parameter_tags
   # 의존성 확인 (선택적 - 디버깅용)

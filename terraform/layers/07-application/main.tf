@@ -10,183 +10,24 @@ data "aws_caller_identity" "current" {}
 # 공통 로컬 변수 (공유 변수 활용)
 
 # =============================================================================
-# EC2 인스턴스 - 데이터베이스 디버깅용
+# Bastion Host 모듈 (조건부 생성)
 # =============================================================================
 
-# 최신 Amazon Linux 2 AMI 조회
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-  owners      = ["amazon"]
+module "debug_infrastructure" {
+  source = "../../modules/debug-infrastructure"
 
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
+  enable_debug_infrastructure = var.enable_debug_infrastructure
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
+  name_prefix                       = var.name_prefix
+  vpc_id                            = local.vpc_id
+  public_subnet_ids                 = local.public_subnet_ids
+  aurora_security_group_id          = local.aurora_security_group_id
+  aws_region                        = var.aws_region
+  db_cluster_endpoint               = data.terraform_remote_state.database.outputs.cluster_endpoint
+  rds_secret_access_policy_arn      = local.rds_secret_access_policy_arn
+  parameter_store_access_policy_arn = local.parameter_store_access_policy_arn
 
-# Bastion Host (퍼블릭 서브넷)
-resource "aws_instance" "bastion" {
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t3.micro"
-  key_name      = "petclinic-debug"
-
-  # 네트워크 설정 - 퍼블릭 서브넷에 배치
-  subnet_id                   = local.public_subnet_ids[0]
-  vpc_security_group_ids      = [aws_security_group.bastion.id]
-  associate_public_ip_address = true
-
-  tags = merge(local.layer_common_tags, {
-    Name = "${var.name_prefix}-bastion"
-    Type = "bastion-host"
-  })
-}
-
-# Bastion Host 보안 그룹
-resource "aws_security_group" "bastion" {
-  name_prefix = "${var.name_prefix}-bastion-"
-  vpc_id      = local.vpc_id
-
-  # SSH 인바운드 허용 (임시로 모든 IP에서 허용)
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # 아웃바운드: 모든 트래픽 허용
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.layer_common_tags, {
-    Name = "${var.name_prefix}-bastion-sg"
-    Type = "bastion-security-group"
-  })
-}
-
-resource "aws_instance" "db_debug" {
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t3.micro"
-  key_name      = "petclinic-debug"
-
-  # 네트워크 설정 - 프라이빗 서브넷 유지
-  subnet_id                   = local.private_app_subnet_ids[0]
-  vpc_security_group_ids      = [aws_security_group.db_debug.id]
-  associate_public_ip_address = false
-
-  # IAM 역할 (SSM 접근용)
-  iam_instance_profile = aws_iam_instance_profile.db_debug.name
-
-  # 사용자 데이터 (MySQL 클라이언트 설치 및 데이터베이스 연결 스크립트)
-  user_data = base64encode(<<-EOF
-    #!/bin/bash
-    yum update -y
-    amazon-linux-extras install -y epel
-    yum install -y mysql
-    yum install -y telnet
-    yum install -y nc
-    yum install -y jq
-    yum install -y awscli
-
-    # 데이터베이스 연결 정보 조회 및 연결 테스트
-    echo "=== Database Connection Test ===" > /tmp/db_test.log
-
-    # Parameter Store에서 DB 정보 조회
-    DB_URL=$(aws ssm get-parameter --name "/petclinic/dev/db/url" --query "Parameter.Value" --output text --region us-west-2)
-    DB_USERNAME=$(aws ssm get-parameter --name "/petclinic/dev/db/username" --query "Parameter.Value" --output text --region us-west-2)
-    DB_SECRET_ARN=$(aws ssm get-parameter --name "/petclinic/dev/db/secrets-manager-name" --query "Parameter.Value" --output text --region us-west-2)
-
-    echo "DB_URL: $DB_URL" >> /tmp/db_test.log
-    echo "DB_USERNAME: $DB_USERNAME" >> /tmp/db_test.log
-    echo "DB_SECRET_ARN: $DB_SECRET_ARN" >> /tmp/db_test.log
-
-    # Secrets Manager에서 비밀번호 조회
-    DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "$DB_SECRET_ARN" --query "SecretString" --output text --region us-west-2 | jq -r '.password')
-
-    echo "DB_PASSWORD retrieved successfully" >> /tmp/db_test.log
-
-    # MySQL 연결 테스트
-    echo "=== Testing MySQL Connection ===" >> /tmp/db_test.log
-    mysql -h petclinic-dev-aurora-cluster.cluster-cr6g0qccsvqv.us-west-2.rds.amazonaws.com \
-          -P 3306 \
-          -u "$DB_USERNAME" \
-          -p"$DB_PASSWORD" \
-          -e "SHOW DATABASES;" >> /tmp/db_test.log 2>&1
-
-    # petclinic 데이터베이스 확인
-    echo "=== Checking petclinic database ===" >> /tmp/db_test.log
-    mysql -h petclinic-dev-aurora-cluster.cluster-cr6g0qccsvqv.us-west-2.rds.amazonaws.com \
-          -P 3306 \
-          -u "$DB_USERNAME" \
-          -p"$DB_PASSWORD" \
-          -e "USE petclinic; SHOW TABLES;" >> /tmp/db_test.log 2>&1
-
-    # 사용자 권한 확인
-    echo "=== Checking user permissions ===" >> /tmp/db_test.log
-    mysql -h petclinic-dev-aurora-cluster.cluster-cr6g0qccsvqv.us-west-2.rds.amazonaws.com \
-          -P 3306 \
-          -u "$DB_USERNAME" \
-          -p"$DB_PASSWORD" \
-          -e "SELECT User, Host FROM mysql.user WHERE User = '$DB_USERNAME';" >> /tmp/db_test.log 2>&1
-
-    echo "=== Test Complete ===" >> /tmp/db_test.log
-  EOF
-  )
-
-  tags = merge(local.layer_common_tags, {
-    Name = "${var.name_prefix}-db-debug"
-    Type = "db-debug-instance"
-  })
-
-  depends_on = [aws_security_group.db_debug]
-}
-
-# EC2용 보안 그룹 (Bastion Host에서 SSH 접근 허용)
-resource "aws_security_group" "db_debug" {
-  name_prefix = "${var.name_prefix}-db-debug-"
-  vpc_id      = local.vpc_id
-
-  # Bastion Host에서 SSH 접근 허용
-  ingress {
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.bastion.id]
-  }
-
-  # 아웃바운드: 모든 트래픽 허용 (NAT Gateway를 통해 인터넷 접근)
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.layer_common_tags, {
-    Name = "${var.name_prefix}-db-debug-sg"
-    Type = "db-debug-security-group"
-  })
-}
-
-# Aurora 보안 그룹에 EC2 인스턴스 접근 허용 규칙 추가
-resource "aws_security_group_rule" "aurora_allow_db_debug" {
-  type                     = "ingress"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
-  security_group_id        = local.aurora_security_group_id
-  source_security_group_id = aws_security_group.db_debug.id
-
-  description = "Allow MySQL access from DB debug EC2 instance"
+  tags = local.layer_common_tags
 }
 
 # Aurora 보안 그룹에 ECS 태스크 접근 허용 규칙 추가
@@ -201,92 +42,19 @@ resource "aws_security_group_rule" "aurora_allow_ecs" {
   description = "Allow MySQL access from ECS tasks"
 }
 
-# ECS 태스크용 보안 그룹에 ALB 접근 허용 규칙 추가
+# ECS 태스크용 보안 그룹에 ALB 접근 허용 규칙 추가 (단일 규칙으로 모든 8080 포트 허용)
 resource "aws_security_group_rule" "alb_to_ecs" {
-  for_each = local.services
-
   type                     = "ingress"
-  from_port                = each.value.port
-  to_port                  = each.value.port
+  from_port                = 8080
+  to_port                  = 8080
   protocol                 = "tcp"
   security_group_id        = local.ecs_security_group_id
   source_security_group_id = module.alb.alb_security_group_id
 
-  description = "Allow ALB to access ECS tasks on port ${each.value.port}"
+  description = "Allow ALB to access ECS tasks on port 8080"
 }
 
-# EC2용 IAM 역할
-resource "aws_iam_role" "db_debug" {
-  name = "${var.name_prefix}-db-debug-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = merge(local.layer_common_tags, {
-    Name = "${var.name_prefix}-db-debug-role"
-    Type = "iam-role"
-  })
-}
-
-# Secrets Manager 접근 정책
-resource "aws_iam_role_policy" "db_debug_secrets" {
-  name = "${var.name_prefix}-db-debug-secrets-policy"
-  role = aws_iam_role.db_debug.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = [
-          "arn:aws:secretsmanager:us-west-2:897722691159:secret:rds!cluster-*"
-        ]
-      }
-    ]
-  })
-}
-
-# SSM 정책 연결
-resource "aws_iam_role_policy_attachment" "db_debug_ssm" {
-  role       = aws_iam_role.db_debug.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-# Secrets Manager 접근 정책 추가
-resource "aws_iam_role_policy_attachment" "db_debug_secrets" {
-  role       = aws_iam_role.db_debug.name
-  policy_arn = local.rds_secret_access_policy_arn
-}
-
-# Parameter Store 접근 정책 추가
-resource "aws_iam_role_policy_attachment" "db_debug_params" {
-  role       = aws_iam_role.db_debug.name
-  policy_arn = local.parameter_store_access_policy_arn
-}
-
-# 인스턴스 프로파일
-resource "aws_iam_instance_profile" "db_debug" {
-  name = "${var.name_prefix}-db-debug-profile"
-  role = aws_iam_role.db_debug.name
-
-  tags = merge(local.layer_common_tags, {
-    Name = "${var.name_prefix}-db-debug-profile"
-    Type = "iam-instance-profile"
-  })
-}
 
 # =============================================================================
 # ECR 모듈 (각 서비스별 리포지토리)
@@ -323,6 +91,19 @@ module "alb" {
 
   vpc_id            = local.vpc_id
   public_subnet_ids = local.public_subnet_ids
+
+  # Rate Limiting 및 보안 설정
+  enable_waf_rate_limiting = var.enable_alb_rate_limiting
+  rate_limit_per_ip        = var.alb_rate_limit_per_ip
+  rate_limit_burst_per_ip  = var.alb_rate_limit_burst_per_ip
+  enable_geo_blocking      = var.enable_geo_blocking
+  blocked_countries        = var.blocked_countries
+  enable_security_rules    = var.enable_security_rules
+
+  # 모니터링 설정
+  enable_waf_monitoring      = var.enable_waf_monitoring
+  rate_limit_alarm_threshold = var.alb_rate_limit_alarm_threshold
+  alarm_actions              = var.alarm_actions
 
   tags = local.layer_common_tags
 }
@@ -405,7 +186,7 @@ resource "aws_cloudwatch_log_group" "services" {
   for_each = local.services
 
   name              = "/ecs/${var.name_prefix}-${each.key}"
-  retention_in_days = 30
+  retention_in_days = local.log_retention_days
 
   tags = merge(local.layer_common_tags, {
     Service = each.key
@@ -424,71 +205,24 @@ resource "aws_ecs_task_definition" "services" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = each.value.cpu
   memory                   = each.value.memory
-  execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/petclinic-ecs-task-execution-role"
-  task_role_arn            = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/petclinic-ecs-task-execution-role"
+  execution_role_arn       = data.terraform_remote_state.security.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.security.outputs.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([
-    {
-      name      = each.key
-      image     = lookup(var.service_image_map, each.key, null)
-      cpu       = each.value.cpu
-      memory    = each.value.memory
-      essential = true
-      portMappings = [
-        {
-          containerPort = each.value.port
-          hostPort      = each.value.port
-          protocol      = "tcp"
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.services[each.key].name
-          "awslogs-region"        = var.aws_region
-          "awslogs-stream-prefix" = "ecs"
-        }
-      }
-      command = [
-        "/bin/sh",
-        "-c",
-        "echo '=== ECR DNS Resolution Test ===' && nslookup us-west-2.dkr.ecr.us-west-2.amazonaws.com && echo '=== ECR API DNS Test ===' && nslookup api.ecr.us-west-2.amazonaws.com && echo '=== ECR Auth Test ===' && timeout 10 aws ecr get-login-password --region us-west-2 && echo '=== Auth Success ===' || echo '=== Auth Failed ===' && echo '=== Network Test ===' && curl -I --connect-timeout 5 https://google.com && echo '=== Tests Complete - Starting Application ===' && exec java -jar app.jar"
-      ]
-      environment = [
-        {
-          name  = "SPRING_PROFILES_ACTIVE"
-          value = "mysql,aws"
-        },
-        {
-          name  = "AWS_ECR_DEBUG"
-          value = "true"
-        }
-      ]
-      secrets = [
-        {
-          name      = "SPRING_DATASOURCE_URL"
-          valueFrom = "/petclinic/${var.environment}/db/url"
-        },
-        {
-          name      = "SPRING_DATASOURCE_USERNAME"
-          valueFrom = "/petclinic/${var.environment}/db/username"
-        },
-        {
-          name      = "SPRING_DATASOURCE_PASSWORD"
-          valueFrom = "arn:aws:secretsmanager:us-west-2:897722691159:secret:rds!cluster-a2e69195-87ba-46c7-beb9-f3cb45e32887-AOx2t1:password::"
-        }
-      ]
-      # DNS 설정을 명시적으로 추가하여 Route 53 Resolver 강제 사용
-      # dnsServers        = ["169.254.169.253"]  # awsvpc 모드에서는 지원되지 않음
-      # dnsSearchDomains  = ["us-west-2.compute.internal"]
-    }
-  ])
+  container_definitions = templatefile("${path.module}/templates/container-definition.json.tpl", {
+    service_name     = each.key
+    image_uri        = lookup(var.service_image_map, each.key, "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.name_prefix}-${each.key}:latest")
+    cpu              = each.value.cpu
+    memory           = each.value.memory
+    container_port   = each.value.port
+    log_group_name   = aws_cloudwatch_log_group.services[each.key].name
+    aws_region       = var.aws_region
+    environment_vars = local.common_environment
+    secrets          = local.common_secrets
+  })
 
   tags = merge(local.layer_common_tags, {
     Service = each.key
   })
-
-  # 빌드는 CI로 분리되어 있으므로 null_resource 의존성을 제거합니다.
 }
 
 resource "aws_ecs_service" "services" {

@@ -159,17 +159,6 @@ resource "aws_cloudtrail" "main" {
       values = ["${aws_s3_bucket.cloudtrail.arn}/*"]
     }
 
-    # 데이터 이벤트 - Parameter Store 접근 로그
-    data_resource {
-      type   = "AWS::SSM::Parameter"
-      values = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/petclinic/*"]
-    }
-
-    # 데이터 이벤트 - Secrets Manager 접근 로그
-    data_resource {
-      type   = "AWS::SecretsManager::Secret"
-      values = ["arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:petclinic/*"]
-    }
   }
 
   depends_on = [aws_s3_bucket_policy.cloudtrail]

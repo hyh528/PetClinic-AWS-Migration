@@ -149,9 +149,28 @@ terraform apply -var-file=../../envs/dev.tfvars
 
 ### Phase 5: 모니터링 및 통합
 
-#### 9. Monitoring Layer
+#### 9. AWS Native Integration Layer
 ```bash
-cd terraform/layers/09-monitoring
+cd terraform/layers/09-aws-native
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
+```
+**이유**: 모든 AWS 네이티브 서비스들 간의 통합과 오케스트레이션
+
+**생성 리소스**:
+- API Gateway와 Lambda GenAI 통합
+- 서비스 간 연결 검증 및 모니터링
+- 통합 CloudWatch 대시보드
+- WAF 보안 설정 (선택사항)
+- Route 53 헬스체크 (선택사항)
+- 비용 최적화 태그 및 정책
+
+---
+
+#### 10. Monitoring Layer
+```bash
+cd terraform/layers/10-monitoring
 terraform init -backend-config=backend.config -reconfigure
 terraform plan -var-file=../../envs/dev.tfvars
 terraform apply -var-file=../../envs/dev.tfvars
@@ -163,25 +182,6 @@ terraform apply -var-file=../../envs/dev.tfvars
 - CloudWatch 알람
 - SNS 토픽 (알림용)
 - X-Ray 설정
-
----
-
-#### 10. AWS Native Integration Layer
-```bash
-cd terraform/layers/10-aws-native
-terraform init -backend-config=backend.config -reconfigure
-terraform plan -var-file=../../envs/dev.tfvars
-terraform apply -var-file=../../envs/dev.tfvars
-```
-**이유**: 모든 AWS 네이티브 서비스들 간의 통합과 오케스트레이션
-
-**생성 리소스** (클린 아키텍처 적용):
-- API Gateway와 Lambda GenAI 통합
-- 서비스 간 연결 검증 및 모니터링
-- 통합 CloudWatch 대시보드
-- WAF 보안 설정 (선택사항)
-- Route 53 헬스체크 (선택사항)
-- 비용 최적화 태그 및 정책
 
 ---
 
@@ -228,8 +228,8 @@ LAYERS=(
     "06-lambda-genai"
     "07-application"
     "08-api-gateway"
-    "09-monitoring"
-    "10-aws-native"
+    "09-aws-native"
+    "10-monitoring"
     "11-frontend"
 )
 
@@ -275,8 +275,8 @@ $Layers = @(
     "06-lambda-genai",
     "07-application",
     "08-api-gateway",
-    "09-monitoring",
-    "10-aws-native",
+    "09-aws-native",
+    "10-monitoring",
     "11-frontend"
 )
 
@@ -325,7 +325,7 @@ foreach ($layer in $Layers) {
 **역순으로 실행해야 합니다**:
 ```bash
 # 정리 순서 (역순)
-11-frontend → 10-aws-native → 09-monitoring → 08-api-gateway →
+11-frontend → 10-monitoring → 09-aws-native → 08-api-gateway →
 07-application → 06-lambda-genai → 05-cloud-map → 04-parameter-store →
 03-database → 02-security → 01-network
 ```
@@ -364,8 +364,8 @@ terraform output
 | lambda-genai | 2-3분 | Lambda 함수 배포 |
 | application | 5-8분 | ECS 서비스 시작 |
 | api-gateway | 2-3분 | API 배포 |
-| monitoring | 2-3분 | 대시보드 생성 |
 | aws-native | 1-2분 | 통합 설정 |
+| monitoring | 2-3분 | 대시보드 생성 |
 | frontend | 3-5분 | S3 + CloudFront 배포 |
 
 

@@ -94,3 +94,15 @@ output "deployment_info" {
     alb_dns_name = module.alb.alb_dns_name
   }
 }
+
+# =============================================================================
+# 디버깅 인프라 관련 출력값
+# =============================================================================
+
+output "debug_infrastructure" {
+  description = "Bastion Host 정보 (조건부 생성)"
+  value = {
+    enabled           = module.debug_infrastructure.debug_infrastructure_enabled
+    bastion_public_ip = module.debug_infrastructure.bastion_public_ip
+  }
+}

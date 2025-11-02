@@ -219,3 +219,108 @@ variable "integration_latency_threshold" {
   type        = number
   default     = 800
 }
+
+# Rate Limiting 설정
+variable "enable_rate_limiting" {
+  description = "Rate Limiting 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "rate_limit_per_ip" {
+  description = "IP당 분당 요청 제한 수"
+  type        = number
+  default     = 1000
+
+  validation {
+    condition     = var.rate_limit_per_ip > 0 && var.rate_limit_per_ip <= 10000
+    error_message = "IP당 요청 제한은 1에서 10000 사이여야 합니다."
+  }
+}
+
+variable "rate_limit_burst_per_ip" {
+  description = "IP당 버스트 요청 제한 수"
+  type        = number
+  default     = 2000
+
+  validation {
+    condition     = var.rate_limit_burst_per_ip > 0 && var.rate_limit_burst_per_ip <= 20000
+    error_message = "IP당 버스트 요청 제한은 1에서 20000 사이여야 합니다."
+  }
+}
+
+variable "rate_limit_window_minutes" {
+  description = "Rate Limiting 윈도우 시간 (분)"
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = contains([1, 5, 10, 15, 30, 60], var.rate_limit_window_minutes)
+    error_message = "Rate Limiting 윈도우는 1, 5, 10, 15, 30, 60분 중 하나여야 합니다."
+  }
+}
+
+variable "enable_waf_integration" {
+  description = "AWS WAF 통합 활성화 여부 (고급 Rate Limiting)"
+  type        = bool
+  default     = false
+}
+
+variable "waf_rate_limit_rules" {
+  description = "WAF Rate Limiting 규칙 설정"
+  type = list(object({
+    name        = string
+    priority    = number
+    limit       = number
+    window      = number # 초 단위 (60, 300, 600, 1800, 3600)
+    action      = string # ALLOW, BLOCK, COUNT
+    description = string
+  }))
+  default = [
+    {
+      name        = "GeneralRateLimit"
+      priority    = 1
+      limit       = 1000
+      window      = 300 # 5분
+      action      = "BLOCK"
+      description = "일반적인 Rate Limiting - 5분간 1000 요청 제한"
+    },
+    {
+      name        = "StrictRateLimit"
+      priority    = 2
+      limit       = 100
+      window      = 60 # 1분
+      action      = "BLOCK"
+      description = "엄격한 Rate Limiting - 1분간 100 요청 제한"
+    }
+  ]
+
+  validation {
+    condition = alltrue([
+      for rule in var.waf_rate_limit_rules :
+      contains([60, 300, 600, 1800, 3600], rule.window)
+    ])
+    error_message = "WAF Rate Limiting 윈도우는 60, 300, 600, 1800, 3600초 중 하나여야 합니다."
+  }
+
+  validation {
+    condition = alltrue([
+      for rule in var.waf_rate_limit_rules :
+      contains(["ALLOW", "BLOCK", "COUNT"], rule.action)
+    ])
+    error_message = "WAF 액션은 ALLOW, BLOCK, COUNT 중 하나여야 합니다."
+  }
+}
+
+# CloudWatch 알람 - Rate Limiting 관련
+variable "rate_limit_alarm_threshold" {
+  description = "Rate Limiting 위반 알람 임계값 (5분간 차단된 요청 수)"
+  type        = number
+  default     = 50
+}
+
+variable "enable_rate_limit_monitoring" {
+  description = "Rate Limiting 모니터링 활성화 여부"
+  type        = bool
+  default     = true
+}

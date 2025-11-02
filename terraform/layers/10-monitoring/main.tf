@@ -6,8 +6,8 @@
 # 공통 로컬 변수
 locals {
   # 각 레이어에서 필요한 정보
-  api_gateway_name     = "petclinic-api"  # 고정값 사용
-  lambda_function_name = "petclinic-dev-genai-function"  # 고정값 사용
+  api_gateway_name     = "petclinic-api"                # 고정값 사용
+  lambda_function_name = "petclinic-dev-genai-function" # 고정값 사용
   aurora_cluster_name  = data.terraform_remote_state.database.outputs.cluster_identifier
   alb_name             = data.terraform_remote_state.application.outputs.alb_dns_name
 }

@@ -88,7 +88,7 @@ resource "aws_security_group_rule" "lambda_mysql_outbound" {
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/lambda_function.zip"
-  
+
   source {
     content  = "def handler(event, context): return {'statusCode': 200, 'body': 'Hello World'}"
     filename = "index.py"

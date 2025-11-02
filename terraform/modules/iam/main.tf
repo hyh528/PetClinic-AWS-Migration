@@ -1,3 +1,7 @@
+# 현재 AWS 계정 정보 및 리전 정보 가져오기
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 # CLI 전용 그룹 생성
 resource "aws_iam_group" "cli_users" {
   name = "${var.project_name}-cli-users"
@@ -45,7 +49,7 @@ resource "aws_iam_group_membership" "cli_users" {
 
 # ECS 태스크 실행 역할 생성
 resource "aws_iam_role" "ecs_task_execution" {
-  name = "petclinic-ecs-task-execution-role"
+  name = "${var.project_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -60,9 +64,12 @@ resource "aws_iam_role" "ecs_task_execution" {
     ]
   })
 
-  tags = {
-    Name = "petclinic-ecs-task-execution-role"
-  }
+  tags = merge(var.tags, {
+    Name      = "${var.project_name}-ecs-task-execution-role"
+    Component = "iam"
+    Purpose   = "ecs-task-execution"
+    ManagedBy = "terraform"
+  })
 }
 
 # ECS 태스크 실행 역할 정책 연결
@@ -79,7 +86,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
 
 # Parameter Store 및 Secrets Manager 읽기 권한 추가
 resource "aws_iam_role_policy" "parameter_store_read" {
-  name = "petclinic-parameter-store-read"
+  name = "${var.project_name}-parameter-store-read"
   role = aws_iam_role.ecs_task_execution.id
 
   policy = jsonencode({
@@ -92,21 +99,21 @@ resource "aws_iam_role_policy" "parameter_store_read" {
           "ssm:GetParameters",
           "ssm:GetParametersByPath"
         ]
-        Resource = "arn:aws:ssm:us-west-2:897722691159:parameter/petclinic/*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/*"
       },
       {
         Effect = "Allow"
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = "arn:aws:secretsmanager:us-west-2:897722691159:secret:rds!cluster-*"
+        Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:rds!cluster-*"
       },
       {
         Effect = "Allow"
         Action = [
           "kms:Decrypt"
         ]
-        Resource = "arn:aws:kms:us-west-2:897722691159:key/*"
+        Resource = "arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"
       }
     ]
   })

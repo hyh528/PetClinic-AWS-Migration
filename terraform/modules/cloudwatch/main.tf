@@ -164,7 +164,7 @@ resource "aws_cloudwatch_log_group" "lambda_genai" {
 # CloudWatch 메트릭 필터 (비즈니스 메트릭 추출)
 resource "aws_cloudwatch_log_metric_filter" "error_count" {
   name           = "ErrorCount"
-  log_group_name = "/ecs/${var.ecs_cluster_name}/${var.ecs_service_name}"
+  log_group_name = "/ecs/${var.ecs_service_name}"
   pattern        = "[timestamp, request_id, level=\"ERROR\", ...]"
 
   metric_transformation {
@@ -176,7 +176,7 @@ resource "aws_cloudwatch_log_metric_filter" "error_count" {
 
 resource "aws_cloudwatch_log_metric_filter" "response_time" {
   name           = "ResponseTime"
-  log_group_name = "/ecs/${var.ecs_cluster_name}/${var.ecs_service_name}"
+  log_group_name = "/ecs/${var.ecs_service_name}"
   pattern        = "[timestamp, request_id, level, message, response_time]"
 
   metric_transformation {

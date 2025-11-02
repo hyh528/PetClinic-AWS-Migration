@@ -167,8 +167,7 @@ resource "aws_iam_policy" "parameter_store_access" {
           "ssm:GetParametersByPath"
         ]
         Resource = [
-          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.name_prefix}/*",
-          "arn:aws:ssm:${var.aws_region}:*:parameter/petclinic/*"
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.name_prefix}/*"
         ]
       },
       {

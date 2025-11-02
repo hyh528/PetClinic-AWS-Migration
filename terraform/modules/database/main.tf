@@ -97,7 +97,7 @@ resource "aws_rds_cluster" "this" {
 
 resource "null_resource" "enable_data_api" {
   triggers = {
-    cluster_arn = aws_rds_cluster.this.arn
+    cluster_arn    = aws_rds_cluster.this.arn
     engine_version = aws_rds_cluster.this.engine_version
   }
 

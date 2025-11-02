@@ -156,3 +156,79 @@ variable "tfstate_bucket_name" {
   description = "Terraform 상태 파일을 저장할 S3 버킷 이름"
   type        = string
 }
+
+# =============================================================================
+# Rate Limiting 및 보안 설정
+# =============================================================================
+
+variable "enable_rate_limiting" {
+  description = "Rate Limiting 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "rate_limit_per_ip" {
+  description = "IP당 분당 요청 제한 수"
+  type        = number
+  default     = 1000
+}
+
+variable "rate_limit_burst_per_ip" {
+  description = "IP당 버스트 요청 제한 수"
+  type        = number
+  default     = 2000
+}
+
+variable "rate_limit_window_minutes" {
+  description = "Rate Limiting 윈도우 시간 (분)"
+  type        = number
+  default     = 1
+}
+
+variable "enable_waf_integration" {
+  description = "AWS WAF 통합 활성화 여부 (고급 Rate Limiting)"
+  type        = bool
+  default     = true
+}
+
+variable "waf_rate_limit_rules" {
+  description = "WAF Rate Limiting 규칙 설정"
+  type = list(object({
+    name        = string
+    priority    = number
+    limit       = number
+    window      = number
+    action      = string
+    description = string
+  }))
+  default = [
+    {
+      name        = "GeneralRateLimit"
+      priority    = 1
+      limit       = 1000
+      window      = 300
+      action      = "BLOCK"
+      description = "일반적인 Rate Limiting - 5분간 1000 요청 제한"
+    },
+    {
+      name        = "StrictRateLimit"
+      priority    = 2
+      limit       = 100
+      window      = 60
+      action      = "BLOCK"
+      description = "엄격한 Rate Limiting - 1분간 100 요청 제한"
+    }
+  ]
+}
+
+variable "rate_limit_alarm_threshold" {
+  description = "Rate Limiting 위반 알람 임계값 (5분간 차단된 요청 수)"
+  type        = number
+  default     = 50
+}
+
+variable "enable_rate_limit_monitoring" {
+  description = "Rate Limiting 모니터링 활성화 여부"
+  type        = bool
+  default     = true
+}

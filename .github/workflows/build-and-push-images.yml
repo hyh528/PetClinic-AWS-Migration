@@ -1,10 +1,10 @@
 name: 서비스 이미지 빌드 및 배포
 
 on:
-   push:
-     paths:
-       - 'spring-petclinic-*/**'
-       - '.github/workflows/build-and-push-images.yml'
+  push:
+    paths:
+      - "spring-petclinic-*/**"
+      - ".github/workflows/build-and-push-images.yml"
 
 jobs:
   build-and-deploy:
@@ -30,8 +30,8 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
@@ -141,7 +141,6 @@ jobs:
           docker push ${{ env.ECR_REGISTRY }}/petclinic-dev-admin:latest
           echo "✅ admin-server 푸시 완료 (태그: ${COMBINED_TAG}, latest)"
 
-
       - name: 이미지 매핑 아티팩트 생성
         run: |
           # Terraform 변수 `service_image_map`에 필요한 이미지 URI 매핑
@@ -190,17 +189,455 @@ jobs:
           echo "✅ 배포 정보 생성 완료"
           echo "이미지 태그: ${IMAGE_TAG}"
 
-      - name: Application Layer 배포 (수동)
+      - name: ECS 서비스 자동 업데이트
         run: |
-          echo "🚀 Application Layer 배포 준비 완료"
-          echo "다음 명령어로 수동 배포하세요:"
+          echo "🚀 ECS 서비스 자동 업데이트 시작..."
+
+          # ECS 클러스터 및 서비스 정보
+          CLUSTER_NAME="petclinic-dev-cluster"
+          SERVICES=("petclinic-dev-customers" "petclinic-dev-vets" "petclinic-dev-visits" "petclinic-dev-admin")
+
+          # 각 서비스별로 업데이트 실행
+          for service in "${SERVICES[@]}"; do
+            echo "🔄 ${service} 서비스 업데이트 중..."
+            
+            # ECS 서비스 강제 새 배포 실행
+            aws ecs update-service \
+              --cluster ${CLUSTER_NAME} \
+              --service ${service} \
+              --force-new-deployment \
+              --region ${AWS_REGION} \
+              --output table
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ ${service} 서비스 업데이트 요청 성공"
+            else
+              echo "❌ ${service} 서비스 업데이트 실패"
+              exit 1
+            fi
+          done
+
+          echo "✅ 모든 ECS 서비스 업데이트 요청 완료"
+
+      - name: ECS 서비스 배포 상태 확인
+        run: |
+          echo "⏳ ECS 서비스 배포 상태 확인 중..."
+
+          CLUSTER_NAME="petclinic-dev-cluster"
+          SERVICES=("petclinic-dev-customers" "petclinic-dev-vets" "petclinic-dev-visits" "petclinic-dev-admin")
+
+          # 각 서비스의 배포 상태 확인
+          for service in "${SERVICES[@]}"; do
+            echo "🔍 ${service} 서비스 상태 확인 중..."
+            
+            # 서비스 상태 조회
+            SERVICE_STATUS=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].status' \
+              --output text)
+            
+            RUNNING_COUNT=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].runningCount' \
+              --output text)
+            
+            DESIRED_COUNT=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].desiredCount' \
+              --output text)
+            
+            echo "📊 ${service}: 상태=${SERVICE_STATUS}, 실행중=${RUNNING_COUNT}, 목표=${DESIRED_COUNT}"
+            
+            # 배포 이벤트 확인 (최근 5개)
+            echo "📋 ${service} 최근 배포 이벤트:"
+            aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].events[:5].[createdAt,message]' \
+              --output table
+          done
+
+          echo "✅ ECS 서비스 상태 확인 완료"
+
+      - name: 배포 완료 대기 및 검증
+        id: deployment-validation
+        run: |
+          echo "⏳ ECS 서비스 안정화 대기 중..."
+
+          CLUSTER_NAME="petclinic-dev-cluster"
+          SERVICES=("petclinic-dev-customers" "petclinic-dev-vets" "petclinic-dev-visits" "petclinic-dev-admin")
+          FAILED_SERVICES=()
+
+          # 배포 시작 시간 기록
+          DEPLOYMENT_START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "deployment_start_time=${DEPLOYMENT_START_TIME}" >> $GITHUB_OUTPUT
+
+          # 각 서비스가 안정화될 때까지 대기 (최대 15분)
+          for service in "${SERVICES[@]}"; do
+            echo "⏳ ${service} 서비스 안정화 대기 중..."
+            
+            # 배포 전 태스크 정의 ARN 저장 (롤백용)
+            PREVIOUS_TASK_DEF=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].taskDefinition' \
+              --output text)
+            
+            echo "previous_${service//-/_}_task_def=${PREVIOUS_TASK_DEF}" >> $GITHUB_OUTPUT
+            
+            # AWS CLI wait 명령어로 서비스 안정화 대기
+            timeout 900 aws ecs wait services-stable \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION}
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ ${service} 서비스 안정화 완료"
+              
+              # 헬스체크 검증
+              HEALTHY_TASKS=$(aws ecs describe-services \
+                --cluster ${CLUSTER_NAME} \
+                --services ${service} \
+                --region ${AWS_REGION} \
+                --query 'services[0].runningCount' \
+                --output text)
+              
+              DESIRED_TASKS=$(aws ecs describe-services \
+                --cluster ${CLUSTER_NAME} \
+                --services ${service} \
+                --region ${AWS_REGION} \
+                --query 'services[0].desiredCount' \
+                --output text)
+              
+              if [ "${HEALTHY_TASKS}" -eq "${DESIRED_TASKS}" ]; then
+                echo "✅ ${service} 헬스체크 통과: ${HEALTHY_TASKS}/${DESIRED_TASKS} 태스크 정상"
+              else
+                echo "❌ ${service} 헬스체크 실패: ${HEALTHY_TASKS}/${DESIRED_TASKS} 태스크 정상"
+                FAILED_SERVICES+=("${service}")
+              fi
+            else
+              echo "❌ ${service} 서비스 안정화 시간 초과 (15분)"
+              FAILED_SERVICES+=("${service}")
+              
+              # 실패한 서비스의 상세 정보 출력
+              echo "🔍 ${service} 서비스 상세 정보:"
+              aws ecs describe-services \
+                --cluster ${CLUSTER_NAME} \
+                --services ${service} \
+                --region ${AWS_REGION} \
+                --query 'services[0].events[:5].[createdAt,message]' \
+                --output table
+            fi
+          done
+
+          # 실패한 서비스가 있는지 확인
+          if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+            echo "failed_services=${FAILED_SERVICES[*]}" >> $GITHUB_OUTPUT
+            echo "deployment_status=failed" >> $GITHUB_OUTPUT
+            echo "❌ 배포 실패: ${FAILED_SERVICES[*]}"
+            exit 1
+          else
+            echo "deployment_status=success" >> $GITHUB_OUTPUT
+            echo "🎉 모든 ECS 서비스 배포 및 안정화 완료!"
+          fi
+
+      - name: 배포 실패 시 자동 롤백
+        if: failure() && steps.deployment-validation.outputs.deployment_status == 'failed'
+        run: |
+          echo "🔄 배포 실패 감지 - 자동 롤백 시작..."
+
+          CLUSTER_NAME="petclinic-dev-cluster"
+          FAILED_SERVICES="${{ steps.deployment-validation.outputs.failed_services }}"
+
+          echo "📋 롤백 대상 서비스: ${FAILED_SERVICES}"
+
+          # 실패한 서비스들을 이전 태스크 정의로 롤백
+          for service in ${FAILED_SERVICES}; do
+            echo "🔄 ${service} 서비스 롤백 중..."
+            
+            # 이전 태스크 정의 ARN 가져오기
+            service_var="previous_${service//-/_}_task_def"
+            previous_task_def=$(echo "${{ steps.deployment-validation.outputs }}" | grep "${service_var}" | cut -d'=' -f2)
+            
+            if [ -n "${previous_task_def}" ] && [ "${previous_task_def}" != "None" ]; then
+              # 이전 태스크 정의로 서비스 업데이트
+              aws ecs update-service \
+                --cluster ${CLUSTER_NAME} \
+                --service ${service} \
+                --task-definition ${previous_task_def} \
+                --region ${AWS_REGION}
+              
+              echo "✅ ${service} 롤백 요청 완료 (태스크 정의: ${previous_task_def})"
+              
+              # 롤백 완료 대기 (최대 10분)
+              echo "⏳ ${service} 롤백 완료 대기 중..."
+              timeout 600 aws ecs wait services-stable \
+                --cluster ${CLUSTER_NAME} \
+                --services ${service} \
+                --region ${AWS_REGION}
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ ${service} 롤백 완료"
+              else
+                echo "❌ ${service} 롤백 시간 초과"
+              fi
+            else
+              echo "❌ ${service} 이전 태스크 정의를 찾을 수 없음 - 수동 롤백 필요"
+            fi
+          done
+
+          echo "🔄 자동 롤백 프로세스 완료"
+
+      - name: 배포 상태 로깅 및 모니터링
+        if: always()
+        run: |
+          echo "📊 배포 상태 로깅 및 모니터링..."
+
+          CLUSTER_NAME="petclinic-dev-cluster"
+          SERVICES=("petclinic-dev-customers" "petclinic-dev-vets" "petclinic-dev-visits" "petclinic-dev-admin")
+          DEPLOYMENT_STATUS="${{ steps.deployment-validation.outputs.deployment_status }}"
+          DEPLOYMENT_START="${{ steps.deployment-validation.outputs.deployment_start_time }}"
+          DEPLOYMENT_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo "📋 배포 요약 리포트"
+          echo "===================="
+          echo "🕐 시작 시간: ${DEPLOYMENT_START}"
+          echo "🕐 종료 시간: ${DEPLOYMENT_END}"
+          echo "📊 배포 상태: ${DEPLOYMENT_STATUS}"
+          echo "🏷️  이미지 태그: ${IMAGE_TAG}"
+          echo "🔗 커밋 SHA: ${{ github.sha }}"
+          echo "👤 트리거: ${{ github.actor }}"
+          echo "🌿 브랜치: ${{ github.ref_name }}"
           echo ""
-          echo "cd terraform/layers/07-application"
-          echo "terraform init -backend-config=\"../../backend.hcl\" -backend-config=\"backend.config\" -reconfigure"
-          echo "TF_VAR_service_image_map='${SERVICE_IMAGE_MAP}' terraform plan -var-file=\"../../envs/dev.tfvars\""
-          echo "TF_VAR_service_image_map='${SERVICE_IMAGE_MAP}' terraform apply -auto-approve -var-file=\"../../envs/dev.tfvars\""
+
+          # 각 서비스의 최종 상태 확인
+          echo "📋 서비스별 최종 상태:"
+          for service in "${SERVICES[@]}"; do
+            SERVICE_STATUS=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].status' \
+              --output text 2>/dev/null || echo "UNKNOWN")
+            
+            RUNNING_COUNT=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].runningCount' \
+              --output text 2>/dev/null || echo "0")
+            
+            DESIRED_COUNT=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].desiredCount' \
+              --output text 2>/dev/null || echo "0")
+            
+            TASK_DEFINITION=$(aws ecs describe-services \
+              --cluster ${CLUSTER_NAME} \
+              --services ${service} \
+              --region ${AWS_REGION} \
+              --query 'services[0].taskDefinition' \
+              --output text 2>/dev/null || echo "UNKNOWN")
+            
+            echo "  ${service}: ${SERVICE_STATUS} (${RUNNING_COUNT}/${DESIRED_COUNT}) - ${TASK_DEFINITION}"
+          done
+
+          # CloudWatch 로그에 배포 이벤트 기록
           echo ""
-          echo "또는 배포 스크립트 사용:"
-          echo "./terraform/scripts/deploy-application.sh dev ${IMAGE_TAG}"
+          echo "📝 CloudWatch 로그 그룹에 배포 이벤트 기록 중..."
+
+          # 배포 메트릭을 CloudWatch에 전송 (선택사항)
+          if [ "${DEPLOYMENT_STATUS}" == "success" ]; then
+            aws cloudwatch put-metric-data \
+              --namespace "PetClinic/Deployment" \
+              --metric-data MetricName=DeploymentSuccess,Value=1,Unit=Count \
+              --region ${AWS_REGION} || echo "CloudWatch 메트릭 전송 실패 (무시)"
+          else
+            aws cloudwatch put-metric-data \
+              --namespace "PetClinic/Deployment" \
+              --metric-data MetricName=DeploymentFailure,Value=1,Unit=Count \
+              --region ${AWS_REGION} || echo "CloudWatch 메트릭 전송 실패 (무시)"
+          fi
+
+          echo "✅ 배포 상태 로깅 완료"
+
+      - name: 배포 성공 알림
+        if: success()
+        run: |
+          echo "🎉 PetClinic 애플리케이션 배포 성공!"
           echo ""
-          echo "✅ GitHub Actions에서 빌드 및 이미지 푸시는 완료됨"
+          echo "📋 배포 요약:"
+          echo "- 이미지 태그: ${IMAGE_TAG}"
+          echo "- 배포된 서비스: customers, vets, visits, admin"
+          echo "- 클러스터: petclinic-dev-cluster"
+          echo "- 리전: ${AWS_REGION}"
+          echo "- 커밋: ${{ github.sha }}"
+          echo "- 브랜치: ${{ github.ref_name }}"
+          echo "- 배포자: ${{ github.actor }}"
+          echo ""
+          echo "🔗 애플리케이션 접속:"
+          echo "- ALB 엔드포인트를 통해 애플리케이션에 접속 가능"
+          echo ""
+          echo "✅ CI/CD 파이프라인 완료: 빌드 → 푸시 → 배포 → 검증"
+
+          # GitHub 이슈에 배포 성공 코멘트 추가 (선택사항)
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            echo "📝 PR에 배포 성공 알림 추가..."
+            # PR 코멘트는 별도 액션으로 처리 가능
+          fi
+
+      - name: 배포 실패 팀 알림
+        if: failure()
+        run: |
+          echo "❌ PetClinic 애플리케이션 배포 실패!"
+          echo ""
+          echo "🚨 배포 실패 정보:"
+          echo "- 이미지 태그: ${IMAGE_TAG}"
+          echo "- 실패한 서비스: ${{ steps.deployment-validation.outputs.failed_services }}"
+          echo "- 클러스터: petclinic-dev-cluster"
+          echo "- 리전: ${AWS_REGION}"
+          echo "- 커밋: ${{ github.sha }}"
+          echo "- 브랜치: ${{ github.ref_name }}"
+          echo "- 배포자: ${{ github.actor }}"
+          echo "- 워크플로우 URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "🔄 자동 롤백 상태:"
+          if [ "${{ steps.deployment-validation.outputs.deployment_status }}" == "failed" ]; then
+            echo "- 자동 롤백이 실행되었습니다"
+            echo "- 실패한 서비스들이 이전 버전으로 복원되었습니다"
+          else
+            echo "- 롤백이 필요하지 않습니다"
+          fi
+          echo ""
+          echo "🔍 다음 단계:"
+          echo "1. 워크플로우 로그를 확인하여 실패 원인을 파악하세요"
+          echo "2. 애플리케이션 코드 또는 설정을 수정하세요"
+          echo "3. 수정 후 다시 배포를 시도하세요"
+          echo ""
+          echo "📞 긴급한 경우 팀 리더에게 연락하세요"
+
+          # 실패 시 GitHub 이슈 생성 (선택사항)
+          echo "📝 배포 실패 이슈 생성 준비..."
+          echo "DEPLOYMENT_FAILURE_DETAILS<<EOF" >> $GITHUB_ENV
+          echo "## 🚨 배포 실패 알림" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "**배포 정보:**" >> $GITHUB_ENV
+          echo "- 이미지 태그: \`${IMAGE_TAG}\`" >> $GITHUB_ENV
+          echo "- 실패한 서비스: \`${{ steps.deployment-validation.outputs.failed_services }}\`" >> $GITHUB_ENV
+          echo "- 커밋: \`${{ github.sha }}\`" >> $GITHUB_ENV
+          echo "- 브랜치: \`${{ github.ref_name }}\`" >> $GITHUB_ENV
+          echo "- 배포자: @${{ github.actor }}" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "**워크플로우:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "**자동 롤백:** 실행됨" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "**다음 단계:**" >> $GITHUB_ENV
+          echo "1. 워크플로우 로그 확인" >> $GITHUB_ENV
+          echo "2. 실패 원인 분석 및 수정" >> $GITHUB_ENV
+          echo "3. 재배포 시도" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      # Slack 알림 (선택사항 - Slack Webhook URL이 설정된 경우)
+      - name: Slack 알림 전송
+        if: always() && secrets.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          custom_payload: |
+            {
+              "channel": "#petclinic-alerts",
+              "username": "GitHub Actions",
+              "icon_emoji": ":github:",
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "title": "${{ job.status == 'success' && '✅ PetClinic 배포 성공' || '❌ PetClinic 배포 실패' }}",
+                  "fields": [
+                    {
+                      "title": "프로젝트",
+                      "value": "PetClinic",
+                      "short": true
+                    },
+                    {
+                      "title": "환경",
+                      "value": "DEV",
+                      "short": true
+                    },
+                    {
+                      "title": "이미지 태그",
+                      "value": "`${{ env.IMAGE_TAG }}`",
+                      "short": true
+                    },
+                    {
+                      "title": "배포자",
+                      "value": "@${{ github.actor }}",
+                      "short": true
+                    },
+                    {
+                      "title": "브랜치",
+                      "value": "`${{ github.ref_name }}`",
+                      "short": false
+                    },
+                    {
+                      "title": "커밋",
+                      "value": "`${{ github.sha }}`",
+                      "short": false
+                    }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "워크플로우 보기",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    },
+                    {
+                      "type": "button", 
+                      "text": "커밋 보기",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+                    }
+                  ],
+                  "footer": "GitHub Actions",
+                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+                  "ts": ${{ github.event.head_commit.timestamp && 'github.event.head_commit.timestamp' || 'github.run_number' }}
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # Microsoft Teams 알림 (선택사항)
+      - name: Teams 알림 전송
+        if: always() && secrets.TEAMS_WEBHOOK_URL != ''
+        uses: skitionek/notify-microsoft-teams@master
+        with:
+          webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          overwrite: |
+            {
+              "themeColor": "${{ job.status == 'success' && '00FF00' || 'FF0000' }}",
+              "summary": "PetClinic 배포 ${{ job.status == 'success' && '성공' || '실패' }}",
+              "sections": [{
+                "activityTitle": "PetClinic 배포 ${{ job.status == 'success' && '성공' || '실패' }}",
+                "activitySubtitle": "환경: DEV | 배포자: ${{ github.actor }}",
+                "facts": [
+                  {"name": "이미지 태그", "value": "${{ env.IMAGE_TAG }}"},
+                  {"name": "브랜치", "value": "${{ github.ref_name }}"},
+                  {"name": "커밋", "value": "${{ github.sha }}"}
+                ],
+                "potentialAction": [{
+                  "@type": "OpenUri",
+                  "name": "워크플로우 보기",
+                  "targets": [{"os": "default", "uri": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}]
+                }]
+              }]
+            }

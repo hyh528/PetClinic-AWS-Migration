@@ -59,3 +59,82 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# Rate Limiting 설정
+variable "enable_waf_rate_limiting" {
+  description = "ALB에 WAF Rate Limiting 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "rate_limit_per_ip" {
+  description = "IP당 5분간 요청 제한 수"
+  type        = number
+  default     = 1000
+
+  validation {
+    condition     = var.rate_limit_per_ip > 0 && var.rate_limit_per_ip <= 20000
+    error_message = "IP당 요청 제한은 1에서 20000 사이여야 합니다."
+  }
+}
+
+variable "rate_limit_burst_per_ip" {
+  description = "IP당 1분간 버스트 요청 제한 수"
+  type        = number
+  default     = 200
+
+  validation {
+    condition     = var.rate_limit_burst_per_ip > 0 && var.rate_limit_burst_per_ip <= 5000
+    error_message = "IP당 버스트 요청 제한은 1에서 5000 사이여야 합니다."
+  }
+}
+
+variable "enable_geo_blocking" {
+  description = "지역 차단 기능 활성화 여부"
+  type        = bool
+  default     = false
+}
+
+variable "blocked_countries" {
+  description = "차단할 국가 코드 목록 (ISO 3166-1 alpha-2)"
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for country in var.blocked_countries :
+      length(country) == 2
+    ])
+    error_message = "국가 코드는 2자리 ISO 3166-1 alpha-2 형식이어야 합니다."
+  }
+}
+
+variable "enable_security_rules" {
+  description = "추가 보안 규칙 활성화 여부 (SQL Injection, XSS 방지)"
+  type        = bool
+  default     = true
+}
+
+variable "waf_log_retention_days" {
+  description = "WAF 로그 보관 기간 (일)"
+  type        = number
+  default     = 14
+}
+
+variable "enable_waf_monitoring" {
+  description = "WAF 모니터링 및 알람 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "rate_limit_alarm_threshold" {
+  description = "Rate Limiting 위반 알람 임계값 (5분간 차단된 요청 수)"
+  type        = number
+  default     = 100
+}
+
+variable "alarm_actions" {
+  description = "알람 발생 시 실행할 액션 (SNS 토픽 ARN 등)"
+  type        = list(string)
+  default     = []
+}

@@ -132,3 +132,64 @@ service_image_map = {
   visits    = "897722691159.dkr.ecr.us-west-2.amazonaws.com/petclinic-dev-visits:latest"
   admin     = "897722691159.dkr.ecr.us-west-2.amazonaws.com/petclinic-dev-admin:latest"
 }
+
+# Bastion Host 설정 (개발 환경에서만 활성화)
+enable_debug_infrastructure = true
+
+# =============================================================================
+# Rate Limiting 및 보안 설정
+# =============================================================================
+
+# ALB Rate Limiting 설정
+enable_alb_rate_limiting       = true
+alb_rate_limit_per_ip          = 1000  # 5분간 1000 요청
+alb_rate_limit_burst_per_ip    = 200   # 1분간 200 요청
+enable_geo_blocking            = false # 개발 환경에서는 비활성화
+blocked_countries              = []    # 필요시 ["CN", "RU"] 등 추가
+enable_security_rules          = true  # SQL Injection, XSS 방지
+enable_waf_monitoring          = true
+alb_rate_limit_alarm_threshold = 100
+
+# API Gateway Rate Limiting 설정
+enable_rate_limiting         = true
+rate_limit_per_ip            = 1000 # 분당 1000 요청
+rate_limit_burst_per_ip      = 2000 # 버스트 2000 요청
+rate_limit_window_minutes    = 1
+enable_waf_integration       = true
+rate_limit_alarm_threshold   = 50
+enable_rate_limit_monitoring = true
+
+# WAF Rate Limiting 규칙 (API Gateway용)
+waf_rate_limit_rules = [
+  {
+    name        = "GeneralRateLimit"
+    priority    = 1
+    limit       = 1000
+    window      = 300 # 5분
+    action      = "BLOCK"
+    description = "일반적인 Rate Limiting - 5분간 1000 요청 제한"
+  },
+  {
+    name        = "StrictRateLimit"
+    priority    = 2
+    limit       = 100
+    window      = 60 # 1분
+    action      = "BLOCK"
+    description = "엄격한 Rate Limiting - 1분간 100 요청 제한"
+  }
+]
+
+# =============================================================================
+# 알림 시스템 설정 (12-notification 레이어)
+# =============================================================================
+
+# Slack 알림 설정 (환경 변수 TF_VAR_slack_webhook_url 사용)
+slack_webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL" # 실제 값은 TF_VAR_slack_webhook_url 환경 변수로 설정
+slack_channel     = "#petclinic-alerts"
+email_endpoint    = "" # 이메일 알림 (선택사항)
+
+# 테스트 설정 (개발 환경에서만)
+create_test_alarm = true
+
+# 알람 액션 (12-notification 레이어 배포 후 SNS 토픽 ARN으로 업데이트)
+alarm_actions = ["arn:aws:sns:us-west-2:897722691159:petclinic-dev-alerts"] # 예: ["arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts"]

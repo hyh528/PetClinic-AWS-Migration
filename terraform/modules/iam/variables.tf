@@ -20,3 +20,9 @@ variable "enable_role_based_policies" {
   type        = bool
   default     = false
 }
+
+variable "tags" {
+  description = "공통 리소스 태그"
+  type        = map(string)
+  default     = {}
+}

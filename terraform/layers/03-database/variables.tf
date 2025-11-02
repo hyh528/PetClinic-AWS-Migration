@@ -51,7 +51,7 @@ variable "instance_class" {
 variable "engine_version" {
   description = "Aurora MySQL 엔진 버전"
   type        = string
-  default     = "8.0.mysql_aurora.3.08.0"
+  default     = "8.0.mysql_aurora.3.08.2"
 }
 
 # 데이터베이스 설정

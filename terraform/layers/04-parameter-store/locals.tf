@@ -26,10 +26,10 @@ locals {
     # Spring 프로파일 설정
     "/petclinic/common/spring.profiles.active" = "mysql,aws"
     "/petclinic/common/logging.level.root"     = "INFO"
-    # 서버 포트 설정 (각 서비스별 실제 포트)
-    "/petclinic/${var.environment}/customers/server.port" = "8081"
-    "/petclinic/${var.environment}/vets/server.port"      = "8082"
-    "/petclinic/${var.environment}/visits/server.port"    = "8083"
+    # 서버 포트 설정 (ALB ↔ ECS 통신 포트에 맞춤)
+    "/petclinic/${var.environment}/customers/server.port" = "8080"
+    "/petclinic/${var.environment}/vets/server.port"      = "8080"
+    "/petclinic/${var.environment}/visits/server.port"    = "8080"
     "/petclinic/${var.environment}/admin/server.port"     = "8080"
   }
 

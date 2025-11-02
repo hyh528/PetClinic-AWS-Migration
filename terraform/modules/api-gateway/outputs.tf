@@ -172,7 +172,36 @@ output "monitoring_enabled" {
 output "cloudwatch_alarms" {
   description = "생성된 CloudWatch 알람 정보"
   value = var.enable_monitoring ? {
-    for alarm_name, alarm_config in local.alarms : alarm_name => {
+    for alarm_name, alarm_config in {
+      "4xx-error-rate" = {
+        metric_name         = "4XXError"
+        comparison_operator = "GreaterThanThreshold"
+        threshold           = var.error_4xx_threshold
+        statistic           = "Sum"
+        description         = "API Gateway 4XX 에러율이 임계값을 초과했습니다"
+      }
+      "5xx-error-rate" = {
+        metric_name         = "5XXError"
+        comparison_operator = "GreaterThanThreshold"
+        threshold           = var.error_5xx_threshold
+        statistic           = "Sum"
+        description         = "API Gateway 5XX 에러율이 임계값을 초과했습니다"
+      }
+      "latency" = {
+        metric_name         = "Latency"
+        comparison_operator = "GreaterThanThreshold"
+        threshold           = var.latency_threshold
+        statistic           = "Average"
+        description         = "API Gateway 평균 지연시간이 임계값을 초과했습니다"
+      }
+      "integration-latency" = {
+        metric_name         = "IntegrationLatency"
+        comparison_operator = "GreaterThanThreshold"
+        threshold           = var.integration_latency_threshold
+        statistic           = "Average"
+        description         = "API Gateway 통합 지연시간이 임계값을 초과했습니다"
+      }
+      } : alarm_name => {
       alarm_name  = aws_cloudwatch_metric_alarm.api_alarms[alarm_name].alarm_name
       alarm_arn   = aws_cloudwatch_metric_alarm.api_alarms[alarm_name].arn
       metric_name = alarm_config.metric_name

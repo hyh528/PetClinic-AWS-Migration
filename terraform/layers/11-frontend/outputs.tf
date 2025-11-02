@@ -1,28 +1,11 @@
-# Frontend Hosting Layer Outputs
+# =============================================================================
+# Frontend Layer Outputs - 핵심 정보만 간단하게
+# =============================================================================
 
-output "s3_bucket_id" {
-  description = "프론트엔드 S3 버킷 ID"
-  value       = module.s3_frontend.bucket_id
-}
-
+# 필수 정보
 output "s3_bucket_name" {
-  description = "프론트엔드 S3 버킷 이름"
+  description = "S3 버킷 이름"
   value       = module.s3_frontend.bucket_name
-}
-
-output "s3_bucket_arn" {
-  description = "프론트엔드 S3 버킷 ARN"
-  value       = module.s3_frontend.bucket_arn
-}
-
-output "s3_bucket_domain_name" {
-  description = "프론트엔드 S3 버킷 도메인 이름"
-  value       = module.s3_frontend.bucket_domain_name
-}
-
-output "s3_bucket_website_endpoint" {
-  description = "프론트엔드 S3 정적 웹사이트 엔드포인트"
-  value       = module.s3_frontend.bucket_website_endpoint
 }
 
 output "cloudfront_distribution_id" {
@@ -30,74 +13,40 @@ output "cloudfront_distribution_id" {
   value       = module.cloudfront.distribution_id
 }
 
-output "cloudfront_distribution_domain_name" {
-  description = "CloudFront 배포 도메인 이름"
-  value       = module.cloudfront.distribution_domain_name
-}
-
-output "cloudfront_distribution_url" {
-  description = "CloudFront 배포 URL"
+output "frontend_url" {
+  description = "프론트엔드 URL (CloudFront)"
   value       = module.cloudfront.distribution_url
-}
-
-output "cloudfront_distribution_hosted_zone_id" {
-  description = "CloudFront 배포 호스팅 영역 ID (Route 53용)"
-  value       = module.cloudfront.distribution_hosted_zone_id
 }
 
 output "api_gateway_url" {
-  description = "통합된 API Gateway URL"
+  description = "API Gateway URL"
   value       = local.api_gateway_domain_name
 }
 
-output "frontend_url" {
-  description = "프론트엔드 애플리케이션 URL (CloudFront)"
-  value       = module.cloudfront.distribution_url
+# 파일 업로드용 정보
+output "upload_command" {
+  description = "파일 업로드 AWS CLI 명령어"
+  value       = "aws s3 sync ../../../spring-petclinic-api-gateway/src/main/resources/static/ s3://${module.s3_frontend.bucket_name}/ --delete"
 }
 
-output "cloudfront_oai_iam_arn" {
-  description = "CloudFront Origin Access Identity IAM ARN"
-  value       = module.s3_frontend.cloudfront_oai_iam_arn
+output "cache_invalidation_command" {
+  description = "CloudFront 캐시 무효화 명령어"
+  value       = "aws cloudfront create-invalidation --distribution-id ${module.cloudfront.distribution_id} --paths '/*'"
 }
 
-output "tags" {
-  description = "레이어에 적용된 태그"
-  value       = local.layer_common_tags
-}
+# 배포 완료 메시지
+output "deployment_complete" {
+  description = "배포 완료 안내"
+  value       = <<EOT
+✅ Frontend 레이어 배포 완료!
 
-output "configuration_summary" {
-  description = "프론트엔드 호스팅 설정 요약"
-  value = {
-    s3_bucket_name         = module.s3_frontend.bucket_name
-    cloudfront_domain      = module.cloudfront.distribution_domain_name
-    api_gateway_url        = local.api_gateway_domain_name
-    frontend_url           = module.cloudfront.distribution_url
-    spa_routing_enabled    = var.enable_spa_routing
-    cors_headers_enabled   = var.enable_cors_headers
-    monitoring_enabled     = var.enable_monitoring
-    versioning_enabled     = var.enable_versioning
-    access_logging_enabled = var.enable_access_logging
-  }
-}
+🌐 접속 URL: ${module.cloudfront.distribution_url}
+📦 S3 버킷: ${module.s3_frontend.bucket_name}
 
-output "deployment_instructions" {
-  description = "프론트엔드 배포 후 확인사항"
-  value = <<EOT
-🎉 프론트엔드 호스팅 레이어 배포 완료!
+📁 파일 업로드 방법:
+aws s3 sync ../../../spring-petclinic-api-gateway/src/main/resources/static/ s3://${module.s3_frontend.bucket_name}/ --delete
 
-📋 다음 단계:
-1. 프론트엔드 URL: ${module.cloudfront.distribution_url}
-2. API Gateway URL: ${local.api_gateway_domain_name}
-3. S3 버킷: ${module.s3_frontend.bucket_name}
-
-🔍 확인사항:
-- 프론트엔드 페이지가 정상 로드되는지 확인
-- 챗봇 기능이 Lambda GenAI로 작동하는지 확인
-- 데이터베이스 CRUD 작업이 가능한지 확인
-
-⚠️  주의사항:
-- 프론트엔드 파일들은 Terraform apply 시 자동으로 S3에 업로드됩니다
-- 파일 변경 시 Terraform apply를 재실행하여 업데이트하세요
-- CloudFront 캐시로 인해 변경사항이 즉시 반영되지 않을 수 있습니다
+🔄 캐시 무효화:
+aws cloudfront create-invalidation --distribution-id ${module.cloudfront.distribution_id} --paths '/*'
 EOT
 }

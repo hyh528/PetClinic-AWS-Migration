@@ -57,18 +57,18 @@ output "tags" {
 output "configuration_summary" {
   description = "CloudFront 설정 요약"
   value = {
-    distribution_id         = aws_cloudfront_distribution.frontend.id
-    domain_name            = aws_cloudfront_distribution.frontend.domain_name
-    price_class            = aws_cloudfront_distribution.frontend.price_class
-    enabled                = aws_cloudfront_distribution.frontend.enabled
-    ipv6_enabled           = aws_cloudfront_distribution.frontend.is_ipv6_enabled
-    s3_origin_enabled      = true
-    api_gateway_enabled    = var.enable_api_gateway_integration
-    spa_routing_enabled    = var.enable_spa_routing
-    cors_headers_enabled   = var.enable_cors_headers
-    monitoring_enabled     = var.enable_monitoring
-    logging_enabled        = var.enable_logging
-    waf_enabled            = var.web_acl_arn != null
-    ssl_certificate        = var.use_default_certificate ? "default" : "custom"
+    distribution_id      = aws_cloudfront_distribution.frontend.id
+    domain_name          = aws_cloudfront_distribution.frontend.domain_name
+    price_class          = aws_cloudfront_distribution.frontend.price_class
+    enabled              = aws_cloudfront_distribution.frontend.enabled
+    ipv6_enabled         = aws_cloudfront_distribution.frontend.is_ipv6_enabled
+    s3_origin_enabled    = true
+    api_gateway_enabled  = var.enable_api_gateway_integration
+    spa_routing_enabled  = var.enable_spa_routing
+    cors_headers_enabled = var.enable_cors_headers
+    monitoring_enabled   = var.enable_monitoring
+    logging_enabled      = var.enable_logging
+    waf_enabled          = var.web_acl_arn != null
+    ssl_certificate      = var.use_default_certificate ? "default" : "custom"
   }
 }

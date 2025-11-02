@@ -29,8 +29,9 @@ terraform/
 │   ├── 06-lambda-genai/
 │   ├── 07-application/
 │   ├── 08-api-gateway/
-│   ├── 09-monitoring/
-│   └── 10-aws-native/
+│   ├── 09-aws-native/
+│   ├── 10-monitoring/
+│   └── 11-frontend/
 └── modules/
 ```
 
@@ -95,7 +96,7 @@ done
 # 레이어별 검증 (백엔드 없이)
 cd terraform/layers
 
-for layer in 01-network 02-security 03-database 04-parameter-store 05-cloud-map 06-lambda-genai 07-application 08-api-gateway 09-monitoring 10-aws-native; do
+for layer in 01-network 02-security 03-database 04-parameter-store 05-cloud-map 06-lambda-genai 07-application 08-api-gateway 09-aws-native 10-monitoring; do
     echo "=== $layer 레이어 검증 ==="
     cd "$layer"
     terraform fmt -check

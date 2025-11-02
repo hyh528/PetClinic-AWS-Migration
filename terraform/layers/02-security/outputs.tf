@@ -44,3 +44,8 @@ output "cloudwatch_logs_access_policy_arn" {
   description = "CloudWatch Logs 접근 정책 ARN"
   value       = module.security_groups.cloudwatch_logs_access_policy_arn
 }
+
+output "ecs_task_execution_role_arn" {
+  description = "ECS 태스크 실행 역할 ARN"
+  value       = module.iam_roles.ecs_task_execution_role_arn
+}

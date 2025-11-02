@@ -105,16 +105,16 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # 사용자 지정 에러 페이지 (SPA용)
   custom_error_response {
-    error_code         = 404
-    response_code      = 200
-    response_page_path = "/index.html"
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
     error_caching_min_ttl = 300
   }
 
   custom_error_response {
-    error_code         = 403
-    response_code      = 200
-    response_page_path = "/index.html"
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
     error_caching_min_ttl = 300
   }
 
@@ -192,12 +192,12 @@ EOF
 resource "aws_lambda_function" "cors_headers" {
   count = var.enable_cors_headers ? 1 : 0
 
-  filename         = data.archive_file.cors_lambda[0].output_path
-  function_name    = "${var.name_prefix}-cors-headers"
-  role            = aws_iam_role.lambda_edge[0].arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-  publish         = true
+  filename      = data.archive_file.cors_lambda[0].output_path
+  function_name = "${var.name_prefix}-cors-headers"
+  role          = aws_iam_role.lambda_edge[0].arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  publish       = true
 
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-cors-lambda"

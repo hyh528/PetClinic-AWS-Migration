@@ -72,5 +72,15 @@ module "api_gateway" {
   latency_threshold             = var.latency_threshold
   integration_latency_threshold = var.integration_latency_threshold
 
+  # Rate Limiting 설정 (보안 강화)
+  enable_rate_limiting         = var.enable_rate_limiting
+  rate_limit_per_ip            = var.rate_limit_per_ip
+  rate_limit_burst_per_ip      = var.rate_limit_burst_per_ip
+  rate_limit_window_minutes    = var.rate_limit_window_minutes
+  enable_waf_integration       = var.enable_waf_integration
+  waf_rate_limit_rules         = var.waf_rate_limit_rules
+  rate_limit_alarm_threshold   = var.rate_limit_alarm_threshold
+  enable_rate_limit_monitoring = var.enable_rate_limit_monitoring
+
   tags = local.layer_common_tags
 }

@@ -22,3 +22,8 @@ output "group_membership_name" {
   description = "그룹 멤버십 리소스 이름"
   value       = aws_iam_group_membership.cli_users.name
 }
+
+output "ecs_task_execution_role_arn" {
+  description = "ECS 태스크 실행 역할 ARN"
+  value       = aws_iam_role.ecs_task_execution.arn
+}

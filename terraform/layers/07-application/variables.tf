@@ -38,80 +38,133 @@ variable "tfstate_bucket_name" {
 }
 
 # =============================================================================
-# ECR 관련 변수
-# =============================================================================
-
-variable "repository_name" {
-  description = "ECR 리포지토리 이름"
-  type        = string
-  default     = null
-}
-
-# =============================================================================
 # ECS 관련 변수
 # =============================================================================
 
-variable "cluster_name" {
-  description = "ECS 클러스터 이름"
-  type        = string
-  default     = null
-}
-
-variable "task_family" {
-  description = "ECS 태스크 패밀리 이름"
-  type        = string
-  default     = null
-}
-
-variable "container_name" {
-  description = "컨테이너 이름"
-  type        = string
-  default     = "petclinic-app"
-}
-
-variable "container_port" {
-  description = "컨테이너 포트"
-  type        = number
-  default     = 8080
-}
-
-variable "container_definitions" {
-  description = "ECS 컨테이너 정의 (JSON 형식)"
-  type        = string
-  default     = <<EOF
-[
-  {
-    "name": "petclinic-app",
-    "image": "nginx:latest",
-    "cpu": 256,
-    "memory": 512,
-    "essential": true,
-    "portMappings": [
-      {
-        "containerPort": 8080,
-        "hostPort": 8080,
-        "protocol": "tcp"
-      }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "/ecs/petclinic-dev-app",
-        "awslogs-region": var.shared_config.aws_region,
-        "awslogs-stream-prefix": "ecs"
-      }
-    }
-  }
-]
-EOF
-}
-
 variable "service_image_map" {
-  description = <<EOF
-Map of service key -> full image reference (including tag or digest).
-예: { customers = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-customers:sha-abc123" }
-CI에서 빌드 후 이 값을 생성하여 Terraform 실행에 전달하세요.
-EOF
-  type    = map(string)
-  default = {}
+  description = "서비스별 Docker 이미지 매핑 (CI에서 빌드된 이미지 태그 사용)"
+  type        = map(string)
+  default     = {}
+}
+
+# =============================================================================
+# 디버깅 인프라 관련 변수
+# =============================================================================
+
+variable "enable_debug_infrastructure" {
+  description = "디버깅 인프라 생성 여부 (개발 환경에서만 true)"
+  type        = bool
+  default     = false
+}
+
+# =============================================================================
+# ALB Rate Limiting 및 보안 설정
+# =============================================================================
+
+variable "enable_alb_rate_limiting" {
+  description = "ALB WAF Rate Limiting 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "alb_rate_limit_per_ip" {
+  description = "ALB - IP당 5분간 요청 제한 수"
+  type        = number
+  default     = 1000
+}
+
+variable "alb_rate_limit_burst_per_ip" {
+  description = "ALB - IP당 1분간 버스트 요청 제한 수"
+  type        = number
+  default     = 200
+}
+
+variable "enable_geo_blocking" {
+  description = "지역 차단 기능 활성화 여부"
+  type        = bool
+  default     = false
+}
+
+variable "blocked_countries" {
+  description = "차단할 국가 코드 목록 (ISO 3166-1 alpha-2)"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_security_rules" {
+  description = "추가 보안 규칙 활성화 여부 (SQL Injection, XSS 방지)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_waf_monitoring" {
+  description = "WAF 모니터링 및 알람 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "alb_rate_limit_alarm_threshold" {
+  description = "ALB Rate Limiting 위반 알람 임계값 (5분간 차단된 요청 수)"
+  type        = number
+  default     = 100
+}
+
+variable "alarm_actions" {
+  description = "알람 발생 시 실행할 액션 (SNS 토픽 ARN 등)"
+  type        = list(string)
+  default     = []
+}
+
+# =============================================================================
+# 모니터링 관련 변수
+# =============================================================================
+
+variable "enable_ecs_monitoring" {
+  description = "ECS 서비스 모니터링 및 알람 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "cpu_alarm_threshold" {
+  description = "ECS CPU 사용률 알람 임계값 (%)"
+  type        = number
+  default     = 80
+
+  validation {
+    condition     = var.cpu_alarm_threshold > 0 && var.cpu_alarm_threshold <= 100
+    error_message = "CPU 알람 임계값은 0과 100 사이여야 합니다."
+  }
+}
+
+variable "memory_alarm_threshold" {
+  description = "ECS 메모리 사용률 알람 임계값 (%)"
+  type        = number
+  default     = 85
+
+  validation {
+    condition     = var.memory_alarm_threshold > 0 && var.memory_alarm_threshold <= 100
+    error_message = "메모리 알람 임계값은 0과 100 사이여야 합니다."
+  }
+}
+
+variable "response_time_threshold" {
+  description = "ALB 응답 시간 알람 임계값 (초)"
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.response_time_threshold > 0
+    error_message = "응답 시간 임계값은 0보다 커야 합니다."
+  }
+}
+
+variable "error_5xx_threshold" {
+  description = "ALB 5XX 에러 알람 임계값 (5분간 에러 수)"
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.error_5xx_threshold >= 0
+    error_message = "5XX 에러 임계값은 0 이상이어야 합니다."
+  }
 }
