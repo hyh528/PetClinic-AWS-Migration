@@ -222,28 +222,28 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
   })
 }
 
-# WAF 로깅 설정 (임시 비활성화 - ARN 형식 문제로 인한 임시 조치)
-# resource "aws_wafv2_web_acl_logging_configuration" "api_gateway" {
-#   count = var.enable_waf_integration ? 1 : 0
-#
-#   resource_arn            = aws_wafv2_web_acl.api_gateway_rate_limit[0].arn
-#   log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
-#
-#   # 민감한 정보 필터링
-#   redacted_fields {
-#     single_header {
-#       name = "authorization"
-#     }
-#   }
-#
-#   redacted_fields {
-#     single_header {
-#       name = "cookie"
-#     }
-#   }
-#
-#   depends_on = [
-#     aws_wafv2_web_acl.api_gateway_rate_limit,
-#     aws_cloudwatch_log_group.waf_logs
-#   ]
-# }
+# WAF 로깅 설정
+resource "aws_wafv2_web_acl_logging_configuration" "api_gateway" {
+  count = var.enable_waf_integration ? 1 : 0
+
+  resource_arn            = aws_wafv2_web_acl.api_gateway_rate_limit[0].arn
+  log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
+
+  # 민감한 정보 필터링
+  redacted_fields {
+    single_header {
+      name = "authorization"
+    }
+  }
+
+  redacted_fields {
+    single_header {
+      name = "cookie"
+    }
+  }
+
+  depends_on = [
+    aws_wafv2_web_acl.api_gateway_rate_limit,
+    aws_cloudwatch_log_group.waf_logs
+  ]
+}
