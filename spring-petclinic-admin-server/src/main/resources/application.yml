@@ -1,3 +1,8 @@
+server:
+  port: 9090
+  servlet:
+    context-path: /admin
+
 spring:
   application:
     name: admin-server
