@@ -200,15 +200,15 @@ jobs:
           # 각 서비스별로 업데이트 실행
           for service in "${SERVICES[@]}"; do
             echo "🔄 ${service} 서비스 업데이트 중..."
-            
-            # ECS 서비스 강제 새 배포 실행
+
+            # ECS 서비스 강제 새 배포 실행 (태스크 정의 업데이트 없이 강제 재배포만)
             aws ecs update-service \
               --cluster ${CLUSTER_NAME} \
               --service ${service} \
               --force-new-deployment \
               --region ${AWS_REGION} \
               --output table
-            
+
             if [ $? -eq 0 ]; then
               echo "✅ ${service} 서비스 업데이트 요청 성공"
             else
@@ -218,6 +218,8 @@ jobs:
           done
 
           echo "✅ 모든 ECS 서비스 업데이트 요청 완료"
+          echo "ℹ️  참고: 이 단계에서는 태스크 정의를 업데이트하지 않고 기존 태스크 정의로 강제 재배포만 수행합니다."
+          echo "ℹ️  실제 이미지 업데이트는 Terraform에서 수행됩니다."
 
       - name: ECS 서비스 배포 상태 확인
         run: |
