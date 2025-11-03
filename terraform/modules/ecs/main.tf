@@ -13,7 +13,7 @@ resource "aws_lb_target_group" "service" {
   target_type = "ip"
 
   health_check {
-    path                = "/actuator/health/liveness"
+    path                = "/${var.context_path}/actuator/health"
     protocol            = "HTTP"
     matcher             = "200"
     interval            = 30
@@ -21,6 +21,10 @@ resource "aws_lb_target_group" "service" {
     healthy_threshold   = 2
     unhealthy_threshold = 3
   }
+}
+
+locals {
+  api_path = replace(var.service_name, "-service", "")
 }
 
 # 3. Listener Rule (서비스별로 생성)
@@ -35,8 +39,8 @@ resource "aws_lb_listener_rule" "service" {
 
   condition {
     path_pattern {
-      # 예: /customers-service/* 요청을 이 서비스로 라우팅
-      values = ["/${var.service_name}","/${var.service_name}*"]
+      # 예: /customers/* 요청을 이 서비스로 라우팅
+      values = ["/${local.api_path}","/${local.api_path}*"]
     }
   }
 }

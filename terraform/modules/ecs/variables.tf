@@ -114,3 +114,8 @@ variable "health_check_grace_period" {
   type = number
   default = 150
 }
+
+variable "context_path" {
+  description = "servlet context path 서비스"
+  type        = string
+}

@@ -47,13 +47,21 @@ module "ecs" {
   ecs_task_execution_role_arn = data.aws_iam_role.ecs_task_execution_role.arn
   listener_arn                = aws_lb_listener.http.arn
   task_role_arn               = data.terraform_remote_state.security.outputs.ecs_task_role_arn   
+  context_path                = local.service_definitions[each.key].path_name
 
- secrets_variables = {
+  secrets_variables = {
     "SPRING_DATASOURCE_PASSWORD" = "${data.terraform_remote_state.database.outputs.db_master_user_secret_arn}:password::",
     "SPRING_DATASOURCE_URL"      = data.terraform_remote_state.database.outputs.db_url_parameter_arn,
     "SPRING_DATASOURCE_USERNAME" = data.terraform_remote_state.database.outputs.db_username_parameter_arn 
   } // 동적 참조 방식
 /* 
+  #alb healthcheck 때문에 수정함
+  secrets_variables = each.key == "admin-server" ? {} : {
+    "SPRING_DATASOURCE_PASSWORD" = "${data.terraform_remote_state.database.outputs.db_master_user_secret_arn}:password::",
+    "SPRING_DATASOURCE_URL"      = data.terraform_remote_state.database.outputs.db_url_parameter_arn,
+    "SPRING_DATASOURCE_USERNAME" = data.terraform_remote_state.database.outputs.db_username_parameter_arn 
+  } // 동적 참조 방식
+
    secrets_variables = {
     "SPRING_DATASOURCE_PASSWORD" = "arn:aws:secretsmanager:ap-northeast-2:897722691159:secret:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb-XmjB9d:password::",
     "SPRING_DATASOURCE_URL"      = "/petclinic/common/database.url"

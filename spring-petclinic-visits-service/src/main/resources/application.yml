@@ -1,6 +1,9 @@
 spring:
   application:
     name: visits-service
+  server:
+    servlet:
+      context-path: /visits-service
   config:
     import: [
       "optional:aws-parameterstore:/petclinic/common/", 

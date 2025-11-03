@@ -1,6 +1,9 @@
 spring:
   application:
     name: admin-server
+  server:
+    servlet:
+      context-path: /admin-server
   
   config:                                                
     import: [                                            

@@ -1,6 +1,9 @@
 spring:
   application:
     name: customers-service
+  server:
+    servlet:
+      context-path: /customers-service
 
   config:
     import: [
