@@ -527,68 +527,85 @@ jobs:
       # Slack 알림 (선택사항 - Slack Webhook URL이 설정된 경우)
       - name: Slack 알림 전송
         if: ${{ success() && env.slack_enabled == 'true' }}
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          custom_payload: |
-            {
-              "channel": "#petclinic-alerts",
-              "username": "GitHub Actions",
-              "icon_emoji": ":github:",
-              "attachments": [
-                {
-                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
-                  "title": "${{ job.status == 'success' && '✅ PetClinic 배포 성공' || '❌ PetClinic 배포 실패' }}",
-                  "fields": [
-                    {
-                      "title": "프로젝트",
-                      "value": "PetClinic",
-                      "short": true
-                    },
-                    {
-                      "title": "환경",
-                      "value": "DEV",
-                      "short": true
-                    },
-                    {
-                      "title": "이미지 태그",
-                      "value": "`${{ env.IMAGE_TAG }}`",
-                      "short": true
-                    },
-                    {
-                      "title": "배포자",
-                      "value": "@${{ github.actor }}",
-                      "short": true
-                    },
-                    {
-                      "title": "브랜치",
-                      "value": "`${{ github.ref_name }}`",
-                      "short": false
-                    },
-                    {
-                      "title": "커밋",
-                      "value": "`${{ github.sha }}`",
-                      "short": false
-                    }
-                  ],
-                  "actions": [
-                    {
-                      "type": "button",
-                      "text": "워크플로우 보기",
-                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                    },
-                    {
-                      "type": "button", 
-                      "text": "커밋 보기",
-                      "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-                    }
-                  ],
-                  "footer": "GitHub Actions",
-                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                  "ts": ${{ github.event.head_commit.timestamp && 'github.event.head_commit.timestamp' || 'github.run_number' }}
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "🎉 PetClinic 마이크로서비스 배포가 성공적으로 완료되었습니다!"
+          echo ""
+          echo "📋 배포 상세 정보:"
+          echo "🏷️  이미지 태그: ${{ env.IMAGE_TAG }}"
+          echo "🔗 커밋: ${{ github.sha }}"
+          echo "🌿 브랜치: ${{ github.ref_name }}"
+          echo "👤 배포자: ${{ github.actor }}"
+          echo "📅 배포 시간: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+          echo ""
+          echo "✅ 배포된 서비스:"
+          echo "  • customers-service"
+          echo "  • vets-service"
+          echo "  • visits-service"
+          echo "  • admin-server"
+          echo ""
+          echo "🔗 워크플로우: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "🚀 애플리케이션이 정상적으로 실행 중입니다!"
+
+          # JSON 페이로드 생성
+          PAYLOAD=$(cat <<EOF
+          {
+            "channel": "#petclinic-alerts",
+            "username": "PetClinic CI/CD",
+            "icon_emoji": ":rocket:",
+            "attachments": [
+              {
+                "color": "good",
+                "title": "🎉 PetClinic 마이크로서비스 배포 성공",
+                "text": "모든 서비스가 정상적으로 배포되고 실행 중입니다.",
+                "fields": [
+                  {
+                    "title": "이미지 태그",
+                    "value": "${{ env.IMAGE_TAG }}",
+                    "short": true
+                  },
+                  {
+                    "title": "커밋",
+                    "value": "${{ github.sha }}",
+                    "short": true
+                  },
+                  {
+                    "title": "브랜치",
+                    "value": "${{ github.ref_name }}",
+                    "short": false
+                  },
+                  {
+                    "title": "배포자",
+                    "value": "${{ github.actor }}",
+                    "short": true
+                  },
+                  {
+                    "title": "배포된 서비스",
+                    "value": "customers, vets, visits, admin",
+                    "short": false
+                  }
+                ],
+                "actions": [
+                  {
+                    "type": "button",
+                    "text": "워크플로우 보기",
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  },
+                  {
+                    "type": "button",
+                    "text": "커밋 보기",
+                    "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+                  }
+                ],
+                "footer": "GitHub Actions CI/CD",
+                "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+                "ts": $(date +%s)
+              }
+            ]
+          }
+          EOF
+          )
+
+          # Slack으로 메시지 전송
+          curl -X POST -H 'Content-type: application/json' -d "$PAYLOAD" ${{ secrets.SLACK_WEBHOOK_URL }}
 
