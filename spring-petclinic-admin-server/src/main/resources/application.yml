@@ -8,6 +8,12 @@ spring:
     name: admin-server
   profiles:
     active: aws
+  boot:
+    admin:
+      ui:
+        enabled: true
+  thymeleaf:
+    check-template-location: false
 
 management:
   endpoints:
@@ -17,11 +23,3 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-
-spring:
-  boot:
-    admin:
-      ui:
-        enabled: true
-  thymeleaf:
-    check-template-location: false
