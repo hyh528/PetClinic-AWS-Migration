@@ -259,6 +259,18 @@ module "cognito" {
 }
 
 # =================================================
+# 6) WAF (Web Application Firewall)
+# =================================================
+
+module "waf" {
+  source = "../../../modules/waf"
+
+  name_prefix     = var.name_prefix
+  environment     = var.environment
+  api_gateway_arn = data.terraform_remote_state.application.outputs.api_gateway_arn # pet-app의 outputs에서 가져온다고 가정
+}
+
+# =================================================
 # 6) CloudTrail (감사 및 로깅)
 # =================================================
 
@@ -427,15 +439,12 @@ module "cloudwatch_dashboard" {
 # 10) Lambda Teams Notifier (대안)
 # =================================================
 #
-# module "lambda_teams_notifier" {
-#   source = "../../../modules/lambda-teams-notifier"
-#
-#   project_name        = var.project_name
-#   environment         = var.environment
-#   lambda_iam_role_arn = module.iam.lambda_teams_notifier_role_arn
-#   teams_webhook_url   = var.teams_webhook_url # 이 변수는 dev.tfvars에 추가해야 합니다.
-#   tags                = { Service = "Notification" }
-# }
+module "alarm_teams" {
+  source = "../../../modules/alarm-teams"
+
+  teams_webhook_url = var.teams_webhook_url
+  sns_topic_arn     = module.cloudwatch_dashboard.sns_topic_arn
+}
 
 # =================================================
 # 11) Security Group Rules (순환 종속성 해결)

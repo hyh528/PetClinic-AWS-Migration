@@ -70,8 +70,8 @@ variable "team_members" {
   default     = []
 }
 
-# variable "teams_webhook_url" {
-#   description = "Microsoft Teams 수신 웹훅 URL"
-#   type        = string
-#   sensitive   = true
-# }
+variable "teams_webhook_url" {
+  description = "Microsoft Teams 수신 웹훅 URL"
+  type        = string
+  sensitive   = true
+}
