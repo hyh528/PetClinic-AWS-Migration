@@ -78,6 +78,12 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# SSM 읽기 권한 추가 (Parameter Store 접근용)
+resource "aws_iam_role_policy_attachment" "ecs_ssm_readonly" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
+}
+
 # Parameter Store 읽기 권한 정책 연결 (aws_iam_role_policy는 arn 속성이 없으므로 제거)
 # resource "aws_iam_role_policy_attachment" "parameter_store_read" {
 #   role       = aws_iam_role.ecs_task_execution.name

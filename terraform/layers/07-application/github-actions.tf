@@ -126,6 +126,33 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
         ]
         Resource = "*"
       },
+      # Parameter Store 및 Secrets Manager 읽기 권한
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          "ssm:DescribeParameters"
+        ]
+        Resource = "arn:aws:ssm:*:*:parameter/petclinic/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "arn:aws:secretsmanager:*:*:secret:rds!cluster-*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = "arn:aws:kms:*:*:key/*"
+      },
       # DynamoDB 권한 (Terraform 락용)
       {
         Effect = "Allow"
