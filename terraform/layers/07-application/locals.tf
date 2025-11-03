@@ -38,7 +38,7 @@ locals {
     }
   ]
 
-  # 공통 시크릿 설정 (동적 참조 사용)
+  # 공통 시크릿 설정 (동적 참조 사용) - Admin 서버 제외
   common_secrets = [
     {
       name      = "SPRING_DATASOURCE_URL"
@@ -53,6 +53,9 @@ locals {
       valueFrom = "${local.db_secret_arn}:password::"
     }
   ]
+
+  # Admin 서버용 빈 시크릿 (DB 연결 불필요)
+  admin_secrets = []
 
   # 공통 태그
   layer_common_tags = merge(var.tags, {
