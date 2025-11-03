@@ -195,3 +195,65 @@ resource "aws_iam_role_policy_attachment" "ecs_secrets_policy_attachment" {
   role       = aws_iam_role.ecs_task_role.name
   policy_arn = aws_iam_policy.ecs_secrets_policy.arn
 }
+
+# =================================================================================
+# AWS Chatbot IAM Role
+# =================================================================================
+
+resource "aws_iam_role" "chatbot" {
+  name = "${var.project_name}-chatbot-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "chatbot.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.project_name}-chatbot-role"
+    ManagedBy = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "chatbot_cloudwatch_readonly" {
+  role       = aws_iam_role.chatbot.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
+}
+
+# =================================================================================
+# Lambda for Teams Notifier IAM Role
+# =================================================================================
+#
+# resource "aws_iam_role" "lambda_teams_notifier" {
+#   name = "${var.project_name}-lambda-teams-notifier-role"
+#
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Action = "sts:AssumeRole",
+#         Effect = "Allow",
+#         Principal = {
+#           Service = "lambda.amazonaws.com"
+#         }
+#       }
+#     ]
+#   })
+#
+#   tags = {
+#     Name = "${var.project_name}-lambda-teams-notifier-role"
+#     ManagedBy = "terraform"
+#   }
+# }
+#
+# resource "aws_iam_role_policy_attachment" "lambda_teams_notifier_basic_execution" {
+#   role       = aws_iam_role.lambda_teams_notifier.name
+#   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+# }

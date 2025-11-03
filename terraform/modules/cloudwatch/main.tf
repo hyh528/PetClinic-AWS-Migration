@@ -178,6 +178,94 @@ resource "aws_cloudwatch_dashboard" "main" {
   dashboard_body = jsonencode({
     widgets = local.all_widgets
   })
-
-
 }
+
+# =================================================
+# SNS Topic for Alarms
+# =================================================
+resource "aws_sns_topic" "alarms" {
+  name = "${var.project_name}-${var.environment}-alarms"
+}
+
+# =================================================
+# CloudWatch Alarms
+# =================================================
+
+# ECS Service Alarms
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu_utilization" {
+  for_each = var.services
+
+  alarm_name          = "${each.key}-cpu-utilization-high"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "Alarm when CPU utilization is greater than or equal to 80%"
+  alarm_actions       = [aws_sns_topic.alarms.arn]
+
+  dimensions = {
+    ClusterName = each.value.ecs_cluster_name
+    ServiceName = each.value.ecs_service_name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "ecs_memory_utilization" {
+  for_each = var.services
+
+  alarm_name          = "${each.key}-memory-utilization-high"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "Alarm when memory utilization is greater than or equal to 80%"
+  alarm_actions       = [aws_sns_topic.alarms.arn]
+
+  dimensions = {
+    ClusterName = each.value.ecs_cluster_name
+    ServiceName = each.value.ecs_service_name
+  }
+}
+
+# Database Alarms
+resource "aws_cloudwatch_metric_alarm" "db_cpu_utilization" {
+  count = var.db_cluster_identifier != null ? 1 : 0
+
+  alarm_name          = "db-cpu-utilization-high"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/RDS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "Alarm when DB CPU utilization is greater than or equal to 80%"
+  alarm_actions       = [aws_sns_topic.alarms.arn]
+
+  dimensions = {
+    DBClusterIdentifier = var.db_cluster_identifier
+  }
+}
+
+# =================================================
+# SNS Subscription for Lambda
+# =================================================
+#
+# resource "aws_sns_topic_subscription" "lambda" {
+#   topic_arn = aws_sns_topic.alarms.arn
+#   protocol  = "lambda"
+#   endpoint  = var.lambda_function_arn
+# }
+#
+# resource "aws_lambda_permission" "sns" {
+#   statement_id  = "AllowExecutionFromSNS"
+#   action        = "lambda:InvokeFunction"
+#   function_name = var.lambda_function_name
+#   principal     = "sns.amazonaws.com"
+#   source_arn    = aws_sns_topic.alarms.arn
+# }

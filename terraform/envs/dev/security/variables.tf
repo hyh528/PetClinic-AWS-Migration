@@ -51,3 +51,27 @@ variable "encrypt_state" {
   type        = bool
   default     = true
 }
+
+variable "cpu_threshold" {
+  description = "CPU 사용률 알람 임계값"
+  type        = number
+  default     = 80
+}
+
+variable "memory_threshold" {
+  description = "메모리 사용률 알람 임계값"
+  type        = number
+  default     = 80
+}
+
+variable "team_members" {
+  description = "IAM 사용자를 생성할 팀원 목록 (예: [\"user1\", \"user2\"])"
+  type        = list(string)
+  default     = []
+}
+
+# variable "teams_webhook_url" {
+#   description = "Microsoft Teams 수신 웹훅 URL"
+#   type        = string
+#   sensitive   = true
+# }

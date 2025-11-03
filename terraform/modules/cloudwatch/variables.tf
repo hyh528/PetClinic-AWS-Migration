@@ -36,3 +36,27 @@ variable "db_cluster_identifier" {
   type        = string
   default     = null
 }
+
+variable "cpu_threshold" {
+  description = "CPU 사용률 알람 임계값"
+  type        = number
+  default     = 80
+}
+
+variable "memory_threshold" {
+  description = "메모리 사용률 알람 임계값"
+  type        = number
+  default     = 80
+}
+
+# variable "lambda_function_arn" {
+#   description = "The ARN of the Lambda function to subscribe to the SNS topic."
+#   type        = string
+#   default     = null
+# }
+#
+# variable "lambda_function_name" {
+#   description = "The name of the Lambda function to subscribe to the SNS topic."
+#   type        = string
+#   default     = null
+# }

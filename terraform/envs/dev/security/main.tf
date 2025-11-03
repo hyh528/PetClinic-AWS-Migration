@@ -10,6 +10,7 @@ module "iam" {
   project_name = "petclinic"
   db_secret_arn = data.terraform_remote_state.database.outputs.db_master_user_secret_arn
   db_secret_kms_key_arn = data.terraform_remote_state.database.outputs.db_kms_key_arn
+  team_members = var.team_members # aws sns를 통한 알람 설정용 (ms_teams)
 }
 
 # API Gateway CloudWatch Logs 계정 설정
@@ -166,7 +167,7 @@ resource "aws_cloudwatch_metric_alarm" "nacl_security_alert" {
   statistic           = "Sum"
   threshold           = 10
   alarm_description   = "This metric monitors NACL denied connections for security threats"
-  alarm_actions       = []
+  alarm_actions       = [module.cloudwatch_dashboard.sns_topic_arn]
 
   tags = {
     Name        = "petclinic-dev-nacl-security-alert"
@@ -362,17 +363,17 @@ resource "aws_xray_encryption_config" "this" {
    description = "Allows ECS tasks to access specific SSM parameters" 
    policy = jsonencode({                                              
      Version = "2012-10-17",                                          
-     Statement = [                                                    
-       {                                                              
-         Effect = "Allow",                                            
-         Action = [                                                   
-           "ssm:GetParametersByPath",                                 
-           "ssm:GetParameters",                                       
-           "ssm:GetParameter"                                         
-         ],                                                           
+     Statement = [
+       {
+         Effect = "Allow",
+         Action = [
+           "ssm:GetParametersByPath",
+           "ssm:GetParameters",
+           "ssm:GetParameter"
+         ],
          Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/petclinic/*"  
-       }                                                              
-     ]                                                                
+       }
+     ]
    })                                                                 
  }                      
 
@@ -415,10 +416,29 @@ module "cloudwatch_dashboard" {
   }
 
   db_cluster_identifier = data.terraform_remote_state.database.outputs.db_cluster_resource_id
+  cpu_threshold         = 80
+  memory_threshold      = 80
+
+  # lambda_function_arn  = module.lambda_teams_notifier.lambda_function_arn
+  # lambda_function_name = module.lambda_teams_notifier.lambda_function_name
 }
 
 # =================================================
-# 10) Security Group Rules (순환 종속성 해결)
+# 10) Lambda Teams Notifier (대안)
+# =================================================
+#
+# module "lambda_teams_notifier" {
+#   source = "../../../modules/lambda-teams-notifier"
+#
+#   project_name        = var.project_name
+#   environment         = var.environment
+#   lambda_iam_role_arn = module.iam.lambda_teams_notifier_role_arn
+#   teams_webhook_url   = var.teams_webhook_url # 이 변수는 dev.tfvars에 추가해야 합니다.
+#   tags                = { Service = "Notification" }
+# }
+
+# =================================================
+# 11) Security Group Rules (순환 종속성 해결)
 # =================================================
 
 resource "aws_security_group_rule" "app_from_alb" {
