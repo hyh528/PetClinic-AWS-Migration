@@ -54,6 +54,18 @@ resource "aws_security_group_rule" "alb_to_ecs" {
   description = "Allow ALB to access ECS tasks on port 8080"
 }
 
+# Admin 서비스용 9090 포트 ALB 접근 허용 규칙 추가
+resource "aws_security_group_rule" "alb_to_ecs_admin" {
+  type                     = "ingress"
+  from_port                = 9090
+  to_port                  = 9090
+  protocol                 = "tcp"
+  security_group_id        = local.ecs_security_group_id
+  source_security_group_id = module.alb.alb_security_group_id
+
+  description = "Allow ALB to access Admin service on port 9090 for health checks"
+}
+
 
 
 # =============================================================================
