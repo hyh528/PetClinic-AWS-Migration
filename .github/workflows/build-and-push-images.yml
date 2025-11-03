@@ -231,7 +231,7 @@ jobs:
           # 각 서비스의 배포 상태 확인
           for service in "${SERVICES[@]}"; do
             echo "🔍 ${service} 서비스 상태 확인 중..."
-            
+
             # 서비스 상태 조회
             SERVICE_STATUS=$(aws ecs describe-services \
               --cluster ${CLUSTER_NAME} \
@@ -239,23 +239,23 @@ jobs:
               --region ${AWS_REGION} \
               --query 'services[0].status' \
               --output text)
-            
+
             RUNNING_COUNT=$(aws ecs describe-services \
               --cluster ${CLUSTER_NAME} \
               --services ${service} \
               --region ${AWS_REGION} \
               --query 'services[0].runningCount' \
               --output text)
-            
+
             DESIRED_COUNT=$(aws ecs describe-services \
               --cluster ${CLUSTER_NAME} \
               --services ${service} \
               --region ${AWS_REGION} \
               --query 'services[0].desiredCount' \
               --output text)
-            
+
             echo "📊 ${service}: 상태=${SERVICE_STATUS}, 실행중=${RUNNING_COUNT}, 목표=${DESIRED_COUNT}"
-            
+
             # 배포 이벤트 확인 (최근 5개)
             echo "📋 ${service} 최근 배포 이벤트:"
             aws ecs describe-services \
@@ -284,7 +284,7 @@ jobs:
           # 각 서비스가 안정화될 때까지 대기 (최대 15분)
           for service in "${SERVICES[@]}"; do
             echo "⏳ ${service} 서비스 안정화 대기 중..."
-            
+
             # 배포 전 태스크 정의 ARN 저장 (롤백용)
             PREVIOUS_TASK_DEF=$(aws ecs describe-services \
               --cluster ${CLUSTER_NAME} \
@@ -292,18 +292,18 @@ jobs:
               --region ${AWS_REGION} \
               --query 'services[0].taskDefinition' \
               --output text)
-            
+
             echo "previous_${service//-/_}_task_def=${PREVIOUS_TASK_DEF}" >> $GITHUB_OUTPUT
-            
+
             # AWS CLI wait 명령어로 서비스 안정화 대기
             timeout 900 aws ecs wait services-stable \
               --cluster ${CLUSTER_NAME} \
               --services ${service} \
               --region ${AWS_REGION}
-            
+
             if [ $? -eq 0 ]; then
               echo "✅ ${service} 서비스 안정화 완료"
-              
+
               # 헬스체크 검증
               HEALTHY_TASKS=$(aws ecs describe-services \
                 --cluster ${CLUSTER_NAME} \
@@ -311,14 +311,14 @@ jobs:
                 --region ${AWS_REGION} \
                 --query 'services[0].runningCount' \
                 --output text)
-              
+
               DESIRED_TASKS=$(aws ecs describe-services \
                 --cluster ${CLUSTER_NAME} \
                 --services ${service} \
                 --region ${AWS_REGION} \
                 --query 'services[0].desiredCount' \
                 --output text)
-              
+
               if [ "${HEALTHY_TASKS}" -eq "${DESIRED_TASKS}" ]; then
                 echo "✅ ${service} 헬스체크 통과: ${HEALTHY_TASKS}/${DESIRED_TASKS} 태스크 정상"
               else
@@ -328,7 +328,7 @@ jobs:
             else
               echo "❌ ${service} 서비스 안정화 시간 초과 (15분)"
               FAILED_SERVICES+=("${service}")
-              
+
               # 실패한 서비스의 상세 정보 출력
               echo "🔍 ${service} 서비스 상세 정보:"
               aws ecs describe-services \
@@ -364,11 +364,11 @@ jobs:
           # 실패한 서비스들을 이전 태스크 정의로 롤백
           for service in ${FAILED_SERVICES}; do
             echo "🔄 ${service} 서비스 롤백 중..."
-            
+
             # 이전 태스크 정의 ARN 가져오기
             service_var="previous_${service//-/_}_task_def"
             previous_task_def=$(echo "${{ steps.deployment-validation.outputs }}" | grep "${service_var}" | cut -d'=' -f2)
-            
+
             if [ -n "${previous_task_def}" ] && [ "${previous_task_def}" != "None" ]; then
               # 이전 태스크 정의로 서비스 업데이트
               aws ecs update-service \
@@ -376,16 +376,16 @@ jobs:
                 --service ${service} \
                 --task-definition ${previous_task_def} \
                 --region ${AWS_REGION}
-              
+
               echo "✅ ${service} 롤백 요청 완료 (태스크 정의: ${previous_task_def})"
-              
+
               # 롤백 완료 대기 (최대 10분)
               echo "⏳ ${service} 롤백 완료 대기 중..."
               timeout 600 aws ecs wait services-stable \
                 --cluster ${CLUSTER_NAME} \
                 --services ${service} \
                 --region ${AWS_REGION}
-              
+
               if [ $? -eq 0 ]; then
                 echo "✅ ${service} 롤백 완료"
               else
@@ -403,75 +403,41 @@ jobs:
         run: |
           echo "📊 배포 상태 로깅 및 모니터링..."
 
-          CLUSTER_NAME="petclinic-dev-cluster"
-          SERVICES=("petclinic-dev-customers" "petclinic-dev-vets" "petclinic-dev-visits" "petclinic-dev-admin")
           DEPLOYMENT_STATUS="${{ steps.deployment-validation.outputs.deployment_status }}"
           DEPLOYMENT_START="${{ steps.deployment-validation.outputs.deployment_start_time }}"
           DEPLOYMENT_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          echo "📋 배포 요약 리포트"
+          echo "📋 CI/CD 파이프라인 요약 리포트"
           echo "===================="
           echo "🕐 시작 시간: ${DEPLOYMENT_START}"
           echo "🕐 종료 시간: ${DEPLOYMENT_END}"
-          echo "📊 배포 상태: ${DEPLOYMENT_STATUS}"
+          echo "📊 파이프라인 상태: ${DEPLOYMENT_STATUS}"
           echo "🏷️  이미지 태그: ${IMAGE_TAG}"
           echo "🔗 커밋 SHA: ${{ github.sha }}"
           echo "👤 트리거: ${{ github.actor }}"
           echo "🌿 브랜치: ${{ github.ref_name }}"
           echo ""
 
-          # 각 서비스의 최종 상태 확인
-          echo "📋 서비스별 최종 상태:"
-          for service in "${SERVICES[@]}"; do
-            SERVICE_STATUS=$(aws ecs describe-services \
-              --cluster ${CLUSTER_NAME} \
-              --services ${service} \
-              --region ${AWS_REGION} \
-              --query 'services[0].status' \
-              --output text 2>/dev/null || echo "UNKNOWN")
-            
-            RUNNING_COUNT=$(aws ecs describe-services \
-              --cluster ${CLUSTER_NAME} \
-              --services ${service} \
-              --region ${AWS_REGION} \
-              --query 'services[0].runningCount' \
-              --output text 2>/dev/null || echo "0")
-            
-            DESIRED_COUNT=$(aws ecs describe-services \
-              --cluster ${CLUSTER_NAME} \
-              --services ${service} \
-              --region ${AWS_REGION} \
-              --query 'services[0].desiredCount' \
-              --output text 2>/dev/null || echo "0")
-            
-            TASK_DEFINITION=$(aws ecs describe-services \
-              --cluster ${CLUSTER_NAME} \
-              --services ${service} \
-              --region ${AWS_REGION} \
-              --query 'services[0].taskDefinition' \
-              --output text 2>/dev/null || echo "UNKNOWN")
-            
-            echo "  ${service}: ${SERVICE_STATUS} (${RUNNING_COUNT}/${DESIRED_COUNT}) - ${TASK_DEFINITION}"
-          done
-
-          # CloudWatch 로그에 배포 이벤트 기록
+          echo "📋 생성된 아티팩트:"
+          echo "  - Docker 이미지들 (ECR에 푸시됨)"
+          echo "  - 이미지 매핑 파일 (images.properties)"
+          echo "  - Terraform 변수 (SERVICE_IMAGE_MAP)"
           echo ""
-          echo "📝 CloudWatch 로그 그룹에 배포 이벤트 기록 중..."
 
-          # 배포 메트릭을 CloudWatch에 전송 (선택사항)
-          if [ "${DEPLOYMENT_STATUS}" == "success" ]; then
-            aws cloudwatch put-metric-data \
-              --namespace "PetClinic/Deployment" \
-              --metric-data MetricName=DeploymentSuccess,Value=1,Unit=Count \
-              --region ${AWS_REGION} || echo "CloudWatch 메트릭 전송 실패 (무시)"
-          else
-            aws cloudwatch put-metric-data \
-              --namespace "PetClinic/Deployment" \
-              --metric-data MetricName=DeploymentFailure,Value=1,Unit=Count \
-              --region ${AWS_REGION} || echo "CloudWatch 메트릭 전송 실패 (무시)"
-          fi
+          echo "🎯 다음 단계:"
+          echo "  1. Terraform에서 이미지 업데이트 적용"
+          echo "  2. ECS 서비스 태스크 정의 업데이트"
+          echo "  3. 실제 배포 및 헬스체크 수행"
+          echo ""
 
-          echo "✅ 배포 상태 로깅 완료"
+          # CloudWatch 로그에 CI/CD 이벤트 기록 (선택사항)
+          echo "📝 CloudWatch 로그 그룹에 CI/CD 이벤트 기록 중..."
+          aws cloudwatch put-metric-data \
+            --namespace "PetClinic/CI-CD" \
+            --metric-data MetricName=BuildSuccess,Value=1,Unit=Count \
+            --region ${AWS_REGION} || echo "CloudWatch 메트릭 전송 실패 (무시)"
+
+          echo "✅ CI/CD 파이프라인 완료"
 
       - name: 배포 성공 알림
         if: success()
