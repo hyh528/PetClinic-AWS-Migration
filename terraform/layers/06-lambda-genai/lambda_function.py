@@ -145,16 +145,23 @@ def analyze_question_type(question: str) -> Dict[str, Any]:
 }}
 
 DATABASE_QUERY 예시:
-- "10월에 건강검진 받은 개가 누구야?"
-- "James Johnson이라는 고객이 있어?"
-- "외과 전문 수의사는 누구야?"
-- "Leo라는 이름의 반려동물 정보 알려줘"
+- "춘식이를 키우고 있는 주인은 누구인가?" (특정 반려동물의 주인 조회)
+- "휘권이가 춘식이라는 pet을 키우고 있지?" (특정 주인과 반려동물 관계 확인)
+- "휘권의 pet 이름이 뭐야?" (특정 주인의 반려동물 이름 조회)
+- "Maria의 pet name이 뭐야?" (특정 주인의 반려동물 이름 조회)
+- "George의 주소는 뭐야?" (특정 주인의 주소 정보 조회)
+- "Leo의 owner는 누구야?" (특정 반려동물의 주인 조회)
+- "pet이 없는 owner는 누가 있는가?" (반려동물이 없는 주인들 조회)
+- "10월에 건강검진 받은 개가 누구야?" (방문 기록 조회)
+- "James Johnson이라는 고객이 있어?" (고객 존재 여부 확인)
+- "외과 전문 수의사는 누구야?" (수의사 전문 분야 조회)
+- "Leo라는 이름의 반려동물 정보 알려줘" (반려동물 정보 조회)
 
 GENERAL_ADVICE 예시:
-- "강아지가 기침을 해요"
-- "고양이 예방접종은 언제 해야 하나요?"
-- "반려동물 건강관리 팁 알려주세요"
-- "개가 먹으면 안 되는 음식은?"
+- "강아지가 기침을 해요" (건강 문제 상담)
+- "고양이 예방접종은 언제 해야 하나요?" (예방접종 상담)
+- "반려동물 건강관리 팁 알려주세요" (일반 건강관리 조언)
+- "개가 먹으면 안 되는 음식은?" (식단 관련 상담)
 """
 
         messages = [{"role": "user", "content": prompt}]
@@ -230,22 +237,47 @@ petclinic 데이터베이스 (단일 데이터베이스):
 - 반드시 아래 예시와 정확히 일치하는 패턴의 SQL 쿼리를 생성하세요
 - WHERE 조건을 정확히 사용하세요
 - 불필요한 JOIN은 피하세요
+- LIKE 연산자를 사용하여 부분 일치 검색을 지원하세요
 
 질문 유형별 SQL 예시 (반드시 이 패턴을 따르세요):
 
+질문: "춘식이를 키우고 있는 주인은 누구인가?"
+SQL: "SELECT o.first_name, o.last_name FROM owners o JOIN pets p ON o.id = p.owner_id WHERE p.name LIKE '%춘식%'"
+
+질문: "휘권이가 춘식이라는 pet을 키우고 있지?"
+SQL: "SELECT COUNT(*) as count FROM owners o JOIN pets p ON o.id = p.owner_id WHERE o.first_name LIKE '%휘권%' AND p.name LIKE '%춘식%'"
+
+질문: "휘권의 pet 이름이 뭐야?"
+SQL: "SELECT p.name as pet_name FROM pets p JOIN owners o ON p.owner_id = o.id WHERE o.first_name LIKE '%휘권%'"
+
+질문: "Maria의 pet name이 뭐야?"
+SQL: "SELECT p.name as pet_name FROM pets p JOIN owners o ON p.owner_id = o.id WHERE o.first_name LIKE '%Maria%'"
+
+질문: "George의 주소는 뭐야?"
+SQL: "SELECT o.address, o.city, o.telephone FROM owners o WHERE o.first_name LIKE '%George%'"
+
+질문: "Leo의 owner는 누구야?"
+SQL: "SELECT o.first_name, o.last_name FROM owners o JOIN pets p ON o.id = p.owner_id WHERE p.name LIKE '%Leo%'"
+
+질문: "pet이 없는 owner는 누가 있는가?"
+SQL: "SELECT o.first_name, o.last_name FROM owners o LEFT JOIN pets p ON o.id = p.owner_id WHERE p.id IS NULL"
+
 질문: "Coco라는 반려동물을 키우는 사람은 누구야?"
-SQL: "SELECT o.first_name, o.last_name FROM owners o JOIN pets p ON o.id = p.owner_id WHERE p.name = 'Coco'"
+SQL: "SELECT o.first_name, o.last_name FROM owners o JOIN pets p ON o.id = p.owner_id WHERE p.name LIKE '%Coco%'"
 
 질문: "Yeonghyeon Hwang의 펫 이름은 뭐야?"
-SQL: "SELECT p.name as pet_name FROM pets p JOIN owners o ON p.owner_id = o.id WHERE o.first_name = 'Yeonghyeon' AND o.last_name = 'Hwang'"
+SQL: "SELECT p.name as pet_name FROM pets p JOIN owners o ON p.owner_id = o.id WHERE o.first_name LIKE '%Yeonghyeon%' AND o.last_name LIKE '%Hwang%'"
 
 질문: "고양이를 키우는 사람은 누구야?"
-SQL: "SELECT DISTINCT o.first_name, o.last_name FROM owners o JOIN pets p ON o.id = p.owner_id JOIN types t ON p.type_id = t.id WHERE t.name = 'cat'"
+SQL: "SELECT DISTINCT o.first_name, o.last_name FROM owners o JOIN pets p ON o.id = p.owner_id JOIN types t ON p.type_id = t.id WHERE t.name LIKE '%cat%'"
 
 주의사항:
 - LIMIT 20을 추가해서 결과를 제한하세요
 - 반려동물 이름을 물어보면 p.name (펫 이름)만 선택하세요
 - 주인 이름을 물어보면 o.first_name, o.last_name를 선택하세요
+- 이름 검색 시 LIKE '%{name}%' 패턴을 사용하여 부분 일치를 지원하세요
+- 존재 여부 확인 시 COUNT(*)를 사용하세요
+- 반려동물이 없는 주인 조회 시 LEFT JOIN과 IS NULL을 사용하세요
 """
 
         messages = [{"role": "user", "content": prompt}]
@@ -308,7 +340,7 @@ def query_database_by_question(question: str) -> List[Dict]:
         # AI를 사용해서 SQL 생성
         sql_info = generate_sql_from_question(question)
 
-        database = sql_info.get('database', 'petclinic_customers')
+        database = sql_info.get('database', 'petclinic')
         sql = sql_info.get('sql', '')
         description = sql_info.get('description', '')
 
@@ -350,20 +382,33 @@ def call_bedrock_ai(prompt: str, context_data: str = "", is_general_advice: bool
 친근하고 전문적인 톤으로 답변해주세요. 반려동물의 건강과 복지에 대한 유용한 정보를 제공하되, 응급상황이나 심각한 증상의 경우 반드시 수의사와 상담하도록 안내해주세요."""
         else:
             # 데이터베이스 기반 답변
-            full_prompt = f"""다음은 데이터베이스 조회 결과입니다:
-
-{context_data}
-
-질문: {prompt}
-
-이 데이터를 보고 질문에 직접 답변하세요. 간단하고 정확하게 답변하세요.
-
-답변 예시:
-- 데이터에 Yeonghyeon Hwang이 있으면: "Yeonghyeon Hwang님이 키우고 있습니다."
-- 데이터에 Coco가 있으면: "Coco입니다."
-- 데이터가 비어있으면: "해당 정보를 찾을 수 없습니다."
-
-질문에 맞게 답변하세요:"""
+                full_prompt = f"""당신은 PetClinic 데이터베이스의 정보를 바탕으로 질문에 답변하는 AI 어시스턴트입니다.
+    
+    다음은 데이터베이스에서 조회한 결과입니다:
+    
+    {context_data}
+    
+    질문: {prompt}
+    
+    [중요] 다음 지침을 엄격히 따르세요:
+    1. 데이터베이스 결과에 있는 정보만 사용하세요. 없는 정보는 절대 만들어내지 마세요.
+    2. 데이터베이스 결과가 비어있거나 관련 정보가 없으면 "해당 정보를 찾을 수 없습니다."라고만 답변하세요.
+    3. 데이터에 있는 이름, 주소, 반려동물 정보 등을 정확히 사용하세요.
+    4. 존재 여부 질문에는 "예" 또는 "아니오"로 명확하게 답변하세요.
+    5. 여러 결과가 있으면 모두 나열하세요.
+    6. 주소 정보는 데이터에 있는 그대로 제공하세요.
+    
+    답변 형식:
+    - 구체적인 정보가 있으면: 그 정보를 바탕으로 자연스럽게 답변
+    - 정보가 없으면: "해당 정보를 찾을 수 없습니다."
+    - 존재 여부: "예" 또는 "아니오"
+    
+    예시 답변:
+    - 데이터에 "춘식이"가 없으면: "해당 정보를 찾을 수 없습니다."
+    - 데이터에 "휘권이가 dog를 키운다"가 있으면: "휘권이가 키우는 반려동물은 dog입니다."
+    - 데이터에 "Maria가 dog를 키운다"가 있으면: "Maria가 키우는 반려동물은 dog입니다."
+    
+    데이터베이스 결과를 보고 질문에 답변하세요:"""
 
         # Claude 3 모델용 메시지 형식
         messages = [
@@ -377,7 +422,7 @@ def call_bedrock_ai(prompt: str, context_data: str = "", is_general_advice: bool
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 1000,
             "messages": messages,
-            "temperature": 0.7
+            "temperature": 0.1
         }
         
         response = client.invoke_model(
@@ -406,7 +451,7 @@ def format_context_data(results: List[Dict], question: str) -> str:
 
     if not results:
         logger.warning("데이터베이스 결과가 없습니다")
-        return "요청하신 정보를 데이터베이스에서 찾을 수 없습니다."
+        return "데이터베이스 조회 결과: 정보 없음"
 
     context_data = "데이터베이스 조회 결과:\n"
 

@@ -26,3 +26,21 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "aws_region" {
+  description = "AWS 리전"
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "name_prefix" {
+  description = "리소스 이름 접두사"
+  type        = string
+  default     = "petclinic-dev"
+}
+
+variable "environment" {
+  description = "배포 환경"
+  type        = string
+  default     = "dev"
+}
