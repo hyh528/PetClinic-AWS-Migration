@@ -526,7 +526,7 @@ jobs:
 
       # Slack 알림 (선택사항 - Slack Webhook URL이 설정된 경우)
       - name: Slack 알림 전송
-        if: ${{ always() && env.slack_enabled == 'true' }}
+        if: ${{ success() && env.slack_enabled == 'true' }}
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
