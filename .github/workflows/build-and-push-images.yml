@@ -548,9 +548,17 @@ jobs:
           echo "3. 재배포 시도" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+      - name: 알림 설정
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            echo "slack_enabled=true" >> $GITHUB_ENV
+          else
+            echo "slack_enabled=false" >> $GITHUB_ENV
+          fi
+
       # Slack 알림 (선택사항 - Slack Webhook URL이 설정된 경우)
       - name: Slack 알림 전송
-        if: always() && secrets.SLACK_WEBHOOK_URL != ''
+        if: ${{ always() && env.slack_enabled == 'true' }}
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
@@ -616,28 +624,3 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      # Microsoft Teams 알림 (선택사항)
-      - name: Teams 알림 전송
-        if: always() && secrets.TEAMS_WEBHOOK_URL != ''
-        uses: skitionek/notify-microsoft-teams@master
-        with:
-          webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
-          overwrite: |
-            {
-              "themeColor": "${{ job.status == 'success' && '00FF00' || 'FF0000' }}",
-              "summary": "PetClinic 배포 ${{ job.status == 'success' && '성공' || '실패' }}",
-              "sections": [{
-                "activityTitle": "PetClinic 배포 ${{ job.status == 'success' && '성공' || '실패' }}",
-                "activitySubtitle": "환경: DEV | 배포자: ${{ github.actor }}",
-                "facts": [
-                  {"name": "이미지 태그", "value": "${{ env.IMAGE_TAG }}"},
-                  {"name": "브랜치", "value": "${{ github.ref_name }}"},
-                  {"name": "커밋", "value": "${{ github.sha }}"}
-                ],
-                "potentialAction": [{
-                  "@type": "OpenUri",
-                  "name": "워크플로우 보기",
-                  "targets": [{"os": "default", "uri": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}]
-                }]
-              }]
-            }
