@@ -92,7 +92,7 @@ resource "aws_api_gateway_integration" "direct_proxy_alb" {
   timeout_milliseconds    = 29000
 }
 
-# --------------------------------------
+# --------------------------------------ㅇ
 # 2) /api 및 하위 서비스
 # --------------------------------------
 resource "aws_api_gateway_resource" "api_root" {
@@ -126,7 +126,8 @@ resource "aws_api_gateway_integration" "api_sub_service_root_alb" {
   type                    = "HTTP_PROXY"
   integration_http_method = "ANY"
   # [핵심 로직] /api/vets -> http://.../vets-service/vets
-  uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}"
+  //uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}"
+  uri                     = "http://${var.alb_dns_name}/${each.key}"  // 수정본
 }
 
 # [기존] /api/vets/{proxy+} 와 같은 하위 경로 처리
@@ -155,7 +156,8 @@ resource "aws_api_gateway_integration" "api_sub_service_proxy_alb" {
   type                    = "HTTP_PROXY"
   integration_http_method = "ANY"
   # [핵심 로직] /api/vets/1 -> http://.../vets-service/vets/1
-  uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}/{proxy}"
+  //uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}/{proxy}"
+  uri                     = "http://${var.alb_dns_name}/${each.key}/{proxy}"        // 수정본
   request_parameters      = { "integration.request.path.proxy" = "method.request.path.proxy" }        
   timeout_milliseconds    = 29000
 }

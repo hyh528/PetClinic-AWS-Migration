@@ -28,8 +28,7 @@ locals {
       # 데이터 소스는 원래 서비스 이름(map의 key)으로 참조합니다.
       container_port = tonumber(data.aws_ssm_parameter.service_ports[name].value)
       #container_port = 8080
-      context_path   = (name == "admin-server") ? "" : data.aws_ssm_parameter.service_context_paths[name].value
-      //context_path   = "/${config.path_name}"
+      context_path   = data.aws_ssm_parameter.service_context_paths[name].value
       image_uri      = "${module.ecr.repository_urls[name]}:latest"
       priority       = config.priority
     }
@@ -76,9 +75,11 @@ module "ecs" {
     "SPRING_DATASOURCE_USERNAME" = "/petclinic/common/database.username"
   } //하드 코딩 방식
 */
-  environment_variables = {
+  environment_variables = merge({
    "SPRING_PROFILES_ACTIVE" = "mysql,aws",
-  }
+  },
+  each.key == "admin-server" ?  { "SERVER_SERVLET_CONTEXT_PATH" = "/admin" } : {}
+  )
 
   # --- 서비스별 값 전달 ---
   service_name      = each.key

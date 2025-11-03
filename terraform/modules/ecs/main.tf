@@ -40,7 +40,7 @@ resource "aws_lb_listener_rule" "service" {
   condition {
     path_pattern {
       # 예: /customers/* 요청을 이 서비스로 라우팅
-      values = ["/${local.api_path}","/${local.api_path}*"]
+      values = ["/${var.service_name}*"]
     }
   }
 }
