@@ -3,6 +3,11 @@ variable "service_name" {
   type        = string
 }
 
+variable "context_path" {
+  description = "servlet context path 서비스"
+  type        = string
+}
+
 variable "image_uri" {
   description = "서비스에 사용할 Docker 이미지의 ECR URI"
   type        = string
@@ -113,9 +118,4 @@ variable "health_check_grace_period" {
   description = "컨테이너 시작 후 헬스 체크 실패를 무시할 유예 기간(초)"
   type = number
   default = 150
-}
-
-variable "context_path" {
-  description = "servlet context path 서비스"
-  type        = string
 }

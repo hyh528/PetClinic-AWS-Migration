@@ -1,10 +1,10 @@
 # 배포할 서비스별 목록 및 고유 설정, 파라미터 스토어 경로 이름 정의
 locals {
   service_definitions = {
-    "admin-server"      = { priority = 100, path_name = "admin" }
-    "customers-service" = { priority = 110, path_name = "customers" }
-    "vets-service"      = { priority = 120, path_name = "vets" }
-    "visits-service"    = { priority = 130, path_name = "visits" }
+    "admin-server"      = { priority = 100, path_name = "admin", needs_db = false }
+    "customers-service" = { priority = 110, path_name = "customers", needs_db = true }
+    "vets-service"      = { priority = 120, path_name = "vets", needs_db = true }
+    "visits-service"    = { priority = 130, path_name = "visits", needs_db = true }
   }
 }
 
@@ -15,12 +15,6 @@ data "aws_ssm_parameter" "service_ports" {
   name     = "/petclinic/dev/${each.value.path_name}/server.port"
 }
 
-#    context_path 경로를 Parameter Store에서 가져옴
-data "aws_ssm_parameter" "service_context_paths" {                                
-  for_each = local.service_definitions                                            
-  name     = "/petclinic/dev/${each.value.path_name}/server.servlet.context-path" 
-}                                                                                 
-
 # 3. 위 정보들을 조합하여 ecs_services 맵을 동적으로 생성합니다.
 locals {
   ecs_services = {
@@ -28,9 +22,10 @@ locals {
       # 데이터 소스는 원래 서비스 이름(map의 key)으로 참조합니다.
       container_port = tonumber(data.aws_ssm_parameter.service_ports[name].value)
       #container_port = 8080
-      context_path   = data.aws_ssm_parameter.service_context_paths[name].value
+      context_path   = "/${config.path_name}"
       image_uri      = "${module.ecr.repository_urls[name]}:latest"
       priority       = config.priority
+      needs_db       = config.needs_db
     }
   }
 }
@@ -63,24 +58,18 @@ module "ecs" {
   # } // 동적 참조 방식
 
   #alb healthcheck 때문에 수정함
-  secrets_variables = each.key == "admin-server" ? {} : {
+  secrets_variables = each.value.needs_db ? {
     "SPRING_DATASOURCE_PASSWORD" = "${data.terraform_remote_state.database.outputs.db_master_user_secret_arn}:password::",
     "SPRING_DATASOURCE_URL"      = data.terraform_remote_state.database.outputs.db_url_parameter_arn,
     "SPRING_DATASOURCE_USERNAME" = data.terraform_remote_state.database.outputs.db_username_parameter_arn 
-  } // 동적 참조 방식
-/*
-   secrets_variables = {
-    "SPRING_DATASOURCE_PASSWORD" = "arn:aws:secretsmanager:ap-northeast-2:897722691159:secret:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb-XmjB9d:password::",
-    "SPRING_DATASOURCE_URL"      = "/petclinic/common/database.url"
-    "SPRING_DATASOURCE_USERNAME" = "/petclinic/common/database.username"
-  } //하드 코딩 방식
-*/
-  environment_variables = merge({
-   "SPRING_PROFILES_ACTIVE" = "mysql,aws",
-  },
-  each.key == "admin-server" ?  { "SERVER_SERVLET_CONTEXT_PATH" = "/admin" } : {}
-  )
+  } : {}
+  // 동적 참조 방식
 
+  environment_variables = {
+   "SPRING_PROFILES_ACTIVE" = "mysql,aws",
+   "SERVER_SERVLET_CONTEXT_PATH" = each.value.context_path
+  }
+  
   # --- 서비스별 값 전달 ---
   service_name      = each.key
   image_uri         = each.value.image_uri
@@ -91,3 +80,24 @@ module "ecs" {
   cloudmap_service_arn = module.cloudmap.service_arns[each.key]
 
 }
+
+
+
+
+
+
+/*
+#    context_path 경로를 Parameter Store에서 가져옴
+data "aws_ssm_parameter" "service_context_paths" {                                
+  for_each = local.service_definitions                                            
+  name     = "/petclinic/dev/${each.value.path_name}/server.servlet.context-path" 
+}
+
+secrets_variables = {  
+  "SPRING_DATASOURCE_PASSWORD" = "arn:aws:secretsmanager:ap-northeast-2:897722691159:secret:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb-XmjB9d:password::",
+  "SPRING_DATASOURCE_URL"      = "/petclinic/common/database.url"
+  "SPRING_DATASOURCE_USERNAME" = "/petclinic/common/database.username"
+} //하드 코딩 방식
+
+
+*/
