@@ -25,7 +25,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,15 +48,18 @@ public class AdminServerConfig {
     public void registerServices() {
         try {
             // ALB를 통한 서비스 등록
-            String albDnsName = environment.getProperty("petclinic.alb.dns-name", "petclinic-alb-1234567890.ap-northeast-2.elb.amazonaws.com");
-            
+            String albDnsName = environment.getProperty("petclinic.alb.dns-name",
+                    "petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com");
+            System.out.println("🔍 사용할 ALB DNS 이름: " + albDnsName);
+
             registerService("customers-service", "http://" + albDnsName + "/api/customers");
             registerService("vets-service", "http://" + albDnsName + "/api/vets");
             registerService("visits-service", "http://" + albDnsName + "/api/visits");
-            
+
             System.out.println("✅ Admin 서버에 모든 서비스가 등록되었습니다.");
         } catch (Exception e) {
             System.err.println("❌ 서비스 등록 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -69,7 +71,7 @@ public class AdminServerConfig {
             Map<String, String> metadata = new HashMap<>();
             metadata.put("tags.environment", "aws");
             metadata.put("tags.version", "3.4.1");
-            
+
             Registration registration = Registration.create(serviceName, serviceUrl + "/actuator/health")
                     .managementUrl(serviceUrl + "/actuator")
                     .serviceUrl(serviceUrl)

@@ -46,7 +46,7 @@ management:
 # PetClinic 특정 설정
 petclinic:
   alb:
-    dns-name: ${ALB_DNS_NAME:petclinic-alb-1234567890.ap-northeast-2.elb.amazonaws.com}
+    dns-name: ${ALB_DNS_NAME:petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com}
 
 # 로깅 설정
 logging:
