@@ -24,6 +24,11 @@ spring:
         enabled: false # Admin 서버는 클라이언트가 아님
       discovery:
         enabled: false # 수동으로 서비스 등록하도록 변경
+      monitor:
+        status-interval: 30s # 상태 체크 간격을 30초로 증가
+        info-interval: 60s   # 정보 업데이트 간격을 60초로 증가
+        default-timeout: 15s # 기본 타임아웃을 15초로 증가
+        status-lifetime: 300s # 상태 유지 시간을 5분으로 증가
   # Thymeleaf 설정 제거 - Admin UI는 자체 템플릿 엔진 사용
   web:
     resources:

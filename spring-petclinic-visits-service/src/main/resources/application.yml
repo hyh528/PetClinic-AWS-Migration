@@ -4,9 +4,11 @@ spring:
   boot:
     admin:
       client:
-        url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com
+        url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin
         instance:
-          service-base-url: http://visits-service:8080
+          service-base-url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/api/visits
+          management-base-url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/api/visits
+          health-url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/api/visits/actuator/health
   cloud:
     aws:
       region:
