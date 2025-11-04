@@ -110,7 +110,7 @@ resource "aws_ssm_parameter" "hikari_settings" {
     "spring.datasource.hikari.max-lifetime"        = "600000", # 10분
     "spring.datasource.hikari.validation-timeout"  = "5000"    # 5초
     }
-  name      = "/petclinic/common/${replace(each.key, ".", "/")}"
+  name      = "/petclinic/common/${each.key}"
   type      = "String"
   value     = each.value
   overwrite = true
@@ -121,22 +121,22 @@ resource "aws_ssm_parameter" "hikari_settings" {
 }
 
 # [추가] 각 서비스에 Context Path 설정
-resource "aws_ssm_parameter" "service_context_paths" {
-  for_each = {
-    "admin"     = "/admin-server",
-    "customers" = "/customers-service",
-    "vets"      = "/vets-service",
-    "visits"    = "/visits-service"
-  }
-  name      = "/petclinic/${var.environment}/${each.key}/server.servlet.context-path"
-  type      = "String"
-  value     = each.value
-  overwrite = true
-  tags = {
-    Category = "context-path"
-    Service  = each.key
-  }
-}
+# resource "aws_ssm_parameter" "service_context_paths" {
+#   for_each = {
+#     "admin"     = "/admin",
+#     "customers" = "/customers",
+#     "vets"      = "/vets",
+#     "visits"    = "/visits"
+#   }
+#   name      = "/petclinic/${var.environment}/${each.key}/server.servlet.context-path"
+#   type      = "String"
+#   value     = each.value
+#   overwrite = true
+#   tags = {
+#     Category = "context-path"
+#     Service  = each.key
+#   }
+# }
 
 # [추가] 분산 추적 기능 비활성화
 resource "aws_ssm_parameter" "tracing_disabled" {
