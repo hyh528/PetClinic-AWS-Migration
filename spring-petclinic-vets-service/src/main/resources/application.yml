@@ -32,6 +32,7 @@ spring:
   boot:
     admin:
       client:
+        enabled: false  # ECS 환경에서는 일단 비활성화
         url: http://admin-server:9090/admin
         instance:
           service-base-url: http://vets-service:8080
