@@ -1,6 +1,7 @@
 server:
   port: 9090
-  # context-path 제거 - Admin UI가 루트 경로에서 작동하도록 함
+  servlet:
+    context-path: /admin
 
 spring:
   application:
@@ -15,6 +16,7 @@ spring:
         brand: "PetClinic"
         favicon: "favicon.ico"
         favicon-danger: "favicon-danger.ico"
+        public-url: "http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin"
       server:
         enabled: true
       client:
