@@ -24,14 +24,11 @@ spring:
         enabled: false # Admin 서버는 클라이언트가 아님
       discovery:
         enabled: false # 수동으로 서비스 등록하도록 변경
-      context-path: /admin
   # Thymeleaf 설정 제거 - Admin UI는 자체 템플릿 엔진 사용
   web:
     resources:
       static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/
       add-mappings: true
-  mvc:
-    static-path-pattern: /admin/**
 
 management:
   endpoints:
