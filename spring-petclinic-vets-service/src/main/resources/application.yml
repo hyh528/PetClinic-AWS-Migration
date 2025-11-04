@@ -1,6 +1,12 @@
 spring:
   application:
     name: vets-service
+  boot:
+    admin:
+      client:
+        url: http://admin-server:9090/admin
+        instance:
+          service-base-url: http://vets-service:8080
   cloud:
     aws:
       region:
