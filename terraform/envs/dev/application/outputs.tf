@@ -5,12 +5,12 @@ output "api_gateway_invoke_url" {
 
 output "alb_dns_name" {
   description = "The DNS name of the main Application Load Balancer"
-  value       = aws_lb.main.dns_name
+  value       = module.alb.dns_name
 }
 
 output "ecs_cluster_name" {
   description = "The name of the ECS cluster"
-  value       = aws_ecs_cluster.main.name
+  value       = module.ecs_cluster.cluster_name
 }
 
 output "ecr_repository_urls" {
@@ -45,7 +45,7 @@ output "api_gateway_name" {
 
  output "alb_arn_suffix" {                                                                                        
   description = "The ARN suffix of the main Application Load Balancer (e.g., app/my-alb/1234567890abcdef)"       
-  value       = aws_lb.main.arn_suffix                                                                           
+  value       = module.alb.arn_suffix                                                                          
 }
 
 output "alb_target_group_ids" {
@@ -60,4 +60,9 @@ output "alb_target_group_arns" {
   value = {                                                                   
     for k, m in module.ecs : k => m.target_group_arn                          
   }                                                                           
-}                                                                             
+}
+
+output "http_listener_arn" {
+  description = "The ARN of HTTP listener"
+  value = module.alb.listener_arn
+}

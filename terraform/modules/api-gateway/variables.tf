@@ -16,6 +16,19 @@ variable "alb_dns_name" {
   type        = string
 }
 
+variable "direct_top_level_services" {
+  description = "최상위 경로로 직접 노출될 서비스 맵입니다. (예: { admin = \"admin-server\" })"
+  type        = map(string)
+  default     = {}
+}
+
+variable "api_sub_services" {
+  description = "/api 하위 경로로 노출될 서비스 맵입니다. (예: { customers = \"customers-service\" })"
+  type        = map(string)
+  default     = {}
+}
+
+
 # 참고: 스로틀링 설정은 향후 사용량 계획(Usage Plan)에서 관리 예정
 # 현재는 기본 기능에 집중하여 변수 제거
 

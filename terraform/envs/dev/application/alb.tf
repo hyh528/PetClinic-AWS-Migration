@@ -1,5 +1,17 @@
 # terraform/envs/dev/application/alb.tf
+module "alb" {
+  source = "../../../modules/alb"
 
+  name            = "petclinic-main-alb"
+  security_groups = [data.terraform_remote_state.security.outputs.alb_security_group_id]
+  subnets         = values(data.terraform_remote_state.network.outputs.public_subnet_ids)
+
+  tags = {
+    Name = "petclinic-main-alb"
+  }
+}
+
+/*
 resource "aws_lb" "main" {
   name               = "petclinic-main-alb"
   internal           = false
@@ -30,3 +42,4 @@ resource "aws_lb_listener" "http" {
     }
   }
 }
+*/

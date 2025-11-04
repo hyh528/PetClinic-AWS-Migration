@@ -22,7 +22,7 @@ locals {
       # 데이터 소스는 원래 서비스 이름(map의 key)으로 참조합니다.
       container_port = tonumber(data.aws_ssm_parameter.service_ports[name].value)
       #container_port = 8080
-      context_path   = "/${config.path_name}"
+      //context_path   = "config.path_name"
       image_uri      = "${module.ecr.repository_urls[name]}:latest"
       priority       = config.priority
       needs_db       = config.needs_db
@@ -45,11 +45,11 @@ module "ecs" {
   vpc_id                      = data.terraform_remote_state.network.outputs.vpc_id
   private_subnet_ids          = values(data.terraform_remote_state.network.outputs.private_app_subnet_ids)
   ecs_service_sg_id           = data.terraform_remote_state.security.outputs.app_security_group_id
-  cluster_id                  = aws_ecs_cluster.main.id
-  ecs_task_execution_role_arn = data.aws_iam_role.ecs_task_execution_role.arn
-  listener_arn                = aws_lb_listener.http.arn
+  cluster_id                  = module.ecs_cluster.cluster_id
+  ecs_task_execution_role_arn = module.ecs_cluster.task_execution_role_arn
+  listener_arn                = module.alb.listener_arn
   task_role_arn               = data.terraform_remote_state.security.outputs.ecs_task_role_arn   
-  context_path                = each.value.context_path
+  context_path                = local.service_definitions[each.key].path_name
 
   # secrets_variables = {
   #   "SPRING_DATASOURCE_PASSWORD" = "${data.terraform_remote_state.database.outputs.db_master_user_secret_arn}:password::",
@@ -67,9 +67,10 @@ module "ecs" {
 
   environment_variables = {
    "SPRING_PROFILES_ACTIVE" = "mysql,aws",
-   "SERVER_SERVLET_CONTEXT_PATH" = each.value.context_path,
+   "SERVER_SERVLET_CONTEXT_PATH" = "/${local.service_definitions[each.key].path_name}",
    "MANAGEMENT_HEALTH_PROBES_ENABLED" = "true"
- 
+
+   //"SERVER_SERVLET_CONTEXT_PATH" = each.value.context_path,
   }
   
   # --- 서비스별 값 전달 ---
