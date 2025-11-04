@@ -67,7 +67,9 @@ module "ecs" {
 
   environment_variables = {
    "SPRING_PROFILES_ACTIVE" = "mysql,aws",
-   "SERVER_SERVLET_CONTEXT_PATH" = each.value.context_path
+   "SERVER_SERVLET_CONTEXT_PATH" = each.value.context_path,
+   "MANAGEMENT_HEALTH_PROBES_ENABLED" = "true"
+ 
   }
   
   # --- 서비스별 값 전달 ---
