@@ -4,7 +4,7 @@ spring:
   boot:
     admin:
       client:
-        url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin
+        url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com
         instance:
           service-base-url: http://visits-service:8080
   cloud:
