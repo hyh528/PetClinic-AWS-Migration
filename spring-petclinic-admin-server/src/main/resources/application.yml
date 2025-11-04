@@ -12,6 +12,7 @@ spring:
     admin:
       ui:
         enabled: true
+        title: "PetClinic Admin"
       client:
         enabled: false  # Admin 서버는 클라이언트가 아님
       discovery:
