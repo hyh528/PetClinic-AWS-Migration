@@ -57,6 +57,22 @@ locals {
   # Admin 서버용 빈 시크릿 (DB 연결 불필요)
   admin_secrets = []
 
+  # Admin 서버용 환경 변수 (ALB DNS 이름 포함)
+  admin_environment = [
+    {
+      name  = "SPRING_PROFILES_ACTIVE"
+      value = "aws"
+    },
+    {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    },
+    {
+      name  = "ALB_DNS_NAME"
+      value = module.alb.alb_dns_name
+    }
+  ]
+
   # 공통 태그
   layer_common_tags = merge(var.tags, {
     Layer     = "07-application"

@@ -228,7 +228,7 @@ resource "aws_ecs_task_definition" "services" {
     container_port   = each.value.port
     log_group_name   = aws_cloudwatch_log_group.services[each.key].name
     aws_region       = var.aws_region
-    environment_vars = each.key == "admin" ? [] : local.common_environment
+    environment_vars = each.key == "admin" ? local.admin_environment : local.common_environment
     secrets          = each.key == "admin" ? local.admin_secrets : local.common_secrets
   })
 

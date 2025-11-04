@@ -1,7 +1,6 @@
 server:
   port: 9090
-  servlet:
-    context-path: /admin
+  # context-path 제거 - Admin UI가 루트 경로에서 작동하도록 함
 
 spring:
   application:
@@ -12,23 +11,44 @@ spring:
     admin:
       ui:
         enabled: true
-        title: "PetClinic Admin"
+        title: "PetClinic Admin Dashboard"
+        brand: "PetClinic"
+        favicon: "favicon.ico"
+        favicon-danger: "favicon-danger.ico"
+      server:
+        enabled: true
       client:
         enabled: false  # Admin 서버는 클라이언트가 아님
       discovery:
-        enabled: true
-        services:
-          - customers-service
-          - vets-service
-          - visits-service
-  thymeleaf:
-    check-template-location: false
+        enabled: false  # 수동으로 서비스 등록하도록 변경
+  # Thymeleaf 설정 제거 - Admin UI는 자체 템플릿 엔진 사용
+  web:
+    resources:
+      static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/
 
 management:
   endpoints:
     web:
       exposure:
         include: "*"
+      base-path: /actuator
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
+      show-components: always
+  server:
+    port: 9090
+
+# PetClinic 특정 설정
+petclinic:
+  alb:
+    dns-name: ${ALB_DNS_NAME:petclinic-alb-1234567890.ap-northeast-2.elb.amazonaws.com}
+
+# 로깅 설정
+logging:
+  level:
+    de.codecentric.boot.admin: DEBUG
+    org.springframework.samples.petclinic.admin: DEBUG
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

@@ -22,6 +22,11 @@
     </properties>
 
     <dependencies>
+        <!-- Spring Boot Web (필수: Admin UI를 위해 필요) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
