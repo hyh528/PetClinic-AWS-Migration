@@ -12,6 +12,8 @@ spring:
     admin:
       ui:
         enabled: true
+      client:
+        enabled: false  # Admin 서버는 클라이언트가 아님
   thymeleaf:
     check-template-location: false
 
