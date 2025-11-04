@@ -46,20 +46,77 @@ public class AdminServerConfig {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void registerServices() {
+        // 5초 후에 등록 시도 (서비스들이 완전히 시작될 시간을 줌)
+        new Thread(() -> {
+            try {
+                Thread.sleep(5000); // 5초 대기
+                
+                // ALB를 통한 서비스 등록
+                String albDnsName = environment.getProperty("petclinic.alb.dns-name",
+                        "petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com");
+                System.out.println("🔍 사용할 ALB DNS 이름: " + albDnsName);
+
+                // 각 서비스 등록 시도
+                registerServiceWithRetry("customers-service", "http://" + albDnsName + "/api/customers");
+                registerServiceWithRetry("vets-service", "http://" + albDnsName + "/api/vets");
+                registerServiceWithRetry("visits-service", "http://" + albDnsName + "/api/visits");
+
+                System.out.println("✅ Admin 서버에 모든 서비스 등록 시도가 완료되었습니다.");
+            } catch (Exception e) {
+                System.err.println("❌ 서비스 등록 중 오류 발생: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    /**
+     * 재시도 로직을 포함한 서비스 등록
+     */
+    private void registerServiceWithRetry(String serviceName, String serviceUrl) {
+        int maxRetries = 3;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                // 헬스체크 먼저 확인
+                if (checkServiceHealth(serviceUrl + "/actuator/health")) {
+                    registerService(serviceName, serviceUrl);
+                    return;
+                } else {
+                    System.out.println("⚠️ " + serviceName + " 헬스체크 실패, 재시도 " + (i + 1) + "/" + maxRetries);
+                    Thread.sleep(10000); // 10초 대기 후 재시도
+                }
+            } catch (Exception e) {
+                System.err.println("❌ " + serviceName + " 등록 시도 " + (i + 1) + " 실패: " + e.getMessage());
+                if (i < maxRetries - 1) {
+                    try {
+                        Thread.sleep(10000); // 10초 대기 후 재시도
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        System.err.println("❌ " + serviceName + " 등록 최종 실패 (모든 재시도 소진)");
+    }
+
+    /**
+     * 서비스 헬스체크 확인
+     */
+    private boolean checkServiceHealth(String healthUrl) {
         try {
-            // ALB를 통한 서비스 등록
-            String albDnsName = environment.getProperty("petclinic.alb.dns-name",
-                    "petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com");
-            System.out.println("🔍 사용할 ALB DNS 이름: " + albDnsName);
-
-            registerService("customers-service", "http://" + albDnsName + "/api/customers");
-            registerService("vets-service", "http://" + albDnsName + "/api/vets");
-            registerService("visits-service", "http://" + albDnsName + "/api/visits");
-
-            System.out.println("✅ Admin 서버에 모든 서비스가 등록되었습니다.");
+            // 간단한 HTTP 요청으로 헬스체크 확인
+            java.net.URL url = new java.net.URL(healthUrl);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            
+            int responseCode = connection.getResponseCode();
+            System.out.println("🔍 " + healthUrl + " 응답 코드: " + responseCode);
+            return responseCode == 200;
         } catch (Exception e) {
-            System.err.println("❌ 서비스 등록 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("❌ 헬스체크 실패 " + healthUrl + ": " + e.getMessage());
+            return false;
         }
     }
 
@@ -82,6 +139,7 @@ public class AdminServerConfig {
             System.out.println("✅ " + serviceName + " 서비스가 등록되었습니다: " + serviceUrl);
         } catch (Exception e) {
             System.err.println("❌ " + serviceName + " 등록 실패: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
