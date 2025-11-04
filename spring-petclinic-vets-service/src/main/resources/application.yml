@@ -28,6 +28,14 @@ management:
     health:
       show-details: when-authorized
 
+spring:
+  boot:
+    admin:
+      client:
+        url: http://admin-server:9090/admin
+        instance:
+          service-base-url: http://vets-service:8080
+
 ---
 spring:
   config:
