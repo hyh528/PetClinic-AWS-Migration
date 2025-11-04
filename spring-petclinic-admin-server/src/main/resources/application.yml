@@ -17,6 +17,8 @@ spring:
         favicon: "favicon.ico"
         favicon-danger: "favicon-danger.ico"
         public-url: "http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin"
+        cache:
+          no-cache: true
       server:
         enabled: true
       client:
@@ -27,6 +29,9 @@ spring:
   web:
     resources:
       static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/
+      add-mappings: true
+  mvc:
+    static-path-pattern: /admin/**
 
 management:
   endpoints:

@@ -105,7 +105,7 @@ locals {
     admin = {
       name        = "admin-server"
       port        = 9090
-      health_path = "/actuator/health"
+      health_path = "/admin/actuator/health"
       cpu         = 256
       memory      = 512
     }

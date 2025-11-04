@@ -39,12 +39,22 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Admin UI 정적 리소스 핸들러
-        registry.addResourceHandler("/**")
+        // Spring Boot Admin UI 정적 리소스 핸들러
+        registry.addResourceHandler("/admin/**")
                 .addResourceLocations("classpath:/META-INF/resources/", 
                                     "classpath:/resources/", 
                                     "classpath:/static/", 
                                     "classpath:/public/")
                 .setCachePeriod(0);
+                
+        // Admin UI의 내부 리소스 핸들러
+        registry.addResourceHandler("/admin/assets/**")
+                .addResourceLocations("classpath:/META-INF/resources/assets/")
+                .setCachePeriod(3600);
+                
+        // Webjars 지원 (Spring Boot Admin이 사용하는 라이브러리들)
+        registry.addResourceHandler("/admin/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/")
+                .setCachePeriod(3600);
     }
 }
