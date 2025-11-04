@@ -8,4 +8,3 @@ cpu_threshold         = 80
 memory_threshold      = 80
 team_members          = ["hwigwon", "junje", "yeonghyeon", "seokgyeom"]
 
-teams_webhook_url = ".env파일에서 참조"

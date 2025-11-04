@@ -38,3 +38,4 @@ GEMINI.md
 *.tfstate
 *.tfstate.*
 *.secrets.tfvars
+secrets.tfvars

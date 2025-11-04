@@ -267,7 +267,7 @@ module "waf" {
 
   name_prefix     = var.name_prefix
   environment     = var.environment
-  api_gateway_arn = data.terraform_remote_state.application.outputs.api_gateway_arn # pet-app의 outputs에서 가져온다고 가정
+  api_gateway_arn = local.api_gateway_arn_for_waf
 }
 
 # =================================================
@@ -404,6 +404,17 @@ data "terraform_remote_state" "application" {
     encrypt        = var.encrypt_state
     profile        = var.database_state_profile # Assuming same profile as database
   }
+}
+
+# API Gateway ID 추출
+locals {
+  # URL에서 API ID와 Stage 이름을 추출합니다.
+  api_gateway_id         = split(".", split("//", data.terraform_remote_state.application.outputs.api_gateway_invoke_url)[1])[0]
+  api_gateway_stage_name = split("/", data.terraform_remote_state.application.outputs.api_gateway_invoke_url)[3]
+
+  # WAF Association에 필요한 올바른 형식의 ARN을 조합합니다.
+  # 형식: arn:aws:apigateway:<region>::/restapis/<api-id>/stages/<stage-name>
+  api_gateway_arn_for_waf = "arn:aws:apigateway:${var.aws_region}::/restapis/${local.api_gateway_id}/stages/${local.api_gateway_stage_name}"
 }
 
 # --- CloudWatch 대시보드 모듈 호출 ---
