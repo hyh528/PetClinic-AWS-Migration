@@ -16,15 +16,15 @@ spring:
         brand: "PetClinic"
         favicon: "favicon.ico"
         favicon-danger: "favicon-danger.ico"
-        public-url: "http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin"
         cache:
           no-cache: true
       server:
         enabled: true
       client:
-        enabled: false  # Admin 서버는 클라이언트가 아님
+        enabled: false # Admin 서버는 클라이언트가 아님
       discovery:
-        enabled: false  # 수동으로 서비스 등록하도록 변경
+        enabled: false # 수동으로 서비스 등록하도록 변경
+      context-path: /admin
   # Thymeleaf 설정 제거 - Admin UI는 자체 템플릿 엔진 사용
   web:
     resources:
