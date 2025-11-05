@@ -4,7 +4,7 @@ spring:
   boot:
     admin:
       client:
-        url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin
+        url: http://admin.petclinic.local:9090/admin
         instance:
           # Register internal management URLs (Cloud Map private DNS)
           service-base-url: http://visits.petclinic.local:8080
