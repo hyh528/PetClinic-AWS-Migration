@@ -1,22 +1,25 @@
 variable "project_name" {
-  description = "리소스용 프로젝트 이름 접두사"
+  description = "The name of the project, used for naming resources."
   type        = string
   default     = "petclinic"
 }
 
 variable "team_members" {
-  description = "팀 멤버 이름 목록"
+  description = "A list of team member names to create IAM users for."
   type        = list(string)
-  default = [
-    "yeonghyeon",
-    "seokgyeom",
-    "junje",
-    "hwigwon"
-  ]
+  default     = []
 }
 
-variable "enable_role_based_policies" {
-  description = "AdministratorAccess 대신 역할 기반 정책 활성화"
-  type        = bool
-  default     = false
+# DB 비밀번호 Secret ARN (ECS Task Role 정책에 사용)
+variable "db_secret_arn" {
+  description = "ECS Task Role에 연결될 DB 비밀번호 Secret의 ARN입니다."
+  type        = string
+  default     = null
+}
+
+# DB 비밀번호 암호화에 사용된 KMS 키의 ARN (ECS Task Role 정책에 사용)
+variable "db_secret_kms_key_arn" {
+  description = "DB 비밀번호 암호화에 사용된 KMS 키의 ARN입니다."
+  type        = string
+  default     = null
 }

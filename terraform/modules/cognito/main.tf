@@ -169,9 +169,81 @@ resource "aws_cognito_identity_pool" "this" {
     server_side_token_check = false
   }
 
+
+
   tags = {
     Name        = "${var.project_name}-${var.environment}-identity-pool"
     Project     = var.project_name
     Environment = var.environment
   }
+}
+
+# Identity Pool 인증된 사용자를 위한 IAM 역할
+resource "aws_iam_role" "cognito_auth_role" {
+  count = var.create_identity_pool ? 1 : 0
+  name = "${var.project_name}-${var.environment}-cognito-auth-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = "cognito-identity.amazonaws.com"
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "cognito-identity.amazonaws.com:aud" = aws_cognito_identity_pool.this[0].id
+          }
+          "ForAnyValue:StringLike": {
+            "cognito-identity.amazonaws.com:amr": "authenticated"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-cognito-auth-role"
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
+
+# Identity Pool 인증된 사용자를 위한 IAM 정책
+resource "aws_iam_policy" "cognito_auth_policy" {
+  count = var.create_identity_pool ? 1 : 0
+  name = "${var.project_name}-${var.environment}-cognito-auth-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = var.cognito_auth_role_policy_actions
+        Resource = var.cognito_auth_role_policy_resources
+      }
+    ]
+  })
+}
+
+# IAM 정책을 Identity Pool 역할에 연결
+resource "aws_iam_role_policy_attachment" "cognito_auth_attachment" {
+  count = var.create_identity_pool ? 1 : 0
+  role       = aws_iam_role.cognito_auth_role[0].name
+  policy_arn = aws_iam_policy.cognito_auth_policy[0].arn
+}
+
+# Identity Pool에 역할 연결
+resource "aws_cognito_identity_pool_roles_attachment" "this" {
+  count = var.create_identity_pool ? 1 : 0
+
+  identity_pool_id = aws_cognito_identity_pool.this[0].id
+
+  roles = {
+    "authenticated" = aws_iam_role.cognito_auth_role[0].arn
+  }
+
+  # unauthenticated_role_arn = aws_iam_role.cognito_unauth_role[0].arn # 필요시 비인증 역할 추가
 }

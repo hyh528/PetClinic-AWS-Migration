@@ -22,3 +22,28 @@ output "group_membership_name" {
   description = "그룹 멤버십 리소스 이름"
   value       = aws_iam_group_membership.cli_users.name
 }
+
+output "api_gateway_cloudwatch_logs_role_arn" {
+  description = "API Gateway가 CloudWatch에 로그를 기록하기 위해 사용하는 역할의 ARN입니다."
+  value       = aws_iam_role.api_gateway_cloudwatch_logs_role.arn
+}
+
+output "ecs_task_role_arn" {
+  description = "ARN of the IAM role for ECS tasks"
+  value       = aws_iam_role.ecs_task_role.arn
+}
+
+output "ecs_secrets_policy_arn" {
+  description = "ARN of the policy for ECS to access secrets"
+  value       = aws_iam_policy.ecs_secrets_policy.arn
+}
+
+output "chatbot_role_arn" {
+  description = "AWS Chatbot이 사용할 IAM 역할의 ARN입니다."
+  value       = aws_iam_role.chatbot.arn
+}
+
+# output "lambda_teams_notifier_role_arn" {
+#   description = "The ARN of the IAM role for the Teams notifier Lambda function."
+#   value       = aws_iam_role.lambda_teams_notifier.arn
+# }
