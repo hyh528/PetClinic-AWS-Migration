@@ -269,6 +269,12 @@ resource "aws_ecs_service" "services" {
     Service = each.key
   })
 
+  # Register ECS service instances in Cloud Map (service discovery)
+  service_registries {
+    # Use Cloud Map module outputs (service_arns) from remote state for robustness
+    registry_arn = lookup(data.terraform_remote_state.cloud_map.outputs.service_arns, each.key, "")
+  }
+
   depends_on = [aws_ecs_task_definition.services]
 }
 

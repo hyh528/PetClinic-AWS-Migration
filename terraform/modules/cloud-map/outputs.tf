@@ -28,3 +28,12 @@ output "service_dns_names" {
     service_name => "${service_name}.${var.namespace_name}"
   }
 }
+
+# 서비스 ARN 출력 추가: ECS에서 service_registries에 직접 사용하기 위함
+output "service_arns" {
+  description = "각 마이크로서비스의 Cloud Map 서비스 ARN"
+  value = {
+    for service_name, service in aws_service_discovery_service.microservices :
+    service_name => service.arn
+  }
+}
