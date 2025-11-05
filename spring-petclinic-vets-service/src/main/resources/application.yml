@@ -4,6 +4,7 @@ spring:
   boot:
     admin:
       client:
+        enabled: true
         url: http://admin.petclinic.local:9090/admin
         instance:
           # Register internal management URLs (Cloud Map private DNS)

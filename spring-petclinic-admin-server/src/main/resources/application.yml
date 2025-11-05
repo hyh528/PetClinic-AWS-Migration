@@ -23,7 +23,7 @@ spring:
       client:
         enabled: false # Admin 서버는 클라이언트가 아님
       discovery:
-        enabled: false # 수동으로 서비스 등록하도록 변경
+        enabled: true # 자동 서비스 디스커버리 활성화
       monitor:
         status-interval: 30s # 상태 체크 간격을 30초로 증가
         info-interval: 60s   # 정보 업데이트 간격을 60초로 증가
