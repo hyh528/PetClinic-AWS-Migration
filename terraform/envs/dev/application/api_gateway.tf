@@ -11,6 +11,7 @@ module "api_gateway" {
 
   # API Gateway 라우팅 규칙 정의
   direct_top_level_services = {
+    "proxy" = "proxy-server"
     "admin" = "admin-server"
   }
   api_sub_services = {

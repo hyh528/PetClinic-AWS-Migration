@@ -117,5 +117,11 @@ variable "secrets_variables" {
 variable "health_check_grace_period" {
   description = "컨테이너 시작 후 헬스 체크 실패를 무시할 유예 기간(초)"
   type = number
-  default = 150
+  default = 200
+}
+
+variable "health_check_port" {
+  description = "상태 검사에 사용할 포트입니다. null이면 트래픽 포트를 사용합니다."
+  type        = number
+  default     = null
 }

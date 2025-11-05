@@ -1,0 +1,31 @@
+/*
+moved {
+  from = aws_lb.main
+  to   = module.alb.aws_lb.main
+}
+
+moved {
+  from = aws_lb_listener.http
+  to   = module.alb.aws_lb_listener.http
+}
+
+moved {
+  from = aws_ecs_cluster.main
+  to   = module.ecs_cluster.aws_ecs_cluster.main
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.ecs_task_execution_role_policy
+  to   = module.ecs_cluster.aws_iam_role_policy_attachment.ecs_task_execution_role_policy
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.ecs_secrets_policy_attachment
+  to   = module.ecs_cluster.aws_iam_role_policy_attachment.ecs_secrets_policy_attachment[0]
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.ecs_ssm_policy_attachment
+  to   = module.ecs_cluster.aws_iam_role_policy_attachment.ecs_ssm_policy_attachment[0]
+}
+*/

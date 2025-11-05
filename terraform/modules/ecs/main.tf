@@ -15,6 +15,7 @@ resource "aws_lb_target_group" "service" {
   health_check {
     path                = "/${var.context_path}/actuator/health/liveness"
     protocol            = "HTTP"
+    //port                = "${var.health_check_port}"
     matcher             = "200"
     interval            = 30
     timeout             = 10
