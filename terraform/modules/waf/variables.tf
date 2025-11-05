@@ -18,3 +18,15 @@ variable "api_gateway_arn" {
   description = "The ARN of the API Gateway to associate with the WAF Web ACL."
   type        = string
 }
+
+variable "enable_rate_limiting" {
+  description = "Flag to enable or disable the rate-based rule."
+  type        = bool
+  default     = true
+}
+
+variable "rate_limit_threshold" {
+  description = "The maximum number of requests allowed from a single IP address in a 5-minute period."
+  type        = number
+  default     = 2000
+}
