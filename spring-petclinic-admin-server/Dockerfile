@@ -6,8 +6,8 @@ WORKDIR /app
 # 빌드된 JAR 파일 복사 (와일드카드 사용으로 버전 독립적)
 COPY target/*.jar app.jar
 
-# 애플리케이션이 실행되는 포트 노출
-EXPOSE 8080
+# 애플리케이션이 실행되는 포트 노출 (application.yml에 맞춤)
+EXPOSE 9090
 
 # 애플리케이션 실행
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
