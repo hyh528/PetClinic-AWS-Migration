@@ -115,9 +115,18 @@ public class AdminServerConfig {
      */
 
     /**
-     * 잘못된 URL로 등록된 인스턴스를 자동으로 삭제합니다.
-     * healthUrl에 /api/{service}/ 경로가 없는 인스턴스는 잘못된 것으로 간주합니다.
+     * DISABLED: 잘못된 URL로 등록된 인스턴스를 자동으로 삭제하는 EventListener
+     * 
+     * NOTE: 이 기능은 InstanceRegistrationFilter로 대체되었습니다.
+     * 이제 잘못된 등록 요청은 HTTP 필터 레벨에서 차단(400 Bad Request)되므로
+     * 이 EventListener는 더 이상 필요하지 않습니다.
+     * 
+     * REASON: Filter-based rejection is more efficient than EventListener-based deletion:
+     * - Blocks invalid requests BEFORE registration
+     * - Prevents database pollution
+     * - Returns immediate HTTP 400 error to source
      */
+    /* DISABLED - Replaced by InstanceRegistrationFilter
     @EventListener
     public void onInstanceRegistered(InstanceRegisteredEvent event) {
         InstanceId instanceId = event.getInstance();
@@ -127,15 +136,11 @@ public class AdminServerConfig {
                 String healthUrl = instance.getRegistration().getHealthUrl();
                 logger.info("Instance registered: {} with healthUrl: {}", instanceId, healthUrl);
                 
-                // healthUrl이 잘못된 형식인지 확인
-                // 올바른 형식: http://alb/api/customers/actuator/health
-                // 잘못된 형식: http://alb/actuator/health
                 if (healthUrl != null && healthUrl.contains("/actuator/health")) {
-                    // /api/{service}/actuator 패턴이 있는지 확인
                     if (!healthUrl.matches(".*\\/api\\/[^\\/]+\\/actuator\\/health$")) {
                         logger.warn("Deleting invalid instance {} with incorrect healthUrl pattern: {}", 
                                    instanceId, healthUrl);
-                        return instanceRepository.deregister(instanceId);
+                        // deregister method does not exist in InstanceRepository API
                     }
                 }
                 return Mono.empty();
@@ -145,4 +150,5 @@ public class AdminServerConfig {
                 error -> logger.error("Error processing instance {}: {}", instanceId, error.getMessage())
             );
     }
+    DISABLED - END */
 }
