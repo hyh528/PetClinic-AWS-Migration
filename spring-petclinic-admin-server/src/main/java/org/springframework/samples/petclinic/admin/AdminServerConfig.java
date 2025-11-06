@@ -15,27 +15,25 @@
  */
 package org.springframework.samples.petclinic.admin;
 
-// Auto-registration imports removed - no longer needed
-// import de.codecentric.boot.admin.server.domain.entities.Instance;
-// import de.codecentric.boot.admin.server.domain.entities.InstanceRepository;
-// import de.codecentric.boot.admin.server.domain.values.InstanceId;
-// import de.codecentric.boot.admin.server.domain.values.Registration;
+import de.codecentric.boot.admin.server.domain.entities.Instance;
+import de.codecentric.boot.admin.server.domain.entities.InstanceRepository;
+import de.codecentric.boot.admin.server.domain.events.InstanceEvent;
+import de.codecentric.boot.admin.server.domain.events.InstanceRegisteredEvent;
+import de.codecentric.boot.admin.server.domain.values.InstanceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-// import org.springframework.context.event.EventListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
-// import java.util.HashMap;
-// import java.util.Map;
 
 /**
  * Admin 서버 설정 클래스
@@ -44,9 +42,10 @@ import java.time.Duration;
 @Configuration
 public class AdminServerConfig {
 
-    // InstanceRepository removed - auto-registration disabled
-    // @Autowired
-    // private InstanceRepository instanceRepository;
+    private static final Logger logger = LoggerFactory.getLogger(AdminServerConfig.class);
+
+    @Autowired
+    private InstanceRepository instanceRepository;
 
     @Autowired
     private Environment environment;
@@ -114,4 +113,36 @@ public class AdminServerConfig {
      * - Missing trailing slashes in service URLs
      * - Automatic registration conflicting with manual registration
      */
+
+    /**
+     * 잘못된 URL로 등록된 인스턴스를 자동으로 삭제합니다.
+     * healthUrl에 /api/{service}/ 경로가 없는 인스턴스는 잘못된 것으로 간주합니다.
+     */
+    @EventListener
+    public void onInstanceRegistered(InstanceRegisteredEvent event) {
+        InstanceId instanceId = event.getInstance();
+        
+        instanceRepository.find(instanceId)
+            .flatMap(instance -> {
+                String healthUrl = instance.getRegistration().getHealthUrl();
+                logger.info("Instance registered: {} with healthUrl: {}", instanceId, healthUrl);
+                
+                // healthUrl이 잘못된 형식인지 확인
+                // 올바른 형식: http://alb/api/customers/actuator/health
+                // 잘못된 형식: http://alb/actuator/health
+                if (healthUrl != null && healthUrl.contains("/actuator/health")) {
+                    // /api/{service}/actuator 패턴이 있는지 확인
+                    if (!healthUrl.matches(".*\\/api\\/[^\\/]+\\/actuator\\/health$")) {
+                        logger.warn("Deleting invalid instance {} with incorrect healthUrl pattern: {}", 
+                                   instanceId, healthUrl);
+                        return instanceRepository.deregister(instanceId);
+                    }
+                }
+                return Mono.empty();
+            })
+            .subscribe(
+                v -> logger.info("Invalid instance {} deleted successfully", instanceId),
+                error -> logger.error("Error processing instance {}: {}", instanceId, error.getMessage())
+            );
+    }
 }
