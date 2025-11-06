@@ -95,15 +95,16 @@ resource "aws_security_group_rule" "ecs_inter_service_9090" {
 # =============================================================================
 
 # Admin 서버가 ALB를 통해 다른 서비스의 actuator에 접근하기 위한 egress 규칙
-resource "aws_security_group_rule" "ecs_to_alb_http" {
-  type                     = "egress"
-  from_port                = 80
-  to_port                  = 80
-  protocol                 = "tcp"
-  security_group_id        = local.ecs_security_group_id
-  source_security_group_id = module.alb.alb_security_group_id
+# ALB의 공개 DNS를 통한 접근을 위해 모든 HTTP 트래픽 허용 (NAT Gateway를 통해 나감)
+resource "aws_security_group_rule" "ecs_to_internet_http" {
+  type              = "egress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  security_group_id = local.ecs_security_group_id
+  cidr_blocks       = ["0.0.0.0/0"]
 
-  description = "Allow ECS (Admin) to access ALB on port 80 to reach service actuators"
+  description = "Allow ECS to access internet on port 80 (for Admin to access ALB public DNS)"
 }
 
 # ECS 서비스 간 직접 통신을 위한 egress - 8080 포트
