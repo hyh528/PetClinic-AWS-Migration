@@ -189,6 +189,25 @@ resource "aws_wafv2_web_acl" "alb_rate_limit" {
       rate_based_statement {
         limit              = var.rate_limit_per_ip
         aggregate_key_type = "IP"
+        
+        # actuator 경로 제외 (헬스 체크는 Rate Limit 적용 안 함)
+        scope_down_statement {
+          not_statement {
+            statement {
+              byte_match_statement {
+                search_string = "/actuator/"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "LOWERCASE"
+                }
+                positional_constraint = "CONTAINS"
+              }
+            }
+          }
+        }
       }
     }
 
