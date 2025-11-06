@@ -213,33 +213,55 @@ resource "aws_wafv2_web_acl" "alb_rate_limit" {
         limit              = var.rate_limit_burst_per_ip
         aggregate_key_type = "IP"
 
-        # 특정 경로에 대한 더 엄격한 제한
+        # 특정 경로에 대한 더 엄격한 제한 (actuator 헬스 체크 제외)
         scope_down_statement {
-          or_statement {
+          and_statement {
             statement {
-              byte_match_statement {
-                search_string = "/api/"
-                field_to_match {
-                  uri_path {}
+              or_statement {
+                statement {
+                  byte_match_statement {
+                    search_string = "/api/"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                    positional_constraint = "STARTS_WITH"
+                  }
                 }
-                text_transformation {
-                  priority = 0
-                  type     = "LOWERCASE"
+                statement {
+                  byte_match_statement {
+                    search_string = "/admin/"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                    positional_constraint = "STARTS_WITH"
+                  }
                 }
-                positional_constraint = "STARTS_WITH"
               }
             }
+            # actuator 경로 제외 (헬스 체크는 Rate Limit 적용 안 함)
             statement {
-              byte_match_statement {
-                search_string = "/admin/"
-                field_to_match {
-                  uri_path {}
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    search_string = "/actuator/"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                    positional_constraint = "CONTAINS"
+                  }
                 }
-                text_transformation {
-                  priority = 0
-                  type     = "LOWERCASE"
-                }
-                positional_constraint = "STARTS_WITH"
               }
             }
           }

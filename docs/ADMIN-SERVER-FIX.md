@@ -110,6 +110,47 @@ curl -s -H "Accept: application/json" \
 }
 ```
 
+## 🔄 추가 문제 및 해결 (2차 수정 - 2025-11-06)
+
+### 문제: 서비스가 등록되었으나 여전히 DOWN 상태
+등록 URL은 올바르지만 **403 Forbidden** 에러 발생:
+```json
+{
+  "error": "Forbidden",
+  "status": 403
+}
+```
+
+### 원인: WAF Rate Limiting
+- **BurstRateLimit 규칙**이 `/api/` 경로에 대해 1분간 200개 요청 제한
+- Admin 서버가 NAT Gateway의 단일 IP에서 반복적으로 헬스 체크 요청
+- `/api/*/actuator/health` 경로가 Rate Limit에 걸림
+
+### 해결책: Actuator 경로 Rate Limiting 제외
+**파일**: `terraform/modules/alb/main.tf`
+
+WAF BurstRateLimit 규칙에 actuator 경로 예외 추가:
+```hcl
+# actuator 경로 제외 (헬스 체크는 Rate Limit 적용 안 함)
+statement {
+  not_statement {
+    statement {
+      byte_match_statement {
+        search_string = "/actuator/"
+        positional_constraint = "CONTAINS"
+        # 모든 actuator 하위 경로 제외
+      }
+    }
+  }
+}
+```
+
+**영향**:
+- ✅ Admin 서버의 헬스 체크 요청이 WAF에 의해 차단되지 않음
+- ✅ 일반 API 요청은 여전히 Rate Limiting 보호 유지
+- ✅ 보안과 모니터링 기능의 균형 유지
+- ⚠️ Actuator 엔드포인트는 추가 보안 설정 권장 (Spring Security)
+
 ## 장기적인 개선 방안
 
 ### Option 1: Cloud Map (Service Discovery) 활용 ⭐ 권장
