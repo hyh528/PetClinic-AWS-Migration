@@ -71,9 +71,12 @@ public class AdminServerConfig {
 
     /**
      * 애플리케이션 시작 후 서비스들을 자동으로 등록합니다.
+     * 
+     * NOTE: 자동 등록 기능은 비활성화되어 있습니다.
+     * 수동 등록 스크립트(register-services-to-admin.sh)를 사용하세요.
      */
-    @EventListener(ApplicationReadyEvent.class)
-    public void registerServices() {
+    // @EventListener(ApplicationReadyEvent.class)
+    public void registerServices_DISABLED() {
         // 5초 후에 등록 시도 (서비스들이 완전히 시작될 시간을 줌)
         new Thread(() -> {
             try {
