@@ -23,10 +23,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
+import org.springframework.http.client.reactive.ClientHttpConnector;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +48,26 @@ public class AdminServerConfig {
 
     @Autowired
     private Environment environment;
+
+    /**
+     * Spring Boot Admin이 사용하는 WebClient를 커스터마이즈합니다.
+     * WAF 우회를 위한 헤더 및 타임아웃 설정을 추가합니다.
+     */
+    @Bean
+    public WebClient.Builder webClientBuilder() {
+        // HTTP 클라이언트 타임아웃 설정
+        HttpClient httpClient = HttpClient.create()
+            .responseTimeout(Duration.ofSeconds(30))
+            .followRedirect(true);
+        
+        ClientHttpConnector connector = new ReactorClientHttpConnector(httpClient);
+        
+        return WebClient.builder()
+            .clientConnector(connector)
+            .defaultHeader("User-Agent", "SpringBootAdmin/3.4.1")
+            .defaultHeader("Accept", "application/json, application/*+json")
+            .defaultHeader("X-Admin-Request", "true");
+    }
 
     /**
      * 애플리케이션 시작 후 서비스들을 자동으로 등록합니다.
@@ -112,6 +138,10 @@ public class AdminServerConfig {
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
+            
+            // User-Agent 헤더 추가 (WAF 우회용)
+            connection.setRequestProperty("User-Agent", "SpringBootAdmin/3.4.1");
+            connection.setRequestProperty("Accept", "application/json");
             
             int responseCode = connection.getResponseCode();
             System.out.println("🔍 " + healthUrl + " 응답 코드: " + responseCode);
