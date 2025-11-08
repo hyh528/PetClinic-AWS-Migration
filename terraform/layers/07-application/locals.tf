@@ -19,6 +19,11 @@ locals {
   # Database 레이어에서 필요한 정보 (하드코딩 제거)
   db_secret_arn = data.terraform_remote_state.database.outputs.master_user_secret_name
 
+  # CloudMap 레이어에서 필요한 정보
+  cloudmap_namespace_id   = data.terraform_remote_state.cloud_map.outputs.namespace_id
+  cloudmap_namespace_name = data.terraform_remote_state.cloud_map.outputs.namespace_name
+  cloudmap_service_ids    = data.terraform_remote_state.cloud_map.outputs.service_ids
+
   # 환경별 설정
   log_retention_days = var.environment == "prod" ? 90 : 30
 

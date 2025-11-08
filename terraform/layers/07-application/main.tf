@@ -330,6 +330,13 @@ resource "aws_ecs_service" "services" {
     container_port   = each.value.port
   }
 
+  # CloudMap 서비스 디스커버리 등록
+  service_registries {
+    registry_arn   = local.cloudmap_service_ids[each.key]
+    container_name = each.key
+    container_port = each.value.port
+  }
+
   tags = merge(local.layer_common_tags, {
     Service = each.key
   })
