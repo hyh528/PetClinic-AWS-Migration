@@ -451,8 +451,9 @@ resource "aws_wafv2_web_acl_association" "alb" {
 # ==========================================
 
 # WAF 로그 그룹
+# CloudWatch Log Group for WAF (created but not used unless Kinesis is configured)
 resource "aws_cloudwatch_log_group" "waf_logs" {
-  count = var.enable_waf_rate_limiting ? 1 : 0
+  count = var.enable_waf_rate_limiting && var.enable_waf_logging ? 1 : 0
 
   # WAFv2 requires log group name to start with "aws-wafv2-logs-"
   name              = "aws-wafv2-logs-${var.name_prefix}-alb"
@@ -465,26 +466,21 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
   })
 }
 
-# WAF 로깅 설정
-resource "aws_wafv2_web_acl_logging_configuration" "alb" {
-  count = var.enable_waf_rate_limiting ? 1 : 0
-
-  resource_arn = aws_wafv2_web_acl.alb_rate_limit[0].arn
-  # WAFv2 requires the log group ARN with ":*" suffix
-  log_destination_configs = ["${aws_cloudwatch_log_group.waf_logs[0].arn}:*"]
-
-  # 민감한 정보 필터링
-  redacted_fields {
-    single_header {
-      name = "authorization"
-    }
-  }
-
-  redacted_fields {
-    single_header {
-      name = "cookie"
-    }
-  }
+# WAF 로깅 설정 (비활성화 - CloudWatch Logs 직접 지원 안 함)
+# Note: AWS WAFv2는 CloudWatch Logs를 직접 지원하지 않습니다.
+# 로깅이 필요하면 S3 버킷 또는 Kinesis Data Firehose를 사용해야 합니다.
+# 
+# resource "aws_wafv2_web_acl_logging_configuration" "alb" {
+#   count = var.enable_waf_rate_limiting && var.enable_waf_logging ? 1 : 0
+#
+#   resource_arn = aws_wafv2_web_acl.alb_rate_limit[0].arn
+#   log_destination_configs = [
+#     # S3 버킷 ARN 또는 Kinesis Firehose ARN 필요
+#     # aws_s3_bucket.waf_logs[0].arn
+#     # 또는
+#     # aws_kinesis_firehose_delivery_stream.waf_logs[0].arn
+#   ]
+# }
 
   redacted_fields {
     single_header {
