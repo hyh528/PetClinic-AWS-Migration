@@ -331,10 +331,9 @@ resource "aws_ecs_service" "services" {
   }
 
   # CloudMap 서비스 디스커버리 등록
+  # Note: container_port는 SRV 레코드 타입에서만 사용. A 레코드는 IP만 등록
   service_registries {
-    registry_arn   = local.cloudmap_service_arns[each.key]
-    container_name = each.key
-    container_port = each.value.port
+    registry_arn = local.cloudmap_service_arns[each.key]
   }
 
   tags = merge(local.layer_common_tags, {
