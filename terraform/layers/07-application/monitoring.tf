@@ -301,8 +301,8 @@ resource "aws_cloudwatch_dashboard" "application" {
           metrics = flatten([
             for service in keys(local.services) : [
               ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "TargetGroup", aws_lb_target_group.services[service].arn_suffix, "LoadBalancer", module.alb.alb_arn_suffix],
-              [".", "HTTPCode_Target_4XX_Count", ".", ".", ".", "."],
-              [".", "HTTPCode_Target_5XX_Count", ".", ".", ".", "."]
+              ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "TargetGroup", aws_lb_target_group.services[service].arn_suffix, "LoadBalancer", module.alb.alb_arn_suffix],
+              ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "TargetGroup", aws_lb_target_group.services[service].arn_suffix, "LoadBalancer", module.alb.alb_arn_suffix]
             ]
           ])
           period = 300

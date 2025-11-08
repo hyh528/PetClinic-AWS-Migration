@@ -21,9 +21,24 @@ output "alb_arn" {
   value       = module.alb.alb_arn
 }
 
+output "alb_arn_suffix" {
+  description = "ALB ARN suffix (CloudWatch 메트릭용)"
+  value       = module.alb.alb_arn_suffix
+}
+
 output "target_group_arn" {
   description = "ALB 타겟 그룹 ARN"
   value       = module.alb.default_target_group_arn
+}
+
+output "target_group_arns" {
+  description = "각 서비스별 타겟 그룹 ARN suffixes (CloudWatch 메트릭용)"
+  value = {
+    for service_key, tg in aws_lb_target_group.services : service_key => {
+      arn        = tg.arn
+      arn_suffix = tg.arn_suffix
+    }
+  }
 }
 
 # =============================================================================

@@ -25,8 +25,17 @@ variable "ecs_cluster_name" {
 }
 
 variable "ecs_service_name" {
-  description = "ECS 서비스 이름"
+  description = "ECS 서비스 이름 (레거시, 단일 서비스용)"
   type        = string
+  default     = ""
+}
+
+variable "ecs_services" {
+  description = "ECS 서비스 목록 (멀티 서비스 지원)"
+  type = map(object({
+    service_name = string
+  }))
+  default = {}
 }
 
 variable "lambda_function_name" {
@@ -40,8 +49,23 @@ variable "aurora_cluster_name" {
 }
 
 variable "alb_name" {
-  description = "Application Load Balancer 이름"
+  description = "Application Load Balancer 이름 (레거시)"
   type        = string
+  default     = ""
+}
+
+variable "alb_arn_suffix" {
+  description = "ALB ARN suffix (CloudWatch 메트릭용)"
+  type        = string
+  default     = ""
+}
+
+variable "target_groups" {
+  description = "타겟 그룹 ARN suffixes (멀티 서비스 지원)"
+  type = map(object({
+    arn_suffix = string
+  }))
+  default = {}
 }
 
 variable "log_retention_days" {

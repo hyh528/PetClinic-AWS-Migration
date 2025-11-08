@@ -32,7 +32,7 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         }
       },
 
-      # ECS 서비스 메트릭
+      # ECS 서비스 CPU 사용률 (전체 서비스)
       {
         type   = "metric"
         x      = 12
@@ -41,19 +41,28 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
-          metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name],
-            [".", "MemoryUtilization", ".", ".", ".", "."]
+          metrics = length(var.ecs_services) > 0 ? flatten([
+            for service_key, service in var.ecs_services : [
+              ["AWS/ECS", "CPUUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
+            ]
+          ]) : [
+            ["AWS/ECS", "CPUUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
           ]
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "ECS Service Metrics"
+          title   = "ECS Services - CPU Utilization"
           period  = 300
+          yAxis = {
+            left = {
+              min = 0
+              max = 100
+            }
+          }
         }
       },
 
-      # Lambda 함수 메트릭 (GenAI)
+      # ECS 서비스 메모리 사용률 (전체 서비스)
       {
         type   = "metric"
         x      = 0
@@ -62,11 +71,41 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
+          metrics = length(var.ecs_services) > 0 ? flatten([
+            for service_key, service in var.ecs_services : [
+              ["AWS/ECS", "MemoryUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
+            ]
+          ]) : [
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "ECS Services - Memory Utilization"
+          period  = 300
+          yAxis = {
+            left = {
+              min = 0
+              max = 100
+            }
+          }
+        }
+      },
+
+      # Lambda 함수 메트릭 (GenAI)
+      {
+        type   = "metric"
+        x      = 12
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
           metrics = [
             ["AWS/Lambda", "Invocations", "FunctionName", var.lambda_function_name],
-            [".", "Duration", ".", "."],
-            [".", "Errors", ".", "."],
-            [".", "ConcurrentExecutions", ".", "."]
+            ["AWS/Lambda", "Duration", "FunctionName", var.lambda_function_name],
+            ["AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name],
+            ["AWS/Lambda", "ConcurrentExecutions", "FunctionName", var.lambda_function_name]
           ]
           view    = "timeSeries"
           stacked = false
@@ -79,17 +118,17 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
       # Aurora 데이터베이스 메트릭
       {
         type   = "metric"
-        x      = 12
-        y      = 6
+        x      = 0
+        y      = 12
         width  = 12
         height = 6
 
         properties = {
           metrics = [
             ["AWS/RDS", "CPUUtilization", "DBClusterIdentifier", var.aurora_cluster_name],
-            [".", "DatabaseConnections", ".", "."],
-            [".", "ReadLatency", ".", "."],
-            [".", "WriteLatency", ".", "."]
+            ["AWS/RDS", "DatabaseConnections", "DBClusterIdentifier", var.aurora_cluster_name],
+            ["AWS/RDS", "ReadLatency", "DBClusterIdentifier", var.aurora_cluster_name],
+            ["AWS/RDS", "WriteLatency", "DBClusterIdentifier", var.aurora_cluster_name]
           ]
           view    = "timeSeries"
           stacked = false
@@ -99,21 +138,27 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         }
       },
 
-      # ALB 메트릭
+      # ALB 전체 메트릭
       {
         type   = "metric"
-        x      = 0
+        x      = 12
         y      = 12
         width  = 12
         height = 6
 
         properties = {
-          metrics = [
+          metrics = var.alb_arn_suffix != "" ? [
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_arn_suffix],
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", var.alb_arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", var.alb_arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", var.alb_arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_arn_suffix]
+          ] : [
             ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_name],
-            [".", "TargetResponseTime", ".", "."],
-            [".", "HTTPCode_Target_2XX_Count", ".", "."],
-            [".", "HTTPCode_Target_4XX_Count", ".", "."],
-            [".", "HTTPCode_Target_5XX_Count", ".", "."]
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", var.alb_name],
+            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", var.alb_name],
+            ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", var.alb_name],
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_name]
           ]
           view    = "timeSeries"
           stacked = false
@@ -123,19 +168,50 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         }
       },
 
-      # 비즈니스 메트릭 (로그 기반)
+      # ALB 타겟 그룹별 헬스 체크
       {
-        type   = "log"
-        x      = 12
-        y      = 12
+        type   = "metric"
+        x      = 0
+        y      = 18
         width  = 12
         height = 6
 
         properties = {
-          query  = "SOURCE '/ecs/${var.ecs_cluster_name}/${var.ecs_service_name}' | fields @timestamp, @message | filter @message like /actuator/health/ | stats count() by bin(5m)"
-          region = var.aws_region
-          title  = "Health Check Requests"
-          view   = "table"
+          metrics = length(var.target_groups) > 0 && var.alb_arn_suffix != "" ? flatten([
+            for tg_key, tg in var.target_groups : [
+              ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", tg.arn_suffix, "LoadBalancer", var.alb_arn_suffix],
+              ["AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", tg.arn_suffix, "LoadBalancer", var.alb_arn_suffix]
+            ]
+          ]) : []
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "Target Groups - Health Status"
+          period  = 300
+        }
+      },
+
+      # ECS 실행 중인 태스크 수
+      {
+        type   = "metric"
+        x      = 12
+        y      = 18
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = length(var.ecs_services) > 0 ? flatten([
+            for service_key, service in var.ecs_services : [
+              ["AWS/ECS", "RunningTaskCount", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
+            ]
+          ]) : [
+            ["AWS/ECS", "RunningTaskCount", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "ECS Running Task Count"
+          period  = 300
         }
       }
     ]
@@ -350,4 +426,5 @@ resource "aws_cloudwatch_metric_alarm" "aurora_cpu_utilization" {
   }
 
   tags = var.tags
+}r.tags
 }
