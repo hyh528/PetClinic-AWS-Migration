@@ -454,7 +454,8 @@ resource "aws_wafv2_web_acl_association" "alb" {
 resource "aws_cloudwatch_log_group" "waf_logs" {
   count = var.enable_waf_rate_limiting ? 1 : 0
 
-  name              = "/aws/wafv2/${var.name_prefix}-alb"
+  # WAFv2 requires log group name to start with "aws-wafv2-logs-"
+  name              = "aws-wafv2-logs-${var.name_prefix}-alb"
   retention_in_days = var.waf_log_retention_days
 
   tags = merge(var.tags, {
