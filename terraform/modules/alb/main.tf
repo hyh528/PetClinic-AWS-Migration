@@ -469,8 +469,9 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
 resource "aws_wafv2_web_acl_logging_configuration" "alb" {
   count = var.enable_waf_rate_limiting ? 1 : 0
 
-  resource_arn            = aws_wafv2_web_acl.alb_rate_limit[0].arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
+  resource_arn = aws_wafv2_web_acl.alb_rate_limit[0].arn
+  # WAFv2 requires the log group ARN with ":*" suffix
+  log_destination_configs = ["${aws_cloudwatch_log_group.waf_logs[0].arn}:*"]
 
   # 민감한 정보 필터링
   redacted_fields {
