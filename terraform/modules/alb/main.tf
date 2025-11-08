@@ -447,24 +447,28 @@ resource "aws_wafv2_web_acl_association" "alb" {
 }
 
 # ==========================================
-# WAF 로깅 설정
+# WAF 로깅 설정 (완전 비활성화)
 # ==========================================
+# Note: WAFv2는 CloudWatch Logs를 직접 지원하지 않으며,
+# S3 버킷 또는 Kinesis Data Firehose를 통해서만 로깅 가능합니다.
+# 비용 절감을 위해 WAF 로깅 기능을 완전히 비활성화합니다.
+# WAF Web ACL 자체는 계속 작동하며 CloudWatch Metrics는 수집됩니다.
 
-# WAF 로그 그룹
-# CloudWatch Log Group for WAF (created but not used unless Kinesis is configured)
-resource "aws_cloudwatch_log_group" "waf_logs" {
-  count = var.enable_waf_rate_limiting && var.enable_waf_logging ? 1 : 0
-
-  # WAFv2 requires log group name to start with "aws-wafv2-logs-"
-  name              = "aws-wafv2-logs-${var.name_prefix}-alb"
-  retention_in_days = var.waf_log_retention_days
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-alb-waf-logs"
-    Environment = var.environment
-    Type        = "security-logging"
-  })
-}
+# WAF 로그 그룹 (비활성화)
+# CloudWatch Log Group for WAF (not supported by WAFv2 directly)
+# resource "aws_cloudwatch_log_group" "waf_logs" {
+#   count = var.enable_waf_rate_limiting && var.enable_waf_logging ? 1 : 0
+#
+#   # WAFv2 requires log group name to start with "aws-wafv2-logs-"
+#   name              = "aws-wafv2-logs-${var.name_prefix}-alb"
+#   retention_in_days = var.waf_log_retention_days
+#
+#   tags = merge(var.tags, {
+#     Name        = "${var.name_prefix}-alb-waf-logs"
+#     Environment = var.environment
+#     Type        = "security-logging"
+#   })
+# }
 
 # WAF 로깅 설정 (비활성화 - CloudWatch Logs 직접 지원 안 함)
 # Note: AWS WAFv2는 CloudWatch Logs를 직접 지원하지 않습니다.
