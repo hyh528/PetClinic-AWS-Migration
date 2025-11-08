@@ -5,14 +5,6 @@ server:
 spring:
   application:
     name: visits-service
-  boot:
-    admin:
-      client:
-        url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin
-        instance:
-          service-base-url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com
-          management-base-url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com
-          health-url: http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/actuator/health
   cloud:
     aws:
       region:
