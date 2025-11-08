@@ -53,7 +53,7 @@ class VisitResource {
         this.visitRepository = visitRepository;
     }
 
-    @PostMapping("/api/visits/owners/*/pets/{petId}/visits")
+    @PostMapping("/owners/*/pets/{petId}/visits")
     @ResponseStatus(HttpStatus.CREATED)
     public Visit create(
         @Valid @RequestBody Visit visit,
@@ -64,12 +64,12 @@ class VisitResource {
         return visitRepository.save(visit);
     }
 
-    @GetMapping("/api/visits/owners/*/pets/{petId}/visits")
+    @GetMapping("/owners/*/pets/{petId}/visits")
     public List<Visit> read(@PathVariable("petId") @Min(1) int petId) {
         return visitRepository.findByPetId(petId);
     }
 
-    @GetMapping("/api/visits/pets/visits")
+    @GetMapping("/pets/visits")
     public Visits read(@RequestParam("petId") List<Integer> petIds) {
         final List<Visit> byPetIdIn = visitRepository.findByPetIdIn(petIds);
         return new Visits(byPetIdIn);
