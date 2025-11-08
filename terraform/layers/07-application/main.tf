@@ -332,7 +332,7 @@ resource "aws_ecs_service" "services" {
 
   # CloudMap 서비스 디스커버리 등록
   service_registries {
-    registry_arn   = local.cloudmap_service_ids[each.key]
+    registry_arn   = local.cloudmap_service_arns[each.key]
     container_name = each.key
     container_port = each.value.port
   }

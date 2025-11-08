@@ -20,6 +20,15 @@ output "service_ids" {
   }
 }
 
+# 서비스 ARN 정보 (ECS service_registries에서 사용)
+output "service_arns" {
+  description = "서비스 디스커버리 서비스 ARN 목록"
+  value = {
+    for service_name, service in aws_service_discovery_service.microservices :
+    service_name => service.arn
+  }
+}
+
 # DNS 이름 정보
 output "service_dns_names" {
   description = "각 마이크로서비스의 DNS 이름"

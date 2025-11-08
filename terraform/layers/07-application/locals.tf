@@ -22,7 +22,7 @@ locals {
   # CloudMap 레이어에서 필요한 정보
   cloudmap_namespace_id   = data.terraform_remote_state.cloud_map.outputs.namespace_id
   cloudmap_namespace_name = data.terraform_remote_state.cloud_map.outputs.namespace_name
-  cloudmap_service_ids    = data.terraform_remote_state.cloud_map.outputs.service_ids
+  cloudmap_service_arns   = data.terraform_remote_state.cloud_map.outputs.service_arns
 
   # 환경별 설정
   log_retention_days = var.environment == "prod" ? 90 : 30
