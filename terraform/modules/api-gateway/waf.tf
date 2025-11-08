@@ -210,6 +210,7 @@ resource "aws_cloudwatch_metric_alarm" "api_throttling_alarm" {
 }
 
 # WAF 로그 그룹 (Rate Limiting 이벤트 로깅)
+# Note: WAFv2 logging to CloudWatch Logs may fail - requires S3 or Kinesis
 resource "aws_cloudwatch_log_group" "waf_logs" {
   count = var.enable_waf_integration ? 1 : 0
 
@@ -222,9 +223,11 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
   })
 }
 
-# WAF 로깅 설정
+# WAF 로깅 설정 (CloudWatch Logs - 실험적)
+# WARNING: AWS WAFv2 officially supports only S3 and Kinesis Firehose
+# CloudWatch Logs may work in some regions but is not officially documented
 resource "aws_wafv2_web_acl_logging_configuration" "api_gateway" {
-  count = var.enable_waf_integration ? 1 : 0
+  count = var.enable_waf_integration && var.enable_waf_logging ? 1 : 0
 
   resource_arn            = aws_wafv2_web_acl.api_gateway_rate_limit[0].arn
   log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
