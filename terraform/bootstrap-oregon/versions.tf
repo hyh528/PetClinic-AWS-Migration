@@ -5,8 +5,8 @@
 # ==========================================
 
 terraform {
-  # 로컬 환경 TF 1.12.x 호환을 위해 하한을 1.12.0으로 지정
-  required_version = ">= 1.12.0"
+  # S3 네이티브 잠금 기능 (Terraform 1.10.0+) 호환
+  required_version = ">= 1.10.0"
 
   required_providers {
     aws = {
