@@ -153,7 +153,7 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
         ]
         Resource = "arn:aws:kms:*:*:key/*"
       },
-      # S3 state storage (with native S3 state locking)
+      # S3 상태 파일 저장소 (S3 네이티브 잠금 사용)
       {
         Effect = "Allow"
         Action = [
