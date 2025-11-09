@@ -1,9 +1,10 @@
 # =============================================================================
-# 공통 Backend 설정 - 모든 레이어에서 공유 (Oregon 리전)
+# Backend Configuration - Shared across all layers (us-west-2 Oregon)
 # =============================================================================
-# 사용법: terraform init -backend-config="../backend.hcl"
+# Usage: terraform init -backend-config=../../backend.hcl -backend-config=backend.config
+# 
+# S3 native state locking enabled (no DynamoDB required)
 
-bucket         = "petclinic-tfstate-oregon-dev"
-region         = "us-west-2"
-encrypt        = true
-# dynamodb_table = "petclinic-tf-locks-oregon-dev"  # S3 네이티브 잠금 사용
+bucket  = "petclinic-tfstate-oregon-dev"
+region  = "us-west-2"
+encrypt = true

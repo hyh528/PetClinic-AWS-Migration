@@ -153,17 +153,7 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
         ]
         Resource = "arn:aws:kms:*:*:key/*"
       },
-      # DynamoDB state locking
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:DeleteItem"
-        ]
-        Resource = var.backend_dynamodb_table != "" ? "arn:aws:dynamodb:${var.backend_region}:${data.aws_caller_identity.current.account_id}:table/${var.backend_dynamodb_table}" : "arn:aws:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/*"
-      },
-      # S3 state storage
+      # S3 state storage (with native S3 state locking)
       {
         Effect = "Allow"
         Action = [

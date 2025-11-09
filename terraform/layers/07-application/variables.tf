@@ -33,20 +33,9 @@ variable "tags" {
 }
 
 variable "tfstate_bucket_name" {
-  description = "Terraform 상태 파일을 저장할 S3 버킷 이름"
+  description = "S3 bucket for Terraform state (with native S3 state locking)"
   type        = string
-}
-
-variable "backend_region" {
-  description = "Terraform backend S3 bucket region"
-  type        = string
-  default     = "ap-southeast-2"
-}
-
-variable "backend_dynamodb_table" {
-  description = "Terraform state locking DynamoDB table name"
-  type        = string
-  default     = ""
+  default     = "petclinic-tfstate-oregon-dev"
 }
 
 # =============================================================================
