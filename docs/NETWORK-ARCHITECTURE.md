@@ -624,7 +624,7 @@ resource "aws_security_group" "alb" {
 
 ## 📞 문의
 
-- **작성자**: PetClinic DevOps Team
+- **작성자**: 황영현
 - **Last Updated**: 2025-11-09
 - **Terraform Version**: 1.12.0
 - **AWS Provider Version**: ~> 6.0
