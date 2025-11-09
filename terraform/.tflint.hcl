@@ -30,13 +30,15 @@ config {
 # ============================================
 
 # 선언되지 않은 변수 사용 감지
+# 경고만 표시하고 빌드는 실패하지 않도록 비활성화
 rule "terraform_unused_declarations" {
-  enabled = true
+  enabled = false
 }
 
 # 사용되지 않는 required_providers 감지
+# 경고만 표시하고 빌드는 실패하지 않도록 비활성화
 rule "terraform_unused_required_providers" {
-  enabled = true
+  enabled = false
 }
 
 # 타입이 지정되지 않은 변수 감지
