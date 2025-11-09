@@ -24,9 +24,9 @@ module "cloudwatch" {
   ecs_cluster_name     = data.terraform_remote_state.application.outputs.ecs_cluster_name
   lambda_function_name = local.lambda_function_name
   aurora_cluster_name  = local.aurora_cluster_name
-  
+
   # 멀티 서비스 지원 (CloudMap 아키텍처)
-  ecs_services = data.terraform_remote_state.application.outputs.ecs_services
+  ecs_services   = data.terraform_remote_state.application.outputs.ecs_services
   alb_arn_suffix = data.terraform_remote_state.application.outputs.alb_arn_suffix
   target_groups  = data.terraform_remote_state.application.outputs.target_group_arns
 

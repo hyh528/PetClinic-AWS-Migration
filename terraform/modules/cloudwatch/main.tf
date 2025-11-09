@@ -45,7 +45,7 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
             for service_key, service in var.ecs_services : [
               ["AWS/ECS", "CPUUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
             ]
-          ]) : [
+            ]) : [
             ["AWS/ECS", "CPUUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
           ]
           view    = "timeSeries"
@@ -75,7 +75,7 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
             for service_key, service in var.ecs_services : [
               ["AWS/ECS", "MemoryUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
             ]
-          ]) : [
+            ]) : [
             ["AWS/ECS", "MemoryUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
           ]
           view    = "timeSeries"
@@ -153,7 +153,7 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
             ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", var.alb_arn_suffix],
             ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", var.alb_arn_suffix],
             ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_arn_suffix]
-          ] : [
+            ] : [
             ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_name],
             ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", var.alb_name],
             ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", var.alb_name],
@@ -204,7 +204,7 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
             for service_key, service in var.ecs_services : [
               ["AWS/ECS", "RunningTaskCount", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
             ]
-          ]) : [
+            ]) : [
             ["AWS/ECS", "RunningTaskCount", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
           ]
           view    = "timeSeries"

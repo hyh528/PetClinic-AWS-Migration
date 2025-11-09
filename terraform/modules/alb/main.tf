@@ -189,7 +189,7 @@ resource "aws_wafv2_web_acl" "alb_rate_limit" {
       rate_based_statement {
         limit              = var.rate_limit_per_ip
         aggregate_key_type = "IP"
-        
+
         # actuator 경로 제외 (헬스 체크는 Rate Limit 적용 안 함)
         scope_down_statement {
           not_statement {
@@ -484,19 +484,18 @@ resource "aws_wafv2_web_acl_association" "alb" {
 #     # 또는
 #     # aws_kinesis_firehose_delivery_stream.waf_logs[0].arn
 #   ]
+#
+#   redacted_fields {
+#     single_header {
+#       name = "x-api-key"
+#     }
+#   }
+#
+#   depends_on = [
+#     aws_wafv2_web_acl.alb_rate_limit,
+#     aws_cloudwatch_log_group.waf_logs
+#   ]
 # }
-
-  redacted_fields {
-    single_header {
-      name = "x-api-key"
-    }
-  }
-
-  depends_on = [
-    aws_wafv2_web_acl.alb_rate_limit,
-    aws_cloudwatch_log_group.waf_logs
-  ]
-}
 
 # ==========================================
 # CloudWatch 알람 - Rate Limiting 모니터링
