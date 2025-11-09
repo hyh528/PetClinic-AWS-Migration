@@ -37,6 +37,18 @@ variable "tfstate_bucket_name" {
   type        = string
 }
 
+variable "backend_region" {
+  description = "Terraform backend S3 bucket region"
+  type        = string
+  default     = "ap-southeast-2"
+}
+
+variable "backend_dynamodb_table" {
+  description = "Terraform state locking DynamoDB table name"
+  type        = string
+  default     = ""
+}
+
 # =============================================================================
 # ECS 관련 변수
 # =============================================================================

@@ -235,6 +235,7 @@ resource "aws_lambda_function" "genai_function" {
 
   environment {
     variables = {
+      AWS_REGION       = var.aws_region
       BEDROCK_MODEL_ID = var.bedrock_model_id
       LOG_LEVEL        = "INFO"
       DB_CLUSTER_ARN   = data.terraform_remote_state.database.outputs.cluster_arn

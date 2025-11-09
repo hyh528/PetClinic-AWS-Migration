@@ -153,7 +153,7 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
         ]
         Resource = "arn:aws:kms:*:*:key/*"
       },
-      # DynamoDB 권한 (Terraform 락용)
+      # DynamoDB state locking
       {
         Effect = "Allow"
         Action = [
@@ -161,9 +161,9 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
           "dynamodb:PutItem",
           "dynamodb:DeleteItem"
         ]
-        Resource = "arn:aws:dynamodb:ap-southeast-2:897722691159:table/petclinic-tf-locks-sydney-dev"
+        Resource = var.backend_dynamodb_table != "" ? "arn:aws:dynamodb:${var.backend_region}:${data.aws_caller_identity.current.account_id}:table/${var.backend_dynamodb_table}" : "arn:aws:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/*"
       },
-      # S3 권한 (Terraform 상태 파일용)
+      # S3 state storage
       {
         Effect = "Allow"
         Action = [
@@ -173,8 +173,8 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::petclinic-tfstate-sydney-dev",
-          "arn:aws:s3:::petclinic-tfstate-sydney-dev/*"
+          "arn:aws:s3:::${var.tfstate_bucket_name}",
+          "arn:aws:s3:::${var.tfstate_bucket_name}/*"
         ]
       }
     ]
