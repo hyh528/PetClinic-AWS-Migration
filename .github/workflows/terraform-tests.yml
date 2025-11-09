@@ -106,6 +106,8 @@ jobs:
 
       - name: Initialize TFLint
         working-directory: terraform/${{ matrix.layer }}
+        env:                                          # 👈 이 2줄을 추가해야 함!
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 👈
         run: |
           if [[ "${{ matrix.layer }}" == "bootstrap-oregon" ]]; then
             tflint --init --config ../.tflint.hcl
