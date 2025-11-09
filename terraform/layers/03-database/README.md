@@ -1089,5 +1089,5 @@ jdbc:mysql://reader-endpoint:3306/petclinic
 ---
 
 **작성일**: 2025-11-09  
-**작성자**: DevOps Team  
+**작성자**: 황영현 
 **버전**: 1.0

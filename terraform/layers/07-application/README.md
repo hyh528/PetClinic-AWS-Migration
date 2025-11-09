@@ -16,7 +16,6 @@
 ## 개요
 
 **07-application 레이어**는 Spring PetClinic **마이크로서비스 4개를 ECS Fargate에 배포**합니다.
-모든 레이어가 모이는 **최종 레이어**입니다.
 
 ### 이 레이어가 하는 일
 - ✅ Application Load Balancer (ALB) 생성
@@ -56,16 +55,16 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Internet (인터넷)                         │
+│                         Internet (인터넷)                        │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
                       WAF (보안)
                            │
                            ↓
         ┌──────────────────────────────────────┐
-        │   Application Load Balancer (ALB)   │
-        │   - Public Subnet 배치               │
-        │   - HTTP/HTTPS 리스너               │
+        │   Application Load Balancer (ALB)    │
+        │   - Public Subnet 배치                │
+        │   - HTTP/HTTPS 리스너                 │
         └───────┬──────────────────────────────┘
                 │
         Path-Based Routing
@@ -864,5 +863,5 @@ Internet → WAF → ALB → ECS (Private Subnet) → Aurora (Private DB Subnet)
 ---
 
 **작성일**: 2025-11-09  
-**작성자**: DevOps Team  
+**작성자**: 황영현 
 **버전**: 1.0

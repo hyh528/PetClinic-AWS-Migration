@@ -426,5 +426,4 @@ resource "aws_cloudwatch_metric_alarm" "aurora_cpu_utilization" {
   }
 
   tags = var.tags
-}r.tags
 }
