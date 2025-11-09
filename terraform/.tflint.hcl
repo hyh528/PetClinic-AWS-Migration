@@ -79,15 +79,15 @@ rule "terraform_naming_convention" {
   }
 }
 
-# 더 이상 사용되지 않는 문법 감지
-rule "terraform_deprecated_syntax" {
-  enabled = true
-}
+# 더 이상 사용되지 않는 문법 감지 (TFLint 0.59+ 에서 제거됨)
+# rule "terraform_deprecated_syntax" {
+#   enabled = true
+# }
 
-# 더 이상 사용되지 않는 index 함수 감지
-rule "terraform_deprecated_index" {
-  enabled = true
-}
+# 더 이상 사용되지 않는 index 함수 감지 (TFLint 0.59+ 에서 제거됨)
+# rule "terraform_deprecated_index" {
+#   enabled = true
+# }
 
 # 주석 구문 표준화
 rule "terraform_comment_syntax" {
@@ -133,30 +133,30 @@ rule "aws_db_instance_invalid_type" {
   enabled = true
 }
 
-# ECS 작업 정의 검사
-rule "aws_ecs_task_definition_invalid_cpu" {
-  enabled = true
-}
+# ECS 작업 정의 검사 (TFLint 0.59+ 에서 제거됨)
+# rule "aws_ecs_task_definition_invalid_cpu" {
+#   enabled = true
+# }
 
-# Lambda 함수 런타임 검사
-rule "aws_lambda_function_invalid_runtime" {
-  enabled = true
-}
+# Lambda 함수 런타임 검사 (TFLint 0.59+ 에서 제거됨)
+# rule "aws_lambda_function_invalid_runtime" {
+#   enabled = true
+# }
 
-# Route53 레코드 타입 검사
-rule "aws_route53_record_invalid_type" {
-  enabled = true
-}
+# Route53 레코드 타입 검사 (TFLint 0.59+ 에서 제거됨)
+# rule "aws_route53_record_invalid_type" {
+#   enabled = true
+# }
 
-# ALB 대상 그룹 프로토콜 검사
-rule "aws_alb_target_group_invalid_protocol" {
-  enabled = true
-}
+# ALB 대상 그룹 프로토콜 검사 (TFLint 0.59+ 에서 제거됨)
+# rule "aws_alb_target_group_invalid_protocol" {
+#   enabled = true
+# }
 
-# API Gateway 통합 타입 검사
-rule "aws_api_gateway_integration_invalid_type" {
-  enabled = true
-}
+# API Gateway 통합 타입 검사 (TFLint 0.59+ 에서 제거됨)
+# rule "aws_api_gateway_integration_invalid_type" {
+#   enabled = true
+# }
 
 # ============================================
 # 비활성화된 규칙 (프로젝트 특성상)
