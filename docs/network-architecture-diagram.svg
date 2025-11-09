@@ -84,14 +84,18 @@
       </text>
       
       <!-- ECS Tasks -->
-      <rect x="180" y="505" width="140" height="120" fill="#e1bee7" stroke="#7b1fa2" stroke-width="1.5" rx="4"/>
+      <rect x="180" y="505" width="140" height="155" fill="#e1bee7" stroke="#7b1fa2" stroke-width="1.5" rx="4"/>
       <text x="250" y="525" font-family="Arial, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#4a148c">
         ECS Tasks
       </text>
-      <rect x="195" y="535" width="110" height="30" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
-      <text x="250" y="555" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Customers</text>
-      <rect x="195" y="570" width="110" height="30" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
-      <text x="250" y="590" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Vets</text>
+      <rect x="195" y="535" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="250" y="553" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Customers</text>
+      <rect x="195" y="565" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="250" y="583" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Vets</text>
+      <rect x="195" y="595" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="250" y="613" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Visits</text>
+      <rect x="195" y="625" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="250" y="643" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Admin</text>
       
       <!-- Lambda -->
       <rect x="350" y="505" width="140" height="60" fill="#fff59d" stroke="#f57f17" stroke-width="1.5" rx="4"/>
@@ -190,14 +194,18 @@
       </text>
       
       <!-- ECS Tasks -->
-      <rect x="780" y="505" width="140" height="120" fill="#e1bee7" stroke="#7b1fa2" stroke-width="1.5" rx="4"/>
+      <rect x="780" y="505" width="140" height="155" fill="#e1bee7" stroke="#7b1fa2" stroke-width="1.5" rx="4"/>
       <text x="850" y="525" font-family="Arial, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#4a148c">
         ECS Tasks
       </text>
-      <rect x="795" y="535" width="110" height="30" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
-      <text x="850" y="555" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Visits</text>
-      <rect x="795" y="570" width="110" height="30" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
-      <text x="850" y="590" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Admin</text>
+      <rect x="795" y="535" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="850" y="553" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Customers</text>
+      <rect x="795" y="565" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="850" y="583" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Vets</text>
+      <rect x="795" y="595" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="850" y="613" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Visits</text>
+      <rect x="795" y="625" width="110" height="25" fill="#ce93d8" stroke="#6a1b9a" stroke-width="1" rx="3"/>
+      <text x="850" y="643" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#4a148c">Admin</text>
       
       <!-- Lambda -->
       <rect x="950" y="505" width="140" height="60" fill="#fff59d" stroke="#f57f17" stroke-width="1.5" rx="4"/>
@@ -209,12 +217,12 @@
       </text>
       
       <!-- S3 Gateway Endpoint -->
-      <rect x="780" y="580" width="310" height="50" fill="#4caf50" stroke="#2e7d32" stroke-width="1.5" rx="4"/>
-      <text x="935" y="603" font-family="Arial, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="white">
-        S3 Gateway Endpoint
+      <rect x="950" y="580" width="140" height="50" fill="#4caf50" stroke="#2e7d32" stroke-width="1.5" rx="4"/>
+      <text x="1020" y="603" font-family="Arial, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="white">
+        S3 Gateway
       </text>
-      <text x="935" y="620" font-family="Arial, sans-serif" font-size="9" text-anchor="middle" fill="#e8f5e9">
-        (Shared across all subnets via Route Tables)
+      <text x="1020" y="620" font-family="Arial, sans-serif" font-size="9" text-anchor="middle" fill="#e8f5e9">
+        Endpoint
       </text>
     </g>
     
