@@ -108,7 +108,12 @@ jobs:
 
       - name: Run TFLint
         working-directory: terraform/${{ matrix.layer }}
-        run: tflint --format compact --config ../../.tflint.hcl
+        run: |
+            if [[ "${{ matrix.layer }}" == "bootstrap-oregon" ]]; then
+            tflint --format compact --config ../.tflint.hcl
+            else
+            tflint --format compact --config ../../.tflint.hcl
+            fi
 
   tfsec:
     name: TFSec Security Scan
