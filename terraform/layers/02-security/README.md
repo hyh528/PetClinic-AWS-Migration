@@ -201,9 +201,9 @@ Outbound (아웃바운드):
 
 | 보안 그룹 이름 | 용도 | 주요 규칙 |
 |---------------|------|----------|
-| **alb-sg** | Application Load Balancer | Inbound: 0.0.0.0/0:80,443<br>Outbound: ECS:8080-8088 |
-| **ecs-sg** | ECS Fargate 컨테이너 | Inbound: ALB:8080-8088<br>Outbound: RDS:5432, VPC Endpoints |
-| **rds-sg** | Aurora PostgreSQL | Inbound: ECS:5432<br>Outbound: 없음 (DB는 나갈 필요 없음) |
+| **alb-sg** | Application Load Balancer | Inbound: 0.0.0.0/0:80,443<br>Outbound: ECS:8080,9090 |
+| **ecs-sg** | ECS Fargate 컨테이너 | Inbound: ALB:8080,9090<br>Outbound: RDS:3306, VPC Endpoints |
+| **rds-sg** | Aurora MySQL | Inbound: ECS:3306<br>Outbound: 없음 (DB는 나갈 필요 없음) |
 | **vpce-sg** | VPC Endpoints | Inbound: ECS:443<br>Outbound: 없음 |
 
 ---
@@ -236,13 +236,14 @@ ingress {
 
 | 타입 | 프로토콜 | 포트 | 대상 | 설명 |
 |------|---------|------|------|------|
-| Custom TCP | TCP | 8080-8088 | ecs-sg | ECS 컨테이너로 전달 |
+| Custom TCP | TCP | 8080 | ecs-sg | 마이크로서비스 (customers, vets, visits) |
+| Custom TCP | TCP | 9090 | ecs-sg | Admin 서버 (Spring Boot Admin) |
 
 ```
 사용자 브라우저
     ↓ (HTTP/HTTPS)
 [ALB Security Group] ← 여기서 검사
-    ↓ (8080-8088)
+    ↓ (8080 또는 9090)
 ECS 컨테이너
 ```
 
@@ -256,22 +257,42 @@ ECS 컨테이너
 
 | 타입 | 프로토콜 | 포트 | 소스 | 설명 |
 |------|---------|------|------|------|
-| Custom TCP | TCP | 8080 | alb-sg | api-gateway 서비스 |
-| Custom TCP | TCP | 8081 | alb-sg | customers-service |
-| Custom TCP | TCP | 8082 | alb-sg | vets-service |
-| Custom TCP | TCP | 8083 | alb-sg | visits-service |
-| Custom TCP | TCP | 8084 | alb-sg | admin-server |
-| Custom TCP | TCP | 8888 | alb-sg | config-server |
-| Custom TCP | TCP | 8761 | alb-sg | discovery-server |
+| Custom TCP | TCP | 8080 | alb-sg | 마이크로서비스 (customers, vets, visits) |
+| Custom TCP | TCP | 9090 | alb-sg | Admin 서버 (Spring Boot Admin) |
+| Custom TCP | TCP | 8080 | ecs-sg (self) | ECS 서비스 간 통신 (Admin → 서비스 actuator) |
+| Custom TCP | TCP | 9090 | ecs-sg (self) | ECS 서비스 간 통신 (서비스 → Admin) |
+
+**Note**: Config Server와 Discovery Server는 **제거**되었습니다.
+- Config Server → **Parameter Store**로 대체
+- Discovery Server (Eureka) → **CloudMap**으로 대체
 
 ```hcl
-# ALB에서만 접근 허용
+# ALB에서 마이크로서비스 접근 허용 (8080 포트)
 ingress {
   from_port                = 8080
-  to_port                  = 8088
+  to_port                  = 8080
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb.id  # ALB SG만
-  description              = "Allow traffic from ALB"
+  source_security_group_id = aws_security_group.alb.id
+  description              = "Allow ALB to access ECS tasks on port 8080"
+}
+
+# ALB에서 Admin 서버 접근 허용 (9090 포트)
+ingress {
+  from_port                = 9090
+  to_port                  = 9090
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb.id
+  description              = "Allow ALB to access Admin service on port 9090"
+}
+
+# ECS 서비스 간 통신 허용 (Admin이 서비스 actuator 접근)
+ingress {
+  from_port         = 8080
+  to_port           = 8080
+  protocol          = "tcp"
+  security_group_id = aws_security_group.ecs.id
+  self              = true
+  description       = "Allow ECS services to communicate on port 8080"
 }
 ```
 
@@ -279,16 +300,20 @@ ingress {
 
 | 타입 | 프로토콜 | 포트 | 대상 | 설명 |
 |------|---------|------|------|------|
-| PostgreSQL | TCP | 5432 | rds-sg | Aurora DB 접근 |
+| MySQL | TCP | 3306 | rds-sg | Aurora MySQL 접근 |
 | HTTPS | TCP | 443 | vpce-sg | VPC Endpoints (ECR, Logs 등) |
-| All | All | All | 0.0.0.0/0 | 외부 API 호출 (NAT Gateway 경유) |
+| HTTP | TCP | 80 | 0.0.0.0/0 | Admin → ALB 경유 서비스 접근 |
+| HTTPS | TCP | 443 | 0.0.0.0/0 | 외부 API 호출 (NAT Gateway 경유) |
 
 ```
 ECS 컨테이너가 할 수 있는 일:
-✅ Aurora DB 쿼리 (5432 포트)
+✅ Aurora MySQL 쿼리 (3306 포트)
 ✅ ECR에서 이미지 다운로드 (VPC Endpoint)
 ✅ CloudWatch로 로그 전송 (VPC Endpoint)
+✅ Parameter Store에서 설정 조회 (VPC Endpoint)
 ✅ Secrets Manager에서 비밀번호 조회 (VPC Endpoint)
+✅ CloudMap으로 서비스 디스커버리
+✅ Admin이 ALB를 통해 다른 서비스 actuator 접근
 ✅ 외부 API 호출 (예: 날씨 API)
 ```
 
@@ -296,21 +321,21 @@ ECS 컨테이너가 할 수 있는 일:
 
 ### 3. RDS Security Group (rds-sg)
 
-**목적**: Aurora PostgreSQL이 ECS에서만 접근을 받음
+**목적**: Aurora MySQL이 ECS에서만 접근을 받음
 
 #### Inbound Rules
 
 | 타입 | 프로토콜 | 포트 | 소스 | 설명 |
 |------|---------|------|------|------|
-| PostgreSQL | TCP | 5432 | ecs-sg | ECS 컨테이너만 DB 접근 허용 |
+| MySQL | TCP | 3306 | ecs-sg | ECS 컨테이너만 DB 접근 허용 |
 
 ```hcl
 ingress {
-  from_port                = 5432
-  to_port                  = 5432
+  from_port                = 3306
+  to_port                  = 3306
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.ecs.id  # ECS SG만
-  description              = "Allow PostgreSQL from ECS"
+  description              = "Allow MySQL access from ECS tasks"
 }
 ```
 
