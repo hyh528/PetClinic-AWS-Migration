@@ -24,6 +24,7 @@ jobs:
     name: Terraform Format & Validate
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         layer:
           - bootstrap-oregon
@@ -78,6 +79,7 @@ jobs:
     name: TFLint
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         layer:
           - bootstrap-oregon
@@ -180,6 +182,7 @@ jobs:
     name: Terraform Docs Check
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         layer:
           - bootstrap-oregon
