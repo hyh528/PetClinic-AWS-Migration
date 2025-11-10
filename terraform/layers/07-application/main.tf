@@ -153,9 +153,6 @@ module "ecr_services" {
 # 권장: GitHub Actions 등을 사용해 이미지 빌드 → ECR 푸시 → Terraform에는
 # immutable tag(예: git SHA 또는 digest)를 제공하세요.
 
-# Terraform에서 사용할 서비스 이미지 매핑은 변수 `var.service_image_map` 를 통해 주입됩니다.
-# 예: { customers = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/petclinic-customers:sha-abc123" }
-
 # =============================================================================
 # ALB 모듈 (공통 로드 밸런서)
 # =============================================================================
