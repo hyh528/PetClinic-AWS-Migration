@@ -26,9 +26,3 @@ output "service_dns_names" {
   description = "각 마이크로서비스의 DNS 이름"
   value       = module.cloud_map.service_dns_names
 }
-
-# 서비스 ARN 출력 추가: ECS에서 service_registries에 직접 사용하기 위함
-output "service_arns" {
-  description = "각 마이크로서비스의 Cloud Map 서비스 ARN"
-  value       = module.cloud_map.service_arns
-}
