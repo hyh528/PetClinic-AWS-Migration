@@ -189,6 +189,25 @@ resource "aws_wafv2_web_acl" "alb_rate_limit" {
       rate_based_statement {
         limit              = var.rate_limit_per_ip
         aggregate_key_type = "IP"
+
+        # actuator 경로 제외 (헬스 체크는 Rate Limit 적용 안 함)
+        scope_down_statement {
+          not_statement {
+            statement {
+              byte_match_statement {
+                search_string = "/actuator/"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "LOWERCASE"
+                }
+                positional_constraint = "CONTAINS"
+              }
+            }
+          }
+        }
       }
     }
 
@@ -213,33 +232,55 @@ resource "aws_wafv2_web_acl" "alb_rate_limit" {
         limit              = var.rate_limit_burst_per_ip
         aggregate_key_type = "IP"
 
-        # 특정 경로에 대한 더 엄격한 제한
+        # 특정 경로에 대한 더 엄격한 제한 (actuator 헬스 체크 제외)
         scope_down_statement {
-          or_statement {
+          and_statement {
             statement {
-              byte_match_statement {
-                search_string = "/api/"
-                field_to_match {
-                  uri_path {}
+              or_statement {
+                statement {
+                  byte_match_statement {
+                    search_string = "/api/"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                    positional_constraint = "STARTS_WITH"
+                  }
                 }
-                text_transformation {
-                  priority = 0
-                  type     = "LOWERCASE"
+                statement {
+                  byte_match_statement {
+                    search_string = "/admin/"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                    positional_constraint = "STARTS_WITH"
+                  }
                 }
-                positional_constraint = "STARTS_WITH"
               }
             }
+            # actuator 경로 제외 (헬스 체크는 Rate Limit 적용 안 함)
             statement {
-              byte_match_statement {
-                search_string = "/admin/"
-                field_to_match {
-                  uri_path {}
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    search_string = "/actuator/"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                    positional_constraint = "CONTAINS"
+                  }
                 }
-                text_transformation {
-                  priority = 0
-                  type     = "LOWERCASE"
-                }
-                positional_constraint = "STARTS_WITH"
               }
             }
           }
@@ -406,54 +447,55 @@ resource "aws_wafv2_web_acl_association" "alb" {
 }
 
 # ==========================================
-# WAF 로깅 설정
+# WAF 로깅 설정 (완전 비활성화)
 # ==========================================
+# Note: WAFv2는 CloudWatch Logs를 직접 지원하지 않으며,
+# S3 버킷 또는 Kinesis Data Firehose를 통해서만 로깅 가능합니다.
+# 비용 절감을 위해 WAF 로깅 기능을 완전히 비활성화합니다.
+# WAF Web ACL 자체는 계속 작동하며 CloudWatch Metrics는 수집됩니다.
 
-# WAF 로그 그룹
-resource "aws_cloudwatch_log_group" "waf_logs" {
-  count = var.enable_waf_rate_limiting ? 1 : 0
+# WAF 로그 그룹 (비활성화)
+# CloudWatch Log Group for WAF (not supported by WAFv2 directly)
+# resource "aws_cloudwatch_log_group" "waf_logs" {
+#   count = var.enable_waf_rate_limiting && var.enable_waf_logging ? 1 : 0
+#
+#   # WAFv2 requires log group name to start with "aws-wafv2-logs-"
+#   name              = "aws-wafv2-logs-${var.name_prefix}-alb"
+#   retention_in_days = var.waf_log_retention_days
+#
+#   tags = merge(var.tags, {
+#     Name        = "${var.name_prefix}-alb-waf-logs"
+#     Environment = var.environment
+#     Type        = "security-logging"
+#   })
+# }
 
-  name              = "/aws/wafv2/${var.name_prefix}-alb"
-  retention_in_days = var.waf_log_retention_days
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-alb-waf-logs"
-    Environment = var.environment
-    Type        = "security-logging"
-  })
-}
-
-# WAF 로깅 설정
-resource "aws_wafv2_web_acl_logging_configuration" "alb" {
-  count = var.enable_waf_rate_limiting ? 1 : 0
-
-  resource_arn            = aws_wafv2_web_acl.alb_rate_limit[0].arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
-
-  # 민감한 정보 필터링
-  redacted_fields {
-    single_header {
-      name = "authorization"
-    }
-  }
-
-  redacted_fields {
-    single_header {
-      name = "cookie"
-    }
-  }
-
-  redacted_fields {
-    single_header {
-      name = "x-api-key"
-    }
-  }
-
-  depends_on = [
-    aws_wafv2_web_acl.alb_rate_limit,
-    aws_cloudwatch_log_group.waf_logs
-  ]
-}
+# WAF 로깅 설정 (비활성화 - CloudWatch Logs 직접 지원 안 함)
+# Note: AWS WAFv2는 CloudWatch Logs를 직접 지원하지 않습니다.
+# 로깅이 필요하면 S3 버킷 또는 Kinesis Data Firehose를 사용해야 합니다.
+# 
+# resource "aws_wafv2_web_acl_logging_configuration" "alb" {
+#   count = var.enable_waf_rate_limiting && var.enable_waf_logging ? 1 : 0
+#
+#   resource_arn = aws_wafv2_web_acl.alb_rate_limit[0].arn
+#   log_destination_configs = [
+#     # S3 버킷 ARN 또는 Kinesis Firehose ARN 필요
+#     # aws_s3_bucket.waf_logs[0].arn
+#     # 또는
+#     # aws_kinesis_firehose_delivery_stream.waf_logs[0].arn
+#   ]
+#
+#   redacted_fields {
+#     single_header {
+#       name = "x-api-key"
+#     }
+#   }
+#
+#   depends_on = [
+#     aws_wafv2_web_acl.alb_rate_limit,
+#     aws_cloudwatch_log_group.waf_logs
+#   ]
+# }
 
 # ==========================================
 # CloudWatch 알람 - Rate Limiting 모니터링

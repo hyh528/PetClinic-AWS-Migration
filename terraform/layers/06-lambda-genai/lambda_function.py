@@ -25,8 +25,9 @@ def get_bedrock_client():
     global bedrock_client
     if bedrock_client is None:
         try:
-            bedrock_client = boto3.client('bedrock-runtime', region_name='us-west-2')
-            logger.info("Bedrock 클라이언트 초기화 성공")
+            region = os.getenv('AWS_REGION', 'us-west-2')
+            bedrock_client = boto3.client('bedrock-runtime', region_name=region)
+            logger.info(f"Bedrock 클라이언트 초기화 성공 (region: {region})")
         except Exception as e:
             logger.error(f"Bedrock 클라이언트 초기화 실패: {str(e)}")
             raise
@@ -37,8 +38,9 @@ def get_rds_data_client():
     global rds_data_client
     if rds_data_client is None:
         try:
-            rds_data_client = boto3.client('rds-data', region_name='us-west-2')
-            logger.info("RDS Data API 클라이언트 초기화 성공")
+            region = os.getenv('AWS_REGION', 'us-west-2')
+            rds_data_client = boto3.client('rds-data', region_name=region)
+            logger.info(f"RDS Data API 클라이언트 초기화 성공 (region: {region})")
         except Exception as e:
             logger.error(f"RDS Data API 클라이언트 초기화 실패: {str(e)}")
             raise

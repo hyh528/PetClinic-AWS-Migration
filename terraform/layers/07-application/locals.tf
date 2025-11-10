@@ -19,6 +19,11 @@ locals {
   # Database 레이어에서 필요한 정보 (하드코딩 제거)
   db_secret_arn = data.terraform_remote_state.database.outputs.master_user_secret_name
 
+  # CloudMap 레이어에서 필요한 정보
+  cloudmap_namespace_id   = data.terraform_remote_state.cloud_map.outputs.namespace_id
+  cloudmap_namespace_name = data.terraform_remote_state.cloud_map.outputs.namespace_name
+  cloudmap_service_arns   = data.terraform_remote_state.cloud_map.outputs.service_arns
+
   # 환경별 설정
   log_retention_days = var.environment == "prod" ? 90 : 30
 
@@ -84,21 +89,21 @@ locals {
     customers = {
       name        = "customers-service"
       port        = 8080
-      health_path = "/actuator/health"
+      health_path = "/api/customers/actuator/health"
       cpu         = 256
       memory      = 512
     }
     vets = {
       name        = "vets-service"
       port        = 8080
-      health_path = "/actuator/health"
+      health_path = "/api/vets/actuator/health"
       cpu         = 256
       memory      = 512
     }
     visits = {
       name        = "visits-service"
       port        = 8080
-      health_path = "/actuator/health"
+      health_path = "/api/visits/actuator/health"
       cpu         = 256
       memory      = 512
     }

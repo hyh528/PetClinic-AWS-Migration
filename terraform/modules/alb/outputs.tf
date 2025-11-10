@@ -54,9 +54,15 @@ output "waf_web_acl_id" {
   value       = var.enable_waf_rate_limiting ? aws_wafv2_web_acl.alb_rate_limit[0].id : null
 }
 
+# WAF 로그 그룹 출력 (비활성화 - WAFv2는 CloudWatch Logs 직접 지원 안 함)
+# output "waf_log_group_name" {
+#   description = "WAF CloudWatch 로그 그룹 이름"
+#   value       = var.enable_waf_rate_limiting ? aws_cloudwatch_log_group.waf_logs[0].name : null
+# }
+
 output "waf_log_group_name" {
-  description = "WAF CloudWatch 로그 그룹 이름"
-  value       = var.enable_waf_rate_limiting ? aws_cloudwatch_log_group.waf_logs[0].name : null
+  description = "WAF CloudWatch 로그 그룹 이름 (비활성화)"
+  value       = null
 }
 
 output "rate_limiting_enabled" {

@@ -17,6 +17,11 @@ output "service_ids" {
   value       = module.cloud_map.service_ids
 }
 
+output "service_arns" {
+  description = "서비스 디스커버리 서비스 ARN 목록"
+  value       = module.cloud_map.service_arns
+}
+
 output "service_dns_names" {
   description = "각 마이크로서비스의 DNS 이름"
   value       = module.cloud_map.service_dns_names

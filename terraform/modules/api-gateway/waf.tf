@@ -209,41 +209,51 @@ resource "aws_cloudwatch_metric_alarm" "api_throttling_alarm" {
   })
 }
 
-# WAF 로그 그룹 (Rate Limiting 이벤트 로깅)
-resource "aws_cloudwatch_log_group" "waf_logs" {
-  count = var.enable_waf_integration ? 1 : 0
+# WAF 로깅 설정 (완전 비활성화)
+# ==========================================
+# Note: AWS WAFv2는 CloudWatch Logs를 직접 지원하지 않으며,
+# S3 버킷 또는 Kinesis Data Firehose를 통해서만 로깅 가능합니다.
+# 비용 절감을 위해 WAF 로깅 기능을 완전히 비활성화합니다.
+# WAF Web ACL 자체는 계속 작동하며 CloudWatch Metrics는 수집됩니다.
 
-  name              = "/aws/wafv2/${var.name_prefix}-api"
-  retention_in_days = var.log_retention_days
+# WAF 로그 그룹 (비활성화)
+# Note: WAFv2 logging to CloudWatch Logs may fail - requires S3 or Kinesis
+# resource "aws_cloudwatch_log_group" "waf_logs" {
+#   count = var.enable_waf_integration ? 1 : 0
+#
+#   name              = "/aws/wafv2/${var.name_prefix}-api"
+#   retention_in_days = var.log_retention_days
+#
+#   tags = merge(local.common_tags, {
+#     Name = "${var.name_prefix}-waf-logs"
+#     Type = "security-logging"
+#   })
+# }
 
-  tags = merge(local.common_tags, {
-    Name = "${var.name_prefix}-waf-logs"
-    Type = "security-logging"
-  })
-}
-
-# WAF 로깅 설정
-resource "aws_wafv2_web_acl_logging_configuration" "api_gateway" {
-  count = var.enable_waf_integration ? 1 : 0
-
-  resource_arn            = aws_wafv2_web_acl.api_gateway_rate_limit[0].arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
-
-  # 민감한 정보 필터링
-  redacted_fields {
-    single_header {
-      name = "authorization"
-    }
-  }
-
-  redacted_fields {
-    single_header {
-      name = "cookie"
-    }
-  }
-
-  depends_on = [
-    aws_wafv2_web_acl.api_gateway_rate_limit,
-    aws_cloudwatch_log_group.waf_logs
-  ]
-}
+# WAF 로깅 설정 (비활성화)
+# WARNING: AWS WAFv2 officially supports only S3 and Kinesis Firehose
+# CloudWatch Logs may work in some regions but is not officially documented
+# resource "aws_wafv2_web_acl_logging_configuration" "api_gateway" {
+#   count = var.enable_waf_integration && var.enable_waf_logging ? 1 : 0
+#
+#   resource_arn            = aws_wafv2_web_acl.api_gateway_rate_limit[0].arn
+#   log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
+#
+#   # 민감한 정보 필터링
+#   redacted_fields {
+#     single_header {
+#       name = "authorization"
+#     }
+#   }
+#
+#   redacted_fields {
+#     single_header {
+#       name = "cookie"
+#     }
+#   }
+#
+#   depends_on = [
+#     aws_wafv2_web_acl.api_gateway_rate_limit,
+#     aws_cloudwatch_log_group.waf_logs
+#   ]
+# }

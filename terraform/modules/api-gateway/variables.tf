@@ -266,6 +266,12 @@ variable "enable_waf_integration" {
   default     = false
 }
 
+variable "enable_waf_logging" {
+  description = "WAF 로깅 활성화 여부 (CloudWatch Logs - 실험적, S3/Kinesis 권장)"
+  type        = bool
+  default     = false
+}
+
 variable "waf_rate_limit_rules" {
   description = "WAF Rate Limiting 규칙 설정"
   type = list(object({

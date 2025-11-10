@@ -33,8 +33,9 @@ variable "tags" {
 }
 
 variable "tfstate_bucket_name" {
-  description = "Terraform 상태 파일을 저장할 S3 버킷 이름"
+  description = "Terraform 상태 파일 저장용 S3 버킷 (S3 네이티브 잠금 사용)"
   type        = string
+  default     = "petclinic-tfstate-oregon-dev"
 }
 
 # =============================================================================

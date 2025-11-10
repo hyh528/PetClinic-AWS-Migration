@@ -66,6 +66,71 @@ resource "aws_security_group_rule" "alb_to_ecs_admin" {
   description = "Allow ALB to access Admin service on port 9090 for health checks"
 }
 
+# ECS 서비스 간 통신 허용 (Admin 서버가 다른 서비스의 actuator에 접근하기 위해)
+resource "aws_security_group_rule" "ecs_inter_service_8080" {
+  type              = "ingress"
+  from_port         = 8080
+  to_port           = 8080
+  protocol          = "tcp"
+  security_group_id = local.ecs_security_group_id
+  self              = true
+
+  description = "Allow ECS services to communicate with each other on port 8080 (for Admin to access service actuators)"
+}
+
+# ECS 서비스 간 통신 허용 - 9090 포트 (Admin 서버)
+resource "aws_security_group_rule" "ecs_inter_service_9090" {
+  type              = "ingress"
+  from_port         = 9090
+  to_port           = 9090
+  protocol          = "tcp"
+  security_group_id = local.ecs_security_group_id
+  self              = true
+
+  description = "Allow ECS services to communicate with Admin server on port 9090"
+}
+
+# =============================================================================
+# Egress 규칙 (아웃바운드)
+# =============================================================================
+
+# Admin 서버가 ALB를 통해 다른 서비스의 actuator에 접근하기 위한 egress 규칙
+# ALB의 공개 DNS를 통한 접근을 위해 모든 HTTP 트래픽 허용 (NAT Gateway를 통해 나감)
+resource "aws_security_group_rule" "ecs_to_internet_http" {
+  type              = "egress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  security_group_id = local.ecs_security_group_id
+  cidr_blocks       = ["0.0.0.0/0"]
+
+  description = "Allow ECS to access internet on port 80 (for Admin to access ALB public DNS)"
+}
+
+# ECS 서비스 간 직접 통신을 위한 egress - 8080 포트
+resource "aws_security_group_rule" "ecs_to_ecs_8080" {
+  type              = "egress"
+  from_port         = 8080
+  to_port           = 8080
+  protocol          = "tcp"
+  security_group_id = local.ecs_security_group_id
+  self              = true
+
+  description = "Allow ECS services to communicate with each other on port 8080"
+}
+
+# ECS 서비스 간 직접 통신을 위한 egress - 9090 포트
+resource "aws_security_group_rule" "ecs_to_ecs_9090" {
+  type              = "egress"
+  from_port         = 9090
+  to_port           = 9090
+  protocol          = "tcp"
+  security_group_id = local.ecs_security_group_id
+  self              = true
+
+  description = "Allow ECS services to communicate with Admin on port 9090"
+}
+
 
 
 # =============================================================================
@@ -263,6 +328,12 @@ resource "aws_ecs_service" "services" {
     target_group_arn = aws_lb_target_group.services[each.key].arn
     container_name   = each.key
     container_port   = each.value.port
+  }
+
+  # CloudMap 서비스 디스커버리 등록
+  # Note: container_port는 SRV 레코드 타입에서만 사용. A 레코드는 IP만 등록
+  service_registries {
+    registry_arn = local.cloudmap_service_arns[each.key]
   }
 
   tags = merge(local.layer_common_tags, {

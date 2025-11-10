@@ -32,7 +32,6 @@ data "terraform_remote_state" "database" {
   }
 }
 
-# 05-cloud-map 레이어 상태 참조 (서비스 디스커버리)
 data "terraform_remote_state" "cloud_map" {
   backend = "s3"
   config = {

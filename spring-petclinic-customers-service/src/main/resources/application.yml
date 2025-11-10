@@ -1,16 +1,10 @@
+server:
+  servlet:
+    context-path: /api/customers
+
 spring:
   application:
     name: customers-service
-  boot:
-    admin:
-      client:
-        enabled: true
-        url: http://admin.petclinic.local:9090/admin
-        instance:
-          # Register internal management URLs (Cloud Map private DNS)
-          service-base-url: http://customers.petclinic.local:8080
-          management-base-url: http://customers.petclinic.local:8080
-          health-url: http://customers.petclinic.local:8080/actuator/health
   cloud:
     aws:
       region:

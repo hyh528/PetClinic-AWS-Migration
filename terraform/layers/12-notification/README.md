@@ -1,96 +1,312 @@
-# 12-Notification 레이어 - 알림 시스템
+# 12-notification 레이어 🔔
+
+## 목차
+- [개요](#개요)
+- [SNS + Lambda 알림 기초 개념](#sns--lambda-알림-기초-개념)
+- [우리가 만드는 알림 시스템 구조](#우리가-만드는-알림-시스템-구조)
+- [Slack 알림 설정](#slack-알림-설정)
+- [배포 방법](#배포-방법)
+- [테스트 방법](#테스트-방법)
+- [코드 구조](#코드-구조)
+- [문제 해결](#문제-해결)
+
+---
 
 ## 개요
 
-12-notification 레이어는 CloudWatch 알람을 Slack으로 자동 전송하는 알림 시스템을 구축합니다. SNS + Lambda를 활용하여 실시간 모니터링 알림을 제공합니다.
+**12-notification 레이어**는 CloudWatch 알람을 **Slack으로 실시간 전송**하는 알림 시스템입니다.
 
-## 아키텍처
+### 이 레이어가 하는 일
+- ✅ **SNS 토픽 생성**: CloudWatch 알람 수신
+- ✅ **Lambda 함수 생성**: Slack Webhook 호출
+- ✅ **알림 포맷팅**: 가독성 좋은 메시지 생성
+- ✅ **이메일 알림**: SNS 이메일 구독 (선택)
+- ✅ **테스트 알람**: 알림 시스템 테스트용
+
+### 다른 레이어와의 관계
+```
+10-monitoring (CloudWatch 알람)
+    ↓
+12-notification (이 레이어) 🔔
+    ↓
+    ├─→ SNS 토픽
+    └─→ Lambda 함수
+        ↓
+        Slack (메시지 전송)
+```
+
+### 왜 알림 시스템이 필요한가요?
+
+**문제**:
+```
+CloudWatch 알람 발생
+→ 어디서 알람이 발생했는지 모름
+→ 대응 지연
+→ 서비스 장애 장기화
+```
+
+**해결**:
+```
+CloudWatch 알람 발생
+→ Slack 알림 즉시 전송
+→ 팀원 모두 확인
+→ 즉시 대응
+→ 서비스 정상화
+```
+
+---
+
+## SNS + Lambda 알림 기초 개념
+
+### 1. SNS (Simple Notification Service) 📨
+
+**SNS**: 메시지를 **여러 구독자**에게 전송하는 서비스
+
+**Pub/Sub 패턴**:
+```
+Publisher (발행자)         Subscriber (구독자)
+   ↓                          ↑
+CloudWatch 알람 → SNS 토픽 → Lambda 함수
+                    ↓       → 이메일
+                    ↓       → SMS
+                    ↓       → HTTP Endpoint
+```
+
+**SNS 토픽**:
+```
+SNS 토픽: petclinic-dev-alerts
+    ├─ 구독 1: Lambda 함수 (Slack 알림)
+    ├─ 구독 2: 이메일 (admin@example.com)
+    └─ 구독 3: SMS (010-1234-5678)
+```
+
+**동작 원리**:
+```
+1. CloudWatch 알람 발생
+   → SNS 토픽으로 메시지 발행
+
+2. SNS 토픽
+   → 모든 구독자에게 메시지 전송
+
+3. Lambda 함수 수신
+   → Slack Webhook 호출
+
+4. Slack에 메시지 표시
+```
+
+---
+
+### 2. Lambda 함수 (Slack Notifier) 🤖
+
+**역할**: SNS 메시지를 받아 Slack으로 전송
+
+**Lambda 함수 구조**:
+```python
+import json
+import urllib.request
+
+def lambda_handler(event, context):
+    # 1. SNS 메시지 파싱
+    message = json.loads(event['Records'][0]['Sns']['Message'])
+    alarm_name = message['AlarmName']
+    new_state = message['NewStateValue']
+    
+    # 2. Slack 메시지 포맷팅
+    slack_message = {
+        "text": f"🚨 알람 발생: {alarm_name}",
+        "attachments": [{
+            "color": "danger" if new_state == "ALARM" else "good",
+            "fields": [
+                {"title": "상태", "value": new_state},
+                {"title": "설명", "value": message['AlarmDescription']}
+            ]
+        }]
+    }
+    
+    # 3. Slack Webhook 호출
+    webhook_url = os.environ['SLACK_WEBHOOK_URL']
+    req = urllib.request.Request(webhook_url, 
+                                  data=json.dumps(slack_message).encode('utf-8'),
+                                  headers={'Content-Type': 'application/json'})
+    urllib.request.urlopen(req)
+    
+    return {'statusCode': 200}
+```
+
+---
+
+### 3. Slack Webhook 이해하기 🔗
+
+**Webhook**: 외부에서 Slack으로 메시지를 보내는 **URL**
+
+**Webhook 생성 방법**:
+```
+1. Slack 워크스페이스 접속
+   → https://slack.com/apps
+
+2. "Incoming Webhooks" 앱 검색
+   → "Add to Slack" 클릭
+
+3. 채널 선택
+   → "#petclinic-alerts" 선택
+
+4. Webhook URL 복사
+   → https://hooks.slack.com/services/T1234/B5678/xyz...
+```
+
+**Webhook 테스트**:
+```bash
+curl -X POST https://hooks.slack.com/services/T1234/B5678/xyz... \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "text": "테스트 메시지입니다!",
+    "attachments": [{
+      "color": "good",
+      "text": "알림 시스템이 정상 작동합니다 ✅"
+    }]
+  }'
+```
+
+---
+
+## 우리가 만드는 알림 시스템 구조
+
+### 전체 아키텍처 다이어그램
 
 ```
-CloudWatch Alarm → SNS Topic → Lambda Function → Slack Webhook
+┌─────────────────────────────────────────────────────────────────────┐
+│                    CloudWatch Alarms                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
+│  │ API 4XX      │  │ Lambda Error │  │ ECS CPU > 80%│            │
+│  │ > 20/5분      │  │ > 5/5분       │  │              │            │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘            │
+│         │                 │                 │                      │
+└─────────┼─────────────────┼─────────────────┼──────────────────────┘
+          │                 │                 │
+          └─────────┬───────┴─────────┬───────┘
+                    │                 │
+                    ↓                 ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  ╔═══════════════════════════════════════════════════════════════╗  │
+│  ║  12-notification 레이어                                       ║  │
+│  ║                                                               ║  │
+│  ║  ┌──────────────────────────────────────────────────────┐    ║  │
+│  ║  │  SNS 토픽                                             │    ║  │
+│  ║  │  arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts  ║  │
+│  ║  │                                                       │    ║  │
+│  ║  │  구독자:                                               │    ║  │
+│  ║  │  - Lambda 함수 (Slack)                                │    ║  │
+│  ║  │  - 이메일 (선택)                                       │    ║  │
+│  ║  └──────────────────────────────────────────────────────┘    ║  │
+│  ║                          │                                    ║  │
+│  ║                          ↓                                    ║  │
+│  ║  ┌──────────────────────────────────────────────────────┐    ║  │
+│  ║  │  Lambda 함수 (Slack Notifier)                         │    ║  │
+│  ║  │  - Runtime: Python 3.11                               │    ║  │
+│  ║  │  - Memory: 128MB                                      │    ║  │
+│  ║  │  - Timeout: 10초                                      │    ║  │
+│  ║  │                                                       │    ║  │
+│  ║  │  환경변수:                                             │    ║  │
+│  ║  │  - SLACK_WEBHOOK_URL                                  │    ║  │
+│  ║  │  - SLACK_CHANNEL: #petclinic-alerts                   │    ║  │
+│  ║  │  - ENVIRONMENT: dev                                   │    ║  │
+│  ║  │  - PROJECT_NAME: petclinic                            │    ║  │
+│  ║  └──────────────────────────────────────────────────────┘    ║  │
+│  ║                          │                                    ║  │
+│  ║                          ↓ HTTPS POST                         ║  │
+│  ╚═══════════════════════════════════════════════════════════════╝  │
+└─────────────────────────────────────────────────────────────────────┘
+                             │
+                             ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  ╔═══════════════════════════════════════════════════════════════╗  │
+│  ║  Slack (#petclinic-alerts)                                    ║  │
+│  ║                                                               ║  │
+│  ║  🚨 알람 발생: petclinic-dev-api-4xx-error-rate              ║  │
+│  ║                                                               ║  │
+│  ║  프로젝트: PETCLINIC-DEV                                      ║  │
+│  ║  환경: DEV                                                    ║  │
+│  ║  리전: US West (Oregon)                                       ║  │
+│  ║  상태 변화: OK → ALARM                                        ║  │
+│  ║  설명: API Gateway 4XX 에러율이 임계값을 초과했습니다         ║  │
+│  ║  원인: 25개 요청 중 25개 에러 (임계값: 20개)                  ║  │
+│  ║  발생 시간: 2025-11-09 10:30:00 UTC                          ║  │
+│  ║                                                               ║  │
+│  ║  [CloudWatch 콘솔 열기]                                       ║  │
+│  ╚═══════════════════════════════════════════════════════════════╝  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## 구성 요소
+---
 
-### 1. SNS 토픽 (`petclinic-dev-alerts`)
-- CloudWatch 알람 메시지를 수신
-- Lambda 함수로 메시지 전달
-- 이메일 알림도 지원 (선택사항)
+## Slack 알림 설정
 
-### 2. Lambda 함수 (`petclinic-dev-slack-notifier`)
-- Python 3.11 런타임
-- Slack Webhook을 통해 메시지 전송
-- CloudWatch 알람 데이터를 포맷팅하여 가독성 있는 메시지 생성
+### 1. Slack Webhook 생성 🔑
 
-### 3. CloudWatch 로그 그룹
-- Lambda 함수 실행 로그 저장
-- 14일 보관 기간
+#### 1단계: Slack 앱 추가
+```
+1. Slack 워크스페이스 접속
+   https://api.slack.com/apps
 
-## 배포된 알람들
+2. "Create New App" 클릭
+   → "From scratch" 선택
 
-### 현재 SNS 토픽에 연결된 알람들
+3. 앱 이름 입력
+   App Name: PetClinic CloudWatch Alerts
+   Workspace: 사용할 워크스페이스 선택
 
-#### 1. 테스트 알람
-- **이름**: `petclinic-dev-notification-test`
-- **목적**: 알림 시스템 테스트용
-- **임계값**: TestMetric > 0
-- **주기**: 60초
-- **설명**: 알림 시스템이 정상 작동하는지 확인하는 용도
-- **연결 상태**: ✅ SNS 토픽에 연결됨 (`arn:aws:sns:us-west-2:897722691159:petclinic-dev-alerts`)
+4. "Create App" 클릭
+```
 
-### 실제 운영 알람들 (현재 연결되지 않음 - Terraform에서 alarm_actions 추가 필요)
+#### 2단계: Incoming Webhooks 활성화
+```
+1. 좌측 메뉴 "Incoming Webhooks" 클릭
+2. "Activate Incoming Webhooks" 토글 ON
+3. "Add New Webhook to Workspace" 클릭
+4. 채널 선택 (#petclinic-alerts)
+5. "Allow" 클릭
+```
 
-#### API Gateway 알람들
-- **4XX 에러율**: `petclinic-dev-api-4xx-error-rate`
-  - 임계값: 4XX 에러 > 20회/5분
-  - 설명: API Gateway 4XX 에러율이 임계값을 초과했습니다
+#### 3단계: Webhook URL 복사
+```
+Webhook URL:
+https://hooks.slack.com/services/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jkl
 
-- **5XX 에러율**: `petclinic-dev-api-5xx-error-rate`
-  - 임계값: 5XX 에러 > 10회/5분
-  - 설명: API Gateway 5XX 에러율이 임계값을 초과했습니다
+→ 이 URL을 terraform.tfvars에 입력
+```
 
-- **응답 지연**: `petclinic-dev-api-latency`
-  - 임계값: 평균 응답 시간 > 2000ms
-  - 설명: API Gateway 응답 시간이 임계값을 초과했습니다
+---
 
-- **백엔드 지연**: `petclinic-dev-api-integration-latency`
-  - 임계값: 백엔드 응답 시간 > 1500ms
-  - 설명: API Gateway 백엔드 통합 응답 시간이 임계값을 초과했습니다
+### 2. Slack 채널 생성 📢
 
-#### CloudFront 알람들
-- **4XX 에러율**: `petclinic-dev-cloudfront-4xx-errors`
-  - 임계값: 4XX 에러율 > 5%
-  - 설명: CloudFront 4XX 에러율이 임계값을 초과했습니다
+```
+1. Slack 워크스페이스에서 "+" 클릭
+2. "Create a channel" 선택
+3. 채널 이름: petclinic-alerts
+4. Description: PetClinic AWS 알람 알림
+5. "Create" 클릭
+```
 
-- **5XX 에러율**: `petclinic-dev-cloudfront-5xx-errors`
-  - 임계값: 5XX 에러율 > 2%
-  - 설명: CloudFront 5XX 에러율이 임계값을 초과했습니다
+---
 
-#### Lambda 알람들
-- **GenAI 함수 에러**: `petclinic-dev-lambda-genai-errors`
-  - 임계값: 에러 수 > 5회/5분
-  - 설명: GenAI Lambda 함수에서 에러가 발생했습니다
+### 3. 알림 메시지 포맷 🎨
 
-## 슬랙 알림 포맷
-
-### 알람 발생 시 메시지 예시
-
+#### 알람 발생 메시지
 ```
 🚨 알람 발생: petclinic-dev-api-4xx-error-rate
 
 프로젝트: PETCLINIC-DEV
 환경: DEV
 리전: US West (Oregon)
-상태 변화: INSUFFICIENT_DATA → ALARM
+상태 변화: OK → ALARM
 설명: API Gateway 4XX 에러율이 임계값을 초과했습니다
-원인: Threshold Crossed: 1 out of the last 1 datapoints [25.0 (28/10/24 10:30:00)] was greater than the threshold (20.0)
-발생 시간: 2025-11-02 08:42:14 UTC
+원인: Threshold Crossed: 1 out of the last 1 datapoints [25.0 (09/11/25 10:30:00)] was greater than the threshold (20.0)
+발생 시간: 2025-11-09 10:30:00 UTC
 
-[CloudWatch 콘솔 열기] 버튼
+[CloudWatch 콘솔 열기]
 ```
 
-### 알람 복구 시 메시지 예시
-
+#### 알람 복구 메시지
 ```
 ✅ 정상 복구: petclinic-dev-api-4xx-error-rate
 
@@ -99,13 +315,107 @@ CloudWatch Alarm → SNS Topic → Lambda Function → Slack Webhook
 리전: US West (Oregon)
 상태 변화: ALARM → OK
 설명: API Gateway 4XX 에러율이 정상으로 돌아왔습니다
-원인: Threshold Crossed: 1 out of the last 1 datapoints [5.0 (28/10/24 10:35:00)] was less than or equal to the threshold (20.0)
-발생 시간: 2025-11-02 08:45:14 UTC
+원인: Threshold Crossed: 1 out of the last 1 datapoints [5.0 (09/11/25 10:35:00)] was less than or equal to the threshold (20.0)
+발생 시간: 2025-11-09 10:35:00 UTC
 ```
+
+---
+
+## 배포 방법
+
+### 사전 요구사항
+
+1. **Slack Webhook URL** 생성 (위 참조)
+2. **10-monitoring 레이어** 배포 완료 (선택)
+
+---
+
+### 배포 순서
+
+#### 1단계: 작업 디렉토리 이동
+```bash
+cd terraform/layers/12-notification
+```
+
+#### 2단계: 변수 파일 수정
+```bash
+# terraform.tfvars 편집
+vi terraform.tfvars
+```
+
+**중요한 변수**:
+```hcl
+# 공통 설정
+name_prefix = "petclinic"
+environment = "dev"
+aws_region  = "us-west-2"
+aws_profile = "default"
+
+# Slack 설정 (필수!)
+slack_webhook_url = "https://hooks.slack.com/services/T01234/B56789/xyz..."
+slack_channel     = "#petclinic-alerts"
+
+# 이메일 알림 (선택)
+email_endpoint = "2501340070@office.kopo.ac.kr"
+
+# Lambda 설정
+log_retention_days = 14
+
+# 테스트 알람 생성
+create_test_alarm = true
+
+# 백엔드
+tfstate_bucket_name = "petclinic-tfstate-oregon-dev"
+
+tags = {
+  Project     = "petclinic"
+  Environment = "dev"
+  ManagedBy   = "terraform"
+}
+```
+
+#### 3단계: Terraform 초기화
+```bash
+terraform init \
+  -backend-config=../../backend.hcl \
+  -backend-config=backend.config
+```
+
+#### 4단계: 실행 계획 확인
+```bash
+terraform plan -var-file=terraform.tfvars
+```
+
+**확인사항**:
+- SNS 토픽 1개
+- Lambda 함수 1개 (Slack Notifier)
+- CloudWatch Log Group 1개
+- CloudWatch 테스트 알람 1개 (선택)
+- SNS 이메일 구독 1개 (선택)
+
+#### 5단계: 배포 실행
+```bash
+terraform apply -var-file=terraform.tfvars
+```
+
+**소요 시간**: 약 1-2분
+
+#### 6단계: 배포 확인
+```bash
+# SNS 토픽 ARN
+terraform output sns_topic_arn
+# arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts
+
+# Lambda 함수 이름
+terraform output lambda_function_name
+# petclinic-dev-slack-notifier
+```
+
+---
 
 ## 테스트 방법
 
-### 1. 기본 테스트 (권장)
+### 방법 1: 테스트 알람 트리거 (권장) ✅
 
 ```bash
 # 테스트 알람을 ALARM 상태로 변경
@@ -113,161 +423,373 @@ aws cloudwatch set-alarm-state \
   --alarm-name "petclinic-dev-notification-test" \
   --state-value ALARM \
   --state-reason "Testing notification system" \
-  --profile petclinic-dev \
   --region us-west-2
-```
 
-### 2. 실제 알람 테스트
+# 5초 대기 후 Slack 확인
+# → 알림 수신 확인!
 
-```bash
-# API 4XX 에러 알람을 ALARM 상태로 변경
+# 정상 상태로 복구
 aws cloudwatch set-alarm-state \
-  --alarm-name "petclinic-dev-api-4xx-error-rate" \
-  --state-value ALARM \
-  --state-reason "Testing real alarm notification" \
-  --profile petclinic-dev \
+  --alarm-name "petclinic-dev-notification-test" \
+  --state-value OK \
+  --state-reason "Test completed" \
   --region us-west-2
+
+# → "정상 복구" 알림 수신 확인!
 ```
 
-### 3. 직접 SNS 메시지 전송
+---
+
+### 방법 2: 직접 SNS 메시지 전송 📬
 
 ```bash
-# CloudWatch 알람 포맷의 JSON 메시지 전송
+# SNS 토픽 ARN 확인
+SNS_TOPIC_ARN=$(terraform output -raw sns_topic_arn)
+
+# CloudWatch 알람 포맷 메시지 전송
 aws sns publish \
-  --topic-arn "arn:aws:sns:us-west-2:897722691159:petclinic-dev-alerts" \
+  --topic-arn "${SNS_TOPIC_ARN}" \
   --message '{
-    "AlarmName": "Test-Alarm",
-    "AlarmDescription": "테스트 알람입니다",
+    "AlarmName": "Manual-Test-Alarm",
+    "AlarmDescription": "수동 테스트 알람입니다",
     "NewStateValue": "ALARM",
     "OldStateValue": "OK",
-    "NewStateReason": "Manual test",
-    "StateChangeTime": "2025-11-02T08:00:00.000+0000",
+    "NewStateReason": "Manual test from CLI",
+    "StateChangeTime": "2025-11-09T10:00:00.000+0000",
     "Region": "us-west-2"
   }' \
-  --profile petclinic-dev \
   --region us-west-2
 ```
 
-## 로그 확인
+---
 
-### Lambda 함수 로그 확인
+### 방법 3: Lambda 함수 직접 호출 🔧
 
 ```bash
-# 최신 로그 스트림 확인
-aws logs describe-log-streams \
-  --log-group-name "/aws/lambda/petclinic-dev-slack-notifier" \
-  --profile petclinic-dev \
+# Lambda 함수 이름
+FUNCTION_NAME=$(terraform output -raw lambda_function_name)
+
+# 테스트 이벤트
+cat > test-event.json << 'EOF'
+{
+  "Records": [{
+    "Sns": {
+      "Message": "{\"AlarmName\":\"Lambda-Test\",\"AlarmDescription\":\"Lambda 직접 호출 테스트\",\"NewStateValue\":\"ALARM\",\"OldStateValue\":\"OK\",\"NewStateReason\":\"Direct Lambda invocation test\",\"StateChangeTime\":\"2025-11-09T10:00:00.000+0000\",\"Region\":\"us-west-2\"}"
+    }
+  }]
+}
+EOF
+
+# Lambda 호출
+aws lambda invoke \
+  --function-name "${FUNCTION_NAME}" \
+  --payload file://test-event.json \
+  response.json \
   --region us-west-2
 
-# 특정 로그 스트림 내용 확인
-aws logs get-log-events \
-  --log-group-name "/aws/lambda/petclinic-dev-slack-notifier" \
-  --log-stream-name "2025/11/02/[$LATEST]xxxxx" \
-  --profile petclinic-dev \
-  --region us-west-2
+# 응답 확인
+cat response.json
+# {"statusCode": 200}
 ```
 
-### 실시간 로그 모니터링
+---
 
-```bash
-# 실시간 로그 테일링
-aws logs tail \
-  "/aws/lambda/petclinic-dev-slack-notifier" \
-  --follow \
-  --profile petclinic-dev \
-  --region us-west-2
+## 코드 구조
+
+### 파일 구성
+
+```
+12-notification/
+├── main.tf              # SNS, Lambda 모듈 호출
+├── variables.tf         # 변수 정의
+├── outputs.tf           # 출력값 (SNS ARN, Lambda 이름)
+├── backend.tf           # Terraform 상태 저장
+├── backend.config       # 백엔드 키 설정
+├── terraform.tfvars     # 실제 값 입력 (Slack Webhook!)
+└── README.md            # 이 문서
 ```
 
-## 추가 알람 연결하기
+---
 
-### Terraform에서 알람 추가하기
+### main.tf 주요 구성
 
 ```hcl
-# 새로운 알람 생성 예시
-resource "aws_cloudwatch_metric_alarm" "custom_alarm" {
-  alarm_name          = "${var.name_prefix}-custom-alarm"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "CustomMetric"
-  namespace           = "Custom/Namespace"
-  period              = "300"
-  statistic           = "Sum"
-  threshold           = "10"
-  alarm_description   = "커스텀 메트릭 알람"
-  alarm_actions       = [module.notification.sns_topic_arn]
-
-  tags = var.tags
+module "notification" {
+  source = "../../modules/notification"
+  
+  # 기본 설정
+  name_prefix = "petclinic"
+  environment = "dev"
+  
+  # Slack 설정
+  slack_webhook_url = var.slack_webhook_url  # 필수!
+  slack_channel     = "#petclinic-alerts"
+  
+  # 이메일 알림 (선택)
+  email_endpoint = "admin@example.com"
+  
+  # Lambda 설정
+  log_retention_days = 14
+  
+  # 테스트 알람 생성
+  create_test_alarm = true
 }
 ```
 
-### 기존 알람에 SNS 연결하기
-
-```bash
-# AWS CLI로 기존 알람에 SNS 액션 추가
-aws cloudwatch put-metric-alarm \
-  --alarm-name "existing-alarm-name" \
-  --alarm-actions "arn:aws:sns:us-west-2:897722691159:petclinic-dev-alerts" \
-  --profile petclinic-dev \
-  --region us-west-2
-```
-
-## 환경 변수 설정
-
-### 필수 환경 변수
-
-- `SLACK_WEBHOOK_URL`: Slack Incoming Webhook URL
-- `SLACK_CHANNEL`: Slack 채널 이름 (예: "#petclinic-alerts")
-- `ENVIRONMENT`: 환경 이름 (예: "dev", "staging", "prod")
-- `PROJECT_NAME`: 프로젝트 이름 (예: "petclinic")
-
-### 선택 환경 변수
-
-- `SLACK_USERNAME`: Slack 메시지 사용자 이름 (기본값: "AWS CloudWatch (환경명)")
-
-## 보안 고려사항
-
-1. **Webhook URL 보호**: Webhook URL을 환경 변수로 관리
-2. **IAM 권한 최소화**: Lambda 함수에 필요한 최소 권한만 부여
-3. **로그 암호화**: CloudWatch 로그 그룹 암호화 활성화
-4. **채널 권한**: Slack 채널에 봇 권한이 있는지 확인
-
-## 모니터링 및 유지보수
-
-### CloudWatch 대시보드
-
-- Lambda 함수 메트릭 모니터링
-- SNS 토픽 메트릭 확인
-- 알람 발생 빈도 분석
-
-### 비용 최적화
-
-- Lambda 함수 메모리 최적화 (현재 128MB)
-- 로그 보관 기간 조정 (현재 14일)
-- 불필요한 알람 정리
+---
 
 ## 문제 해결
 
-### 알림이 오지 않는 경우
+### 문제 1: Slack 알림이 오지 않음
+```
+테스트 알람 발생시켰는데 Slack에 메시지 없음
+```
 
-1. **Webhook URL 확인**: Slack 앱 설정에서 URL 유효성 확인
-2. **채널 권한 확인**: 봇이 채널에 메시지 보낼 권한 있는지 확인
-3. **Lambda 함수 상태 확인**: 함수가 정상 실행되는지 로그 확인
-4. **환경 변수 확인**: 모든 필수 환경 변수가 설정되었는지 확인
+**디버깅**:
 
-### JSON 파싱 에러
+1. **Lambda 로그 확인**
+```bash
+# 최신 로그 확인
+aws logs tail /aws/lambda/petclinic-dev-slack-notifier --follow
 
-- CloudWatch 알람 메시지 포맷이 변경되었을 수 있음
-- Lambda 함수 코드에서 JSON 파싱 로직 검토 필요
+# 에러 메시지 확인
+# "Webhook URL is invalid" → Webhook URL 재확인
+# "Connection timeout" → 네트워크 문제
+```
 
-### 권한 에러
+2. **Webhook URL 테스트**
+```bash
+curl -X POST https://hooks.slack.com/services/T.../B.../xyz... \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"테스트"}'
 
-- Lambda IAM 역할에 CloudWatch Logs 쓰기 권한 있는지 확인
-- SNS 토픽 정책에서 Lambda 호출 허용되었는지 확인
+# 응답: "ok" → Webhook 정상
+# 응답: "invalid_payload" → URL 오류
+```
+
+3. **Lambda 환경변수 확인**
+```bash
+aws lambda get-function-configuration \
+  --function-name petclinic-dev-slack-notifier \
+  --query 'Environment.Variables'
+
+# SLACK_WEBHOOK_URL이 올바른지 확인
+```
+
+---
+
+### 문제 2: Lambda 함수 에러
+```
+Lambda logs show error: "Unable to import module 'app'"
+```
+
+**원인**: Lambda 코드 배포 실패
+
+**해결**:
+```bash
+# Lambda 함수 상태 확인
+aws lambda get-function \
+  --function-name petclinic-dev-slack-notifier
+
+# 코드 재배포 (모듈에서 자동 처리)
+cd ../../modules/notification
+terraform apply
+```
+
+---
+
+### 문제 3: SNS 구독 확인 이메일 미수신
+```
+이메일 알림 설정했는데 확인 이메일 안 옴
+```
+
+**해결**:
+```bash
+# SNS 구독 상태 확인
+aws sns list-subscriptions-by-topic \
+  --topic-arn arn:aws:sns:us-west-2:...:petclinic-dev-alerts
+
+# 출력:
+# Protocol: email
+# Endpoint: admin@example.com
+# SubscriptionArn: PendingConfirmation  ← 확인 대기 중
+
+# 해결: 이메일 스팸함 확인 또는 재구독
+terraform apply -var-file=terraform.tfvars
+```
+
+---
+
+### 문제 4: 알람이 SNS로 전송되지 않음
+```
+CloudWatch 알람 발생했는데 SNS 메시지 없음
+```
+
+**원인**: 알람에 SNS 연결 안 됨
+
+**해결**:
+```bash
+# 알람에 SNS 액션 추가
+aws cloudwatch put-metric-alarm \
+  --alarm-name "petclinic-dev-api-4xx-error-rate" \
+  --alarm-actions "arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts" \
+  --region us-west-2
+
+# Terraform으로 추가
+# 08-api-gateway/main.tf 수정:
+alarm_actions = [data.terraform_remote_state.notification.outputs.sns_topic_arn]
+```
+
+---
+
+### 디버깅 명령어
+
+```bash
+# SNS 토픽 확인
+aws sns get-topic-attributes \
+  --topic-arn arn:aws:sns:us-west-2:...:petclinic-dev-alerts
+
+# Lambda 함수 확인
+aws lambda get-function \
+  --function-name petclinic-dev-slack-notifier
+
+# Lambda 로그 실시간 모니터링
+aws logs tail /aws/lambda/petclinic-dev-slack-notifier --follow
+
+# SNS 구독자 목록
+aws sns list-subscriptions-by-topic \
+  --topic-arn arn:aws:sns:us-west-2:...:petclinic-dev-alerts
+
+# CloudWatch 알람 목록 (SNS 연결된 알람만)
+aws cloudwatch describe-alarms \
+  --query 'MetricAlarms[?contains(AlarmActions, `petclinic-dev-alerts`)].[AlarmName]' \
+  --output table
+```
+
+---
+
+## 비용 예상
+
+### 주요 비용 요소
+
+| 구성 요소 | 사양 | 월 비용 (USD) |
+|----------|------|---------------|
+| **SNS** | 1,000 알림/월 | $0.00 (100만건까지 무료) |
+| **Lambda 호출** | 1,000 호출/월 | $0.00 (100만건까지 무료) |
+| **Lambda 실행 시간** | 128MB × 1초 | $0.00 (40만 GB-초까지 무료) |
+| **CloudWatch Logs** | 1GB | $0.50 ($0.50/GB) |
+| **합계** | - | **$0.50** |
+
+**비용 최적화 팁**:
+- Lambda 메모리: 128MB (최소) → 충분
+- 로그 보관: 14일 → 7일 (필요시)
+- 불필요한 알람 정리 → 알림 수 감소
+
+---
+
+## 베스트 프랙티스
+
+### 1. 알람 우선순위 설정 🎯
+```
+Critical (즉시 대응):
+- 5XX 에러
+- Lambda 에러
+- Aurora 장애
+
+Warning (모니터링):
+- 4XX 에러
+- CPU 80% 이상
+- 메모리 80% 이상
+
+Info (참고):
+- 배포 알림
+- 스케일링 이벤트
+```
+
+### 2. 알림 채널 분리 📢
+```
+#petclinic-alerts-critical → P0, P1 알람
+#petclinic-alerts-warning  → P2, P3 알람
+#petclinic-alerts-info     → 정보성 알림
+```
+
+### 3. On-Call 로테이션 👥
+```
+Slack 사용자 그룹 활용:
+@petclinic-oncall → 당직자 그룹
+@petclinic-team   → 전체 팀원
+
+알람 메시지에 멘션 추가:
+"@petclinic-oncall 즉시 확인 필요!"
+```
+
+### 4. 알람 대응 플레이북 📖
+```
+Slack 채널 설명에 플레이북 링크 추가:
+#petclinic-alerts
+
+Channel Description:
+PetClinic AWS 알람 알림
+📖 Playbook: https://wiki.example.com/petclinic-playbook
+🔗 Dashboard: https://cloudwatch.aws.amazon.com/...
+```
+
+---
 
 ## 다음 단계
 
-1. 실제 운영 알람들을 SNS 토픽에 연결
-2. 알람 임계값 튜닝
-3. 추가 알림 채널 설정 (이메일, SMS 등)
-4. 알람 대시보드 구축
-5. 자동 복구 워크플로우 구현
+Notification 레이어 배포가 완료되면:
+
+1. **10-monitoring 알람 연결**: CloudWatch 알람에 SNS 추가
+2. **알람 임계값 튜닝**: 실제 트래픽 패턴에 맞게 조정
+3. **추가 알림 채널**: PagerDuty, OpsGenie 통합
+4. **자동 복구**: Lambda로 자동 대응 구현
+
+```bash
+# 10-monitoring 레이어에서 SNS 연결
+cd ../10-monitoring
+# main.tf 수정: alarm_actions 추가
+terraform apply -var-file=terraform.tfvars
+```
+
+---
+
+## 요약
+
+### 핵심 개념 정리
+- ✅ **SNS**: 메시지 발행/구독 서비스
+- ✅ **Lambda**: Slack Webhook 호출
+- ✅ **Slack Webhook**: 외부에서 Slack으로 메시지 전송
+- ✅ **CloudWatch 알람**: SNS로 메시지 발행
+
+### 생성되는 주요 리소스
+- SNS 토픽 1개 (petclinic-dev-alerts)
+- Lambda 함수 1개 (Slack Notifier)
+- CloudWatch Log Group 1개
+- 테스트 알람 1개 (선택)
+
+### 알림 흐름
+```
+CloudWatch 알람 발생
+    ↓
+SNS 토픽으로 메시지 발행
+    ↓
+Lambda 함수 트리거
+    ↓
+Slack Webhook 호출
+    ↓
+Slack 채널에 메시지 표시
+```
+
+### 설정 필수 항목
+```bash
+# terraform.tfvars
+slack_webhook_url = "https://hooks.slack.com/services/..."  # 필수!
+slack_channel     = "#petclinic-alerts"
+```
+
+---
+
+**작성일**: 2025-11-09  
+**작성자**: 황영현 
+**버전**: 1.0

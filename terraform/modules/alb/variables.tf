@@ -115,6 +115,12 @@ variable "enable_security_rules" {
   default     = true
 }
 
+variable "enable_waf_logging" {
+  description = "WAF 로깅 활성화 여부 (CloudWatch Logs는 지원하지 않음, S3/Kinesis 필요)"
+  type        = bool
+  default     = false
+}
+
 variable "waf_log_retention_days" {
   description = "WAF 로그 보관 기간 (일)"
   type        = number

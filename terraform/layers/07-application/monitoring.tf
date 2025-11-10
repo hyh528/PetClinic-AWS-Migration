@@ -181,13 +181,13 @@ resource "aws_cloudwatch_dashboard" "application" {
         width  = 12
         height = 6
         properties = {
-          metrics = [
+          metrics = tolist([
             for service in keys(local.services) : [
               "AWS/ECS", "CPUUtilization", "ServiceName",
               aws_ecs_service.services[service].name, "ClusterName",
               aws_ecs_cluster.main.name
             ]
-          ]
+          ])
           period = 300
           stat   = "Average"
           region = var.aws_region
@@ -208,13 +208,13 @@ resource "aws_cloudwatch_dashboard" "application" {
         width  = 12
         height = 6
         properties = {
-          metrics = [
+          metrics = tolist([
             for service in keys(local.services) : [
               "AWS/ECS", "MemoryUtilization", "ServiceName",
               aws_ecs_service.services[service].name, "ClusterName",
               aws_ecs_cluster.main.name
             ]
-          ]
+          ])
           period = 300
           stat   = "Average"
           region = var.aws_region
@@ -235,13 +235,13 @@ resource "aws_cloudwatch_dashboard" "application" {
         width  = 12
         height = 6
         properties = {
-          metrics = [
+          metrics = tolist([
             for service in keys(local.services) : [
               "AWS/ApplicationELB", "RequestCount", "TargetGroup",
               aws_lb_target_group.services[service].arn_suffix, "LoadBalancer",
               module.alb.alb_arn_suffix
             ]
-          ]
+          ])
           period = 300
           stat   = "Sum"
           region = var.aws_region
@@ -256,13 +256,13 @@ resource "aws_cloudwatch_dashboard" "application" {
         width  = 12
         height = 6
         properties = {
-          metrics = [
+          metrics = tolist([
             for service in keys(local.services) : [
               "AWS/ApplicationELB", "TargetResponseTime", "TargetGroup",
               aws_lb_target_group.services[service].arn_suffix, "LoadBalancer",
               module.alb.alb_arn_suffix
             ]
-          ]
+          ])
           period = 300
           stat   = "Average"
           region = var.aws_region
@@ -277,13 +277,13 @@ resource "aws_cloudwatch_dashboard" "application" {
         width  = 12
         height = 6
         properties = {
-          metrics = [
+          metrics = tolist([
             for service in keys(local.services) : [
               "AWS/ECS", "RunningTaskCount", "ServiceName",
               aws_ecs_service.services[service].name, "ClusterName",
               aws_ecs_cluster.main.name
             ]
-          ]
+          ])
           period = 300
           stat   = "Average"
           region = var.aws_region
@@ -298,13 +298,11 @@ resource "aws_cloudwatch_dashboard" "application" {
         width  = 12
         height = 6
         properties = {
-          metrics = flatten([
-            for service in keys(local.services) : [
-              ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "TargetGroup", aws_lb_target_group.services[service].arn_suffix, "LoadBalancer", module.alb.alb_arn_suffix],
-              [".", "HTTPCode_Target_4XX_Count", ".", ".", ".", "."],
-              [".", "HTTPCode_Target_5XX_Count", ".", ".", ".", "."]
-            ]
-          ])
+          metrics = concat(
+            [for service in keys(local.services) : ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "TargetGroup", aws_lb_target_group.services[service].arn_suffix, "LoadBalancer", module.alb.alb_arn_suffix]],
+            [for service in keys(local.services) : ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "TargetGroup", aws_lb_target_group.services[service].arn_suffix, "LoadBalancer", module.alb.alb_arn_suffix]],
+            [for service in keys(local.services) : ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "TargetGroup", aws_lb_target_group.services[service].arn_suffix, "LoadBalancer", module.alb.alb_arn_suffix]]
+          )
           period = 300
           stat   = "Sum"
           region = var.aws_region

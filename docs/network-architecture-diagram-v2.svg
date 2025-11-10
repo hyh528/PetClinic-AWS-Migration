@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      .vpc-box { fill: #E3F2FD; stroke: #1976D2; stroke-width: 3; }
+      .az-box { fill: #F5F5F5; stroke: #757575; stroke-width: 2; stroke-dasharray: 5,5; }
+      .public-subnet { fill: #E8F5E9; stroke: #4CAF50; stroke-width: 2; }
+      .private-app-subnet { fill: #FFF4E6; stroke: #FF9800; stroke-width: 2; }
+      .private-db-subnet { fill: #FCE4EC; stroke: #E91E63; stroke-width: 2; }
+      .component { fill: #FFFFFF; stroke: #424242; stroke-width: 1.5; }
+      .title { font-size: 14px; font-weight: bold; fill: #212121; }
+      .subtitle { font-size: 11px; fill: #555; }
+      .label { font-size: 10px; fill: #666; }
+      .small-label { font-size: 9px; fill: #777; }
+      .arrow { stroke: #424242; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#424242"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="#1976D2">
+    PetClinic Network Architecture
+  </text>
+  <text x="600" y="50" text-anchor="middle" font-size="12" fill="#555">
+    VPC: 10.0.0.0/16 | Region: us-west-2 | Multi-AZ Configuration
+  </text>
+  
+  <!-- Internet -->
+  <ellipse cx="600" cy="100" rx="80" ry="30" fill="#BBDEFB" stroke="#1976D2" stroke-width="2"/>
+  <text x="600" y="105" text-anchor="middle" class="title" fill="#0D47A1">Internet</text>
+  
+  <!-- Internet Gateway -->
+  <rect x="540" y="150" width="120" height="40" class="component" rx="5"/>
+  <text x="600" y="175" text-anchor="middle" class="subtitle">Internet Gateway</text>
+  
+  <!-- VPC Border -->
+  <rect x="80" y="220" width="1040" height="540" class="vpc-box" rx="10"/>
+  <text x="100" y="240" class="title" fill="#1976D2">VPC (10.0.0.0/16)</text>
+  
+  <!-- AZ-A -->
+  <rect x="100" y="260" width="480" height="480" class="az-box" rx="8"/>
+  <text x="340" y="280" text-anchor="middle" class="title" fill="#757575">Availability Zone A (us-west-2a)</text>
+  
+  <!-- AZ-B -->
+  <rect x="620" y="260" width="480" height="480" class="az-box" rx="8"/>
+  <text x="860" y="280" text-anchor="middle" class="title" fill="#757575">Availability Zone B (us-west-2b)</text>
+  
+  <!-- === AZ-A Subnets === -->
+  
+  <!-- Public Subnet A -->
+  <rect x="120" y="300" width="200" height="110" class="public-subnet" rx="5"/>
+  <text x="220" y="320" text-anchor="middle" class="subtitle" font-weight="bold" fill="#2E7D32">Public Subnet A</text>
+  <text x="220" y="335" text-anchor="middle" class="label">10.0.1.0/24</text>
+  
+  <!-- NAT Gateway A -->
+  <rect x="145" y="350" width="70" height="30" class="component" rx="3"/>
+  <text x="180" y="370" text-anchor="middle" class="small-label">NAT GW A</text>
+  
+  <!-- ALB Node A -->
+  <rect x="230" y="350" width="70" height="30" class="component" rx="3"/>
+  <text x="265" y="370" text-anchor="middle" class="small-label">ALB Node</text>
+  
+  <!-- Private App Subnet A -->
+  <rect x="120" y="430" width="200" height="120" class="private-app-subnet" rx="5"/>
+  <text x="220" y="450" text-anchor="middle" class="subtitle" font-weight="bold" fill="#E65100">Private App Subnet A</text>
+  <text x="220" y="465" text-anchor="middle" class="label">10.0.3.0/24</text>
+  
+  <!-- ECS Tasks A -->
+  <g>
+    <rect x="145" y="480" width="60" height="50" class="component" rx="3"/>
+    <text x="175" y="495" text-anchor="middle" class="small-label">ECS</text>
+    <text x="175" y="507" text-anchor="middle" class="small-label">Task 1</text>
+    <text x="175" y="519" text-anchor="middle" class="small-label" font-size="8px">Customers</text>
+  </g>
+  <g>
+    <rect x="220" y="480" width="60" height="50" class="component" rx="3"/>
+    <text x="250" y="495" text-anchor="middle" class="small-label">ECS</text>
+    <text x="250" y="507" text-anchor="middle" class="small-label">Task 2</text>
+    <text x="250" y="519" text-anchor="middle" class="small-label" font-size="8px">Vets</text>
+  </g>
+  
+  <!-- Private DB Subnet A -->
+  <rect x="120" y="570" width="200" height="150" class="private-db-subnet" rx="5"/>
+  <text x="220" y="590" text-anchor="middle" class="subtitle" font-weight="bold" fill="#C2185B">Private DB Subnet A</text>
+  <text x="220" y="605" text-anchor="middle" class="label">10.0.5.0/24</text>
+  
+  <!-- Aurora Primary -->
+  <rect x="145" y="620" width="150" height="80" class="component" rx="3"/>
+  <text x="220" y="640" text-anchor="middle" class="small-label" font-weight="bold">Aurora MySQL</text>
+  <text x="220" y="655" text-anchor="middle" class="small-label">Primary Writer</text>
+  <text x="220" y="670" text-anchor="middle" class="small-label" font-size="8px">Instance</text>
+  <text x="220" y="685" text-anchor="middle" class="small-label" font-size="8px" fill="#2E7D32">✓ Read/Write</text>
+  
+  <!-- === AZ-B Subnets === -->
+  
+  <!-- Public Subnet B -->
+  <rect x="880" y="300" width="200" height="110" class="public-subnet" rx="5"/>
+  <text x="980" y="320" text-anchor="middle" class="subtitle" font-weight="bold" fill="#2E7D32">Public Subnet B</text>
+  <text x="980" y="335" text-anchor="middle" class="label">10.0.2.0/24</text>
+  
+  <!-- NAT Gateway B -->
+  <rect x="905" y="350" width="70" height="30" class="component" rx="3"/>
+  <text x="940" y="370" text-anchor="middle" class="small-label">NAT GW B</text>
+  
+  <!-- ALB Node B -->
+  <rect x="990" y="350" width="70" height="30" class="component" rx="3"/>
+  <text x="1025" y="370" text-anchor="middle" class="small-label">ALB Node</text>
+  
+  <!-- Private App Subnet B -->
+  <rect x="880" y="430" width="200" height="120" class="private-app-subnet" rx="5"/>
+  <text x="980" y="450" text-anchor="middle" class="subtitle" font-weight="bold" fill="#E65100">Private App Subnet B</text>
+  <text x="980" y="465" text-anchor="middle" class="label">10.0.4.0/24</text>
+  
+  <!-- ECS Tasks B -->
+  <g>
+    <rect x="905" y="480" width="60" height="50" class="component" rx="3"/>
+    <text x="935" y="495" text-anchor="middle" class="small-label">ECS</text>
+    <text x="935" y="507" text-anchor="middle" class="small-label">Task 3</text>
+    <text x="935" y="519" text-anchor="middle" class="small-label" font-size="8px">Visits</text>
+  </g>
+  <g>
+    <rect x="980" y="480" width="60" height="50" class="component" rx="3"/>
+    <text x="1010" y="495" text-anchor="middle" class="small-label">ECS</text>
+    <text x="1010" y="507" text-anchor="middle" class="small-label">Task 4</text>
+    <text x="1010" y="519" text-anchor="middle" class="small-label" font-size="8px">Admin</text>
+  </g>
+  
+  <!-- Private DB Subnet B -->
+  <rect x="880" y="570" width="200" height="150" class="private-db-subnet" rx="5"/>
+  <text x="980" y="590" text-anchor="middle" class="subtitle" font-weight="bold" fill="#C2185B">Private DB Subnet B</text>
+  <text x="980" y="605" text-anchor="middle" class="label">10.0.6.0/24</text>
+  
+  <!-- Aurora Replica -->
+  <rect x="905" y="620" width="150" height="80" class="component" rx="3"/>
+  <text x="980" y="640" text-anchor="middle" class="small-label" font-weight="bold">Aurora MySQL</text>
+  <text x="980" y="655" text-anchor="middle" class="small-label">Read Replica</text>
+  <text x="980" y="670" text-anchor="middle" class="small-label" font-size="8px">Instance</text>
+  <text x="980" y="685" text-anchor="middle" class="small-label" font-size="8px" fill="#1976D2">✓ Read Only</text>
+  
+  <!-- VPC Endpoints (Shared) -->
+  <rect x="360" y="620" width="180" height="80" fill="#E1F5FE" stroke="#0277BD" stroke-width="2" rx="5"/>
+  <text x="450" y="640" text-anchor="middle" class="subtitle" font-weight="bold" fill="#0277BD">VPC Endpoints</text>
+  <text x="450" y="658" text-anchor="middle" class="small-label">ECR, S3, Logs</text>
+  <text x="450" y="672" text-anchor="middle" class="small-label">Secrets, KMS</text>
+  <text x="450" y="686" text-anchor="middle" class="small-label">SSM, Monitoring</text>
+  
+  <!-- Arrows -->
+  <!-- Internet to IGW -->
+  <path d="M 600 130 L 600 150" class="arrow"/>
+  
+  <!-- IGW to ALB -->
+  <path d="M 600 190 L 265 300" class="arrow"/>
+  <path d="M 600 190 L 1025 300" class="arrow"/>
+  
+  <!-- NAT to IGW -->
+  <path d="M 180 350 L 180 240 L 540 190" class="arrow" stroke-dasharray="4,4" stroke="#FF6F00"/>
+  <path d="M 940 350 L 940 240 L 660 190" class="arrow" stroke-dasharray="4,4" stroke="#FF6F00"/>
+  
+  <!-- ALB to ECS -->
+  <path d="M 265 380 L 175 480" class="arrow" stroke="#4CAF50"/>
+  <path d="M 265 380 L 250 480" class="arrow" stroke="#4CAF50"/>
+  <path d="M 1025 380 L 935 480" class="arrow" stroke="#4CAF50"/>
+  <path d="M 1025 380 L 1010 480" class="arrow" stroke="#4CAF50"/>
+  
+  <!-- ECS to VPC Endpoints -->
+  <path d="M 280 505 L 360 660" class="arrow" stroke="#0277BD" stroke-dasharray="3,3"/>
+  <path d="M 905 505 L 540 660" class="arrow" stroke="#0277BD" stroke-dasharray="3,3"/>
+  
+  <!-- ECS to NAT (outbound) -->
+  <path d="M 175 480 L 180 380" class="arrow" stroke="#FF6F00" stroke-dasharray="4,4"/>
+  <path d="M 935 480 L 940 380" class="arrow" stroke="#FF6F00" stroke-dasharray="4,4"/>
+  
+  <!-- ECS to DB -->
+  <path d="M 200 530 L 220 620" class="arrow" stroke="#E91E63"/>
+  <path d="M 960 530 L 980 620" class="arrow" stroke="#E91E63"/>
+  
+  <!-- DB Replication -->
+  <path d="M 295 660 L 905 660" class="arrow" stroke="#9C27B0" stroke-width="3" stroke-dasharray="5,5"/>
+  <text x="600" y="650" text-anchor="middle" class="small-label" fill="#9C27B0" font-weight="bold">Replication</text>
+  
+  <!-- Legend -->
+  <g transform="translate(340, 300)">
+    <rect x="0" y="0" width="520" height="80" fill="#FFFFFF" stroke="#BDBDBD" stroke-width="1" rx="5" opacity="0.95"/>
+    <text x="10" y="20" class="subtitle" font-weight="bold">Traffic Flow Legend:</text>
+    
+    <line x1="10" y1="35" x2="50" y2="35" class="arrow"/>
+    <text x="60" y="39" class="small-label">Inbound (Internet → App)</text>
+    
+    <line x1="10" y1="50" x2="50" y2="50" class="arrow" stroke="#FF6F00" stroke-dasharray="4,4"/>
+    <text x="60" y="54" class="small-label">Outbound (App → Internet via NAT)</text>
+    
+    <line x1="10" y1="65" x2="50" y2="65" class="arrow" stroke="#0277BD" stroke-dasharray="3,3"/>
+    <text x="60" y="69" class="small-label">AWS Service (via VPC Endpoint)</text>
+    
+    <line x1="260" y1="35" x2="300" y2="35" class="arrow" stroke="#4CAF50"/>
+    <text x="310" y="39" class="small-label">Load Balancing</text>
+    
+    <line x1="260" y1="50" x2="300" y2="50" class="arrow" stroke="#E91E63"/>
+    <text x="310" y="54" class="small-label">Database Access</text>
+    
+    <line x1="260" y1="65" x2="300" y2="65" class="arrow" stroke="#9C27B0" stroke-dasharray="5,5"/>
+    <text x="310" y="69" class="small-label">DB Replication</text>
+  </g>
+</svg>

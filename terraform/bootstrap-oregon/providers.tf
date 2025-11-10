@@ -1,5 +1,5 @@
 # ==========================================
-# Bootstrap: Provider 설정 (Singapore 리전)
+# Bootstrap: Provider 설정
 # ==========================================
 
 provider "aws" {
