@@ -15,7 +15,7 @@ terraform {
   }
 }
 
-# AWS Provider (시드니 리전)
+# AWS Provider 
 provider "aws" {
   region  = var.aws_region
   profile = var.aws_profile
