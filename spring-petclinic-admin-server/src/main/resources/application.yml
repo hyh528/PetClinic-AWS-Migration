@@ -1,13 +1,29 @@
 spring:
   application:
     name: admin-server
-  config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
-
+  server:
+    servlet:
+      context-path: /admin-server
+  
+  config:                                                
+    import: [                                            
+      "optional:aws-parameterstore:/petclinic/common/",  
+      "optional:aws-parameterstore:/petclinic/dev/admin" 
+    ]                                                    
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:mysql,aws}
 
 ---
 spring:
   config:
     activate:
       on-profile: docker
-    import: configserver:http://config-server:8888
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+

@@ -1,9 +1,10 @@
-# API Gateway REST API 생성 (Spring Cloud Gateway 대체)
+# --------------------------------------
+# API Gateway REST API 생성
+# --------------------------------------
 resource "aws_api_gateway_rest_api" "this" {
   name        = "${var.project_name}-${var.environment}-api"
   description = "PetClinic 애플리케이션용 API Gateway"
 
-  # Regional 엔드포인트 (설계서 요구사항)
   endpoint_configuration {
     types = ["REGIONAL"]
   }
@@ -17,138 +18,178 @@ resource "aws_api_gateway_rest_api" "this" {
   }
 }
 
-# API Gateway 프록시 리소스 (모든 경로 처리)
-resource "aws_api_gateway_resource" "proxy" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
-  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
-  path_part   = "{proxy+}" # 모든 하위 경로를 ALB로 프록시
-}
+# --------------------------------------
+# 라우팅 맵
+# --------------------------------------
+locals {
+  direct_top_level_services = {
+    admin = "admin-server"
+  }
 
-# API Gateway 메서드 (모든 HTTP 메서드 허용)
-resource "aws_api_gateway_method" "proxy_any" {
-  rest_api_id   = aws_api_gateway_rest_api.this.id
-  resource_id   = aws_api_gateway_resource.proxy.id
-  http_method   = "ANY"
-  authorization = "NONE" # 인증 없음 (설계서 요구사항)
-
-  request_parameters = {
-    "method.request.path.proxy" = true
+  api_sub_services = {
+    customers = "customers-service"
+    vets      = "vets-service"
+    visits    = "visits-service"
   }
 }
 
-# API Gateway 통합 (ALB로 직접 프록시)
-resource "aws_api_gateway_integration" "proxy_alb" {
+# --------------------------------------
+# 0) 루트 경로(/) -> ALB 루트
+# --------------------------------------
+resource "aws_api_gateway_method" "root_any" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_rest_api.this.root_resource_id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "root_alb" {
   rest_api_id             = aws_api_gateway_rest_api.this.id
-  resource_id             = aws_api_gateway_resource.proxy.id
-  http_method             = aws_api_gateway_method.proxy_any.http_method
+  resource_id             = aws_api_gateway_rest_api.this.root_resource_id
+  http_method             = aws_api_gateway_method.root_any.http_method
   type                    = "HTTP_PROXY"
   integration_http_method = "ANY"
-
-  # ALB로 직접 연결 (Public ALB이므로 VPC Link 불필요)
-  uri = "http://${var.alb_dns_name}/{proxy}"
-
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
-
-  # 타임아웃 설정
-  timeout_milliseconds = 29000
+  # [수정됨] for_each가 없으므로 each.value, each.key 제거
+  uri                     = "http://${var.alb_dns_name}/"
 }
 
-# API Gateway 배포
-resource "aws_api_gateway_deployment" "this" {
+# --------------------------------------
+# 1) 최상위 직접 노출 서비스 (예: /admin/{proxy+})
+# --------------------------------------
+resource "aws_api_gateway_resource" "direct_service_root" {
+  for_each    = local.direct_top_level_services
   rest_api_id = aws_api_gateway_rest_api.this.id
-  description = "Deployment for ${var.environment} stage"
-
-  # 리소스 변경 시 자동 재배포 트리거
-  triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.proxy.id,
-      aws_api_gateway_method.proxy_any.id,
-      aws_api_gateway_integration.proxy_alb.id,
-      # CORS 관련 리소스도 포함
-      aws_api_gateway_method.proxy_options.id,
-      aws_api_gateway_integration.proxy_options.id,
-    ]))
-  }
-
-  # 배포가 완료된 후 스테이지를 생성하거나 업데이트합니다.
-  lifecycle {
-    create_before_destroy = true
-  }
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = each.key
 }
 
-# API Gateway 스테이지
-resource "aws_api_gateway_stage" "this" {
-  rest_api_id   = aws_api_gateway_rest_api.this.id
-  deployment_id = aws_api_gateway_deployment.this.id
-  stage_name    = var.environment
-  description   = "PetClinic ${var.environment} 환경 스테이지"
-
-  # X-Ray 트레이싱 활성화 (설계서 9.4절 요구사항)
-  xray_tracing_enabled = true
-
-  # 액세스 로깅 설정 - 생성한 로그 그룹 참조
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
-    format = jsonencode({
-      requestId            = "$context.requestId"
-      ip                   = "$context.identity.sourceIp"
-      caller               = "$context.identity.caller"
-      user                 = "$context.identity.user"
-      requestTime          = "$context.requestTime"
-      httpMethod           = "$context.httpMethod"
-      resourcePath         = "$context.resourcePath"
-      status               = "$context.status"
-      protocol             = "$context.protocol"
-      responseLength       = "$context.responseLength"
-      integrationLatency   = "$context.integrationLatency"
-      integrationStatus    = "$context.integrationStatus"
-      authorizerLatency    = "$context.authorizerLatency"
-      authorizerStatus     = "$context.authorizerStatus"
-      errorResponseMessage = "$context.error.message"
-      extendedRequestId    = "$context.extendedRequestId"
-    })
-  }
-
-  # 참고: 스로틀링 설정은 aws_api_gateway_usage_plan에서 관리
-  # throttle_settings는 stage에서 지원되지 않음
-
-  # 태그
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-stage"
-    Project     = var.project_name
-    Environment = var.environment
-  }
+resource "aws_api_gateway_resource" "direct_service_proxy" {
+  for_each    = local.direct_top_level_services
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.direct_service_root[each.key].id
+  path_part   = "{proxy+}"
 }
 
-# CORS 지원을 위한 OPTIONS 메서드 (개발 환경 필수)
-resource "aws_api_gateway_method" "proxy_options" {
+resource "aws_api_gateway_method" "direct_proxy_any" {
+  for_each      = local.direct_top_level_services
   rest_api_id   = aws_api_gateway_rest_api.this.id
-  resource_id   = aws_api_gateway_resource.proxy.id
+  resource_id   = aws_api_gateway_resource.direct_service_proxy[each.key].id
+  http_method   = "ANY"
+  authorization = "NONE"
+  request_parameters = { "method.request.path.proxy" = true }
+}
+
+resource "aws_api_gateway_integration" "direct_proxy_alb" {
+  for_each                = local.direct_top_level_services
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.direct_service_proxy[each.key].id
+  http_method             = aws_api_gateway_method.direct_proxy_any[each.key].http_method
+  type                    = "HTTP_PROXY"
+  integration_http_method = "ANY"
+  # [수정됨] 불필요한 each.key 제거
+  uri                     = "http://${var.alb_dns_name}/${each.value}/{proxy}"
+  request_parameters      = { "integration.request.path.proxy" = "method.request.path.proxy" }        
+  timeout_milliseconds    = 29000
+}
+
+# --------------------------------------ㅇ
+# 2) /api 및 하위 서비스
+# --------------------------------------
+resource "aws_api_gateway_resource" "api_root" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = "api"
+}
+
+resource "aws_api_gateway_resource" "api_sub_service_root" {
+  for_each    = local.api_sub_services
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.api_root.id
+  path_part   = each.key
+}
+
+# [신규 추가] /api/vets 와 같은 루트 경로 처리
+resource "aws_api_gateway_method" "api_sub_service_root_any" {
+  for_each      = local.api_sub_services
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.api_sub_service_root[each.key].id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+# [신규 추가] /api/vets -> /vets-service/vets 로 변환
+resource "aws_api_gateway_integration" "api_sub_service_root_alb" {
+  for_each                = local.api_sub_services
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.api_sub_service_root[each.key].id
+  http_method             = aws_api_gateway_method.api_sub_service_root_any[each.key].http_method     
+  type                    = "HTTP_PROXY"
+  integration_http_method = "ANY"
+  # [핵심 로직] /api/vets -> http://.../vets-service/vets
+  uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}"
+  //uri                     = "http://${var.alb_dns_name}/${each.key}"  // 수정본
+}
+
+# [기존] /api/vets/{proxy+} 와 같은 하위 경로 처리
+resource "aws_api_gateway_resource" "api_sub_service_proxy" {
+  for_each    = local.api_sub_services
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.api_sub_service_root[each.key].id
+  path_part   = "{proxy+}"
+}
+
+resource "aws_api_gateway_method" "api_sub_service_proxy_any" {
+  for_each      = local.api_sub_services
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.api_sub_service_proxy[each.key].id
+  http_method   = "ANY"
+  authorization = "NONE"
+  request_parameters = { "method.request.path.proxy" = true }
+}
+
+# [기존] /api/vets/{proxy+} -> /vets-service/vets/{proxy+} 로 변환
+resource "aws_api_gateway_integration" "api_sub_service_proxy_alb" {
+  for_each                = local.api_sub_services
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.api_sub_service_proxy[each.key].id
+  http_method             = aws_api_gateway_method.api_sub_service_proxy_any[each.key].http_method
+  type                    = "HTTP_PROXY"
+  integration_http_method = "ANY"
+  # [핵심 로직] /api/vets/1 -> http://.../vets-service/vets/1
+  uri                     = "http://${var.alb_dns_name}/${each.value}/${each.key}/{proxy}"
+  //uri                     = "http://${var.alb_dns_name}/${each.key}/{proxy}"        // 수정본
+  request_parameters      = { "integration.request.path.proxy" = "method.request.path.proxy" }        
+  timeout_milliseconds    = 29000
+}
+
+# --------------------------------------
+# CORS 지원 (최상위 직접 노출 서비스용)
+# --------------------------------------
+resource "aws_api_gateway_method" "direct_proxy_options" {
+  for_each      = local.direct_top_level_services
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.direct_service_proxy[each.key].id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
 
-# CORS 통합 설정 (MOCK 응답)
-resource "aws_api_gateway_integration" "proxy_options" {
+resource "aws_api_gateway_integration" "direct_proxy_options" {
+  for_each    = local.direct_top_level_services
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy_options.http_method
+  resource_id = aws_api_gateway_resource.direct_service_proxy[each.key].id
+  http_method = aws_api_gateway_method.direct_proxy_options[each.key].http_method
   type        = "MOCK"
 
   request_templates = {
-    "application/json" = jsonencode({
-      statusCode = 200
-    })
+    "application/json" = jsonencode({ statusCode = 200 })
   }
 }
 
-# CORS 응답 헤더 설정
-resource "aws_api_gateway_method_response" "proxy_options" {
+resource "aws_api_gateway_method_response" "direct_proxy_options" {
+  for_each    = local.direct_top_level_services
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy_options.http_method
+  resource_id = aws_api_gateway_resource.direct_service_proxy[each.key].id
+  http_method = aws_api_gateway_method.direct_proxy_options[each.key].http_method
   status_code = "200"
 
   response_parameters = {
@@ -162,15 +203,14 @@ resource "aws_api_gateway_method_response" "proxy_options" {
   }
 }
 
-# CORS 통합 응답 설정
-resource "aws_api_gateway_integration_response" "proxy_options" {
+resource "aws_api_gateway_integration_response" "direct_proxy_options" {
+  for_each    = local.direct_top_level_services
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy_options.http_method
-  status_code = aws_api_gateway_method_response.proxy_options.status_code
+  resource_id = aws_api_gateway_resource.direct_service_proxy[each.key].id
+  http_method = aws_api_gateway_method.direct_proxy_options[each.key].http_method
+  status_code = aws_api_gateway_method_response.direct_proxy_options[each.key].status_code
 
   response_parameters = {
-    # Dev 환경용 - 모든 오리진 허용 (개발 편의성 우선)
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
@@ -181,10 +221,134 @@ resource "aws_api_gateway_integration_response" "proxy_options" {
   }
 }
 
-# VPC Link는 제거됨 - Public ALB와 직접 통합하므로 불필요
-# API Gateway → ALB → ECS 구조로 단순화
+# --------------------------------------
+# CORS 지원 (/api 하위 서비스용)
+# --------------------------------------
+resource "aws_api_gateway_method" "api_sub_service_proxy_options" {
+  for_each      = local.api_sub_services
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.api_sub_service_proxy[each.key].id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
 
-# CloudWatch Logs 그룹 (API Gateway 액세스 로그)
+resource "aws_api_gateway_integration" "api_sub_service_proxy_options" {
+  for_each    = local.api_sub_services
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.api_sub_service_proxy[each.key].id
+  http_method = aws_api_gateway_method.api_sub_service_proxy_options[each.key].http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({ statusCode = 200 })
+  }
+}
+
+resource "aws_api_gateway_method_response" "api_sub_service_proxy_options" {
+  for_each    = local.api_sub_services
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.api_sub_service_proxy[each.key].id
+  http_method = aws_api_gateway_method.api_sub_service_proxy_options[each.key].http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "api_sub_service_proxy_options" {
+  for_each    = local.api_sub_services
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.api_sub_service_proxy[each.key].id
+  http_method = aws_api_gateway_method.api_sub_service_proxy_options[each.key].http_method
+  status_code = aws_api_gateway_method_response.api_sub_service_proxy_options[each.key].status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = ""
+  }
+}
+
+# --------------------------------------
+# 배포 & 스테이지
+# --------------------------------------
+resource "aws_api_gateway_deployment" "this" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  description = "Deployment for ${var.environment} stage"
+
+  triggers = {
+    redeployment = sha1(jsonencode([
+      # 루트
+      aws_api_gateway_method.root_any.id,
+      aws_api_gateway_integration.root_alb.id,
+
+      # 최상위 직접 노출 서비스
+      values(aws_api_gateway_resource.direct_service_proxy)[*].id,
+      values(aws_api_gateway_method.direct_proxy_any)[*].id,
+      values(aws_api_gateway_integration.direct_proxy_alb)[*].id,
+
+      # /api 및 하위
+      aws_api_gateway_resource.api_root.id,
+      values(aws_api_gateway_resource.api_sub_service_root)[*].id, # 추가된 부분
+      values(aws_api_gateway_method.api_sub_service_root_any)[*].id, # 추가된 부분
+      values(aws_api_gateway_integration.api_sub_service_root_alb)[*].id, # 추가된 부분
+      values(aws_api_gateway_resource.api_sub_service_proxy)[*].id,
+      values(aws_api_gateway_method.api_sub_service_proxy_any)[*].id,
+      values(aws_api_gateway_integration.api_sub_service_proxy_alb)[*].id,
+
+      # CORS(직접 노출)
+      values(aws_api_gateway_method.direct_proxy_options)[*].id,
+      values(aws_api_gateway_integration.direct_proxy_options)[*].id,
+      values(aws_api_gateway_method_response.direct_proxy_options)[*].id,
+      values(aws_api_gateway_integration_response.direct_proxy_options)[*].id,
+
+      # CORS(/api 하위)
+      values(aws_api_gateway_method.api_sub_service_proxy_options)[*].id,
+      values(aws_api_gateway_integration.api_sub_service_proxy_options)[*].id,
+      values(aws_api_gateway_method_response.api_sub_service_proxy_options)[*].id,
+      values(aws_api_gateway_integration_response.api_sub_service_proxy_options)[*].id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_api_gateway_stage" "this" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  deployment_id = aws_api_gateway_deployment.this.id
+  stage_name    = var.environment
+  description   = "PetClinic ${var.environment} 환경 스테이지"
+  xray_tracing_enabled = true
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-stage"
+    Project     = var.project_name
+    Environment = var.environment
+  }
+
+  # (선택) 액세스 로그 설정을 사용하려면 아래 주석 해제 및 IAM 권한 구성 필요
+  # access_log_settings {
+  #   destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
+  #   format          = jsonencode({ requestId = "$context.requestId", ip = "$context.identity.sourceIp", requestTime = "$context.requestTime", httpMethod = "$context.httpMethod", path = "$context.path", status = "$context.status", protocol = "$context.protocol", responseLength = "$context.responseLength", integrationError = "$context.integration.error" }))
+  # }
+}
+
+# --------------------------------------
+# CloudWatch Logs (API Gateway 액세스 로그 보관용)
+# --------------------------------------
 resource "aws_cloudwatch_log_group" "api_gateway_logs" {
   name              = "/aws/api-gateway/${var.project_name}-${var.environment}"
   retention_in_days = var.log_retention_days

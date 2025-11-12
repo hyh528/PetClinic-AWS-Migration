@@ -20,9 +20,6 @@
         <module>spring-petclinic-customers-service</module>
         <module>spring-petclinic-vets-service</module>
         <module>spring-petclinic-visits-service</module>
-        <module>spring-petclinic-genai-service</module>
-        <module>spring-petclinic-config-server</module>
-        <module>spring-petclinic-discovery-server</module>
         <module>spring-petclinic-api-gateway</module>
     </modules>
 
@@ -30,6 +27,8 @@
         <java.version>17</java.version>
 
         <spring-cloud.version>2024.0.0</spring-cloud.version>
+        <spring-cloud-aws.version>3.2.1</spring-cloud-aws.version>
+        <aws-xray-recorder.version>2.15.1</aws-xray-recorder.version>
         <chaos-monkey-spring-boot.version>3.1.0</chaos-monkey-spring-boot.version>
         <jolokia-core.version>1.7.1</jolokia-core.version>
 
@@ -56,6 +55,13 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>io.awspring.cloud</groupId>
+                <artifactId>spring-cloud-aws-dependencies</artifactId>
+                <version>${spring-cloud-aws.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>de.codecentric</groupId>
                 <artifactId>chaos-monkey-spring-boot</artifactId>
                 <version>${chaos-monkey-spring-boot.version}</version>
@@ -64,6 +70,16 @@
                 <groupId>org.jolokia</groupId>
                 <artifactId>jolokia-core</artifactId>
                 <version>${jolokia-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-xray-recorder-sdk-spring</artifactId>
+                <version>${aws-xray-recorder.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-xray-recorder-sdk-sql-mysql</artifactId>
+                <version>${aws-xray-recorder.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

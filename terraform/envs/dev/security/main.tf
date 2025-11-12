@@ -196,7 +196,7 @@ module "endpoint" {
 module "db_password_secret" {
   source = "../../../modules/secrets-manager"
 
-  secret_name             = "${var.name_prefix}/dev/db-password"
+  secret_name             = "${var.name_prefix}/dev/password"
   secret_description      = "데이터베이스 비밀번호"
   recovery_window_in_days = 7
   project_name            = var.name_prefix

@@ -1,16 +1,53 @@
 spring:
   application:
     name: vets-service
+  server:
+    servlet:
+      context-path: /vets-service
   config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
-  cache:
-    cache-names: vets
-  profiles:
-    active: production
+    import: [
+      "optional:aws-parameterstore:/petclinic/common/", 
+      "optional:aws-parameterstore:/petclinic/dev/vets",
+      "aws-secretsmanager:rds!cluster-0edf3242-4cb9-4b90-9896-52cc5068a5fb"
+    ]
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+  
+  
+---
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  sql:
+    init:
+      mode: always
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQLDialect
+  datasource:
+    url: ${database.url}
+    username: ${username}
+    password: ${password}
 
 ---
 spring:
   config:
     activate:
       on-profile: docker
-    import: configserver:http://config-server:8888
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+      paramstore:
+        enabled: true
+        prefix: /petclinic
+        profile-separator: /
+        fail-fast: false
+      secretsmanager:
+        enabled: true
+        prefix: /petclinic
+        fail-fast: false

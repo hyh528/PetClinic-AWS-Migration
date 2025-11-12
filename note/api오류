@@ -1,0 +1,21 @@
+  1. vets, visits 서비스: "Whitelabel Error"
+
+  이 오류는 이전에 customers-service에서 발생했던 504 Gateway Time-out과 사실상 같은 원인일
+  가능성이 매우 높습니다.
+
+   * 원인: 데이터베이스 연결 실패입니다.ㄷ
+   * 분석: vets와 visits 서비스도 API 요청을 받으면 데이터베이스에 접속해야 합니다. 하지만 DB에        
+     접속하지 못해 요청 처리가 멈춰버리고, 결국 ALB는 타임아웃으로 처리하거나 애플리케이션은
+     500번대 에러(Whitelabel Error Page)를 표시하게 됩니다. 모든 서비스가 동일한 DB 접속 방식을        
+     사용하므로 같은 문제를 겪고 있는 것입니다.
+
+  2. admin 서비스: "Cannot route request"
+
+  이 오류는 완전히 다른 문제이며, 서비스 디스커버리(Service Discovery) 실패가 원인입니다.
+
+   * 원인: admin-server가 다른 서비스들(customers, vets 등)을 찾지 못하고 있습니다.
+   * 분석: admin-server는 다른 마이크로서비스들을 모니터링하는 역할을 합니다. 이를 위해 Eureka 같은
+      Discovery Server에 등록된 서비스들의 목록을 받아와야 합니다. 하지만 현재 Terraform 설정에는
+     이 중요한 discovery-server를 배포하는 코드가 누락되어 있습니다. discovery-server가 없으면 어떤
+      서비스도 서로를 찾을 수 없으므로, admin-server는 "요청을 라우팅할 수 없다"는 오류를 표시하는
+     것입니다.
