@@ -5,6 +5,7 @@ on:
     paths:
       - "spring-petclinic-*/**"
       - ".github/workflows/build-and-push-images.yml"
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:

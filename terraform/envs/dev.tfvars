@@ -48,7 +48,7 @@ vpc_endpoint_services = [
 # =============================================================================
 
 # Cross-Layer 통합 설정
-enable_alb_integration = false # Phase 1: false, Phase 2 (application 레이어 배포 후): true
+enable_alb_integration = true # Phase 1: false, Phase 2 (application 레이어 배포 후): true
 
 # IAM 설정
 team_members               = ["yeonghyeon", "seokgyeom", "junje", "hwigwon"]
