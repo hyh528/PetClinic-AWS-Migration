@@ -41,12 +41,14 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
-          metrics = length(var.ecs_services) > 0 ? flatten([
-            for service_key, service in var.ecs_services : [
-              ["AWS/ECS", "CPUUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
+          metrics = [
+            for service_key, service in length(var.ecs_services) > 0 ? var.ecs_services : tomap({
+              "default" = {
+                service_name = var.ecs_service_name
+              }
+            }) : [
+              "AWS/ECS", "CPUUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name
             ]
-            ]) : [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
           ]
           view    = "timeSeries"
           stacked = false
@@ -71,12 +73,14 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
-          metrics = length(var.ecs_services) > 0 ? flatten([
-            for service_key, service in var.ecs_services : [
-              ["AWS/ECS", "MemoryUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
+          metrics = [
+            for service_key, service in length(var.ecs_services) > 0 ? var.ecs_services : tomap({
+              "default" = {
+                service_name = var.ecs_service_name
+              }
+            }) : [
+              "AWS/ECS", "MemoryUtilization", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name
             ]
-            ]) : [
-            ["AWS/ECS", "MemoryUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
           ]
           view    = "timeSeries"
           stacked = false
@@ -177,12 +181,18 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
-          metrics = length(var.target_groups) > 0 && var.alb_arn_suffix != "" ? flatten([
-            for tg_key, tg in var.target_groups : [
-              ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", tg.arn_suffix, "LoadBalancer", var.alb_arn_suffix],
-              ["AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", tg.arn_suffix, "LoadBalancer", var.alb_arn_suffix]
+          metrics = length(var.target_groups) > 0 && var.alb_arn_suffix != "" ? concat(
+            [
+              for tg_key, tg in var.target_groups : [
+                "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", tg.arn_suffix, "LoadBalancer", var.alb_arn_suffix
+              ]
+            ],
+            [
+              for tg_key, tg in var.target_groups : [
+                "AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", tg.arn_suffix, "LoadBalancer", var.alb_arn_suffix
+              ]
             ]
-          ]) : []
+          ) : []
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
@@ -200,12 +210,14 @@ resource "aws_cloudwatch_dashboard" "petclinic_dashboard" {
         height = 6
 
         properties = {
-          metrics = length(var.ecs_services) > 0 ? flatten([
-            for service_key, service in var.ecs_services : [
-              ["AWS/ECS", "RunningTaskCount", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name]
+          metrics = [
+            for service_key, service in length(var.ecs_services) > 0 ? var.ecs_services : tomap({
+              "default" = {
+                service_name = var.ecs_service_name
+              }
+            }) : [
+              "AWS/ECS", "RunningTaskCount", "ServiceName", service.service_name, "ClusterName", var.ecs_cluster_name
             ]
-            ]) : [
-            ["AWS/ECS", "RunningTaskCount", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name]
           ]
           view    = "timeSeries"
           stacked = false

@@ -11,6 +11,7 @@ aws_profile = "petclinic-dev"
 
 # Terraform 상태 관리
 tfstate_bucket_name = "petclinic-tfstate-oregon-dev"
+backend_bucket       = "petclinic-tfstate-oregon-dev"
 
 # 네트워킹 설정
 name_prefix = "petclinic-dev"
