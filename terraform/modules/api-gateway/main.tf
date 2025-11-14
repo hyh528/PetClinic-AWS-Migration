@@ -182,7 +182,7 @@ resource "aws_api_gateway_integration" "customer_owners_id_get_integration" {
 
   integration_http_method = "GET"
   type                    = "HTTP_PROXY"
-  uri                     = "http://${var.alb_dns_name}/api/customers/{ownerId}"
+  uri                     = "http://${var.alb_dns_name}/api/customers/owners/{ownerId}"
 
   connection_type = "INTERNET"
 
@@ -203,6 +203,13 @@ resource "aws_api_gateway_resource" "customer_owners_pets_id" {
   rest_api_id = aws_api_gateway_rest_api.petclinic.id
   parent_id   = aws_api_gateway_resource.customer_owners_pets.id
   path_part   = "{petId}"
+}
+
+# Pet Types 리소스 생성
+resource "aws_api_gateway_resource" "customer_pet_types" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  parent_id   = aws_api_gateway_resource.services["customers"].id
+  path_part   = "petTypes"
 }
 
 # 서비스별 프록시 리소스 생성 (동적)
@@ -278,6 +285,14 @@ resource "aws_api_gateway_method" "customer_owners_pets_id_method" {
     "method.request.path.ownerId" = true
     "method.request.path.petId"   = true
   }
+}
+
+# Pet Types 메서드 생성
+resource "aws_api_gateway_method" "customer_pet_types_method" {
+  rest_api_id   = aws_api_gateway_rest_api.petclinic.id
+  resource_id   = aws_api_gateway_resource.customer_pet_types.id
+  http_method   = "GET"
+  authorization = "NONE"
 }
 
 # 서비스별 프록시 메서드 생성 (동적)
@@ -406,6 +421,20 @@ resource "aws_api_gateway_integration" "customer_owners_pets_id_integration" {
   timeout_milliseconds = local.common_settings.timeout_ms
 }
 
+# ALB 통합 - Pet Types 경로
+resource "aws_api_gateway_integration" "customer_pet_types_integration" {
+  rest_api_id = aws_api_gateway_rest_api.petclinic.id
+  resource_id = aws_api_gateway_resource.customer_pet_types.id
+  http_method = aws_api_gateway_method.customer_pet_types_method.http_method
+
+  integration_http_method = "GET"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${var.alb_dns_name}/api/customers/petTypes"
+
+  connection_type      = "INTERNET"
+  timeout_milliseconds = local.common_settings.timeout_ms
+}
+
 # ALB 통합 - 서비스별 프록시 경로
 resource "aws_api_gateway_integration" "alb_service_proxy_integrations" {
   for_each = local.alb_services
@@ -508,6 +537,7 @@ resource "aws_api_gateway_deployment" "petclinic" {
     aws_api_gateway_resource.customer_owners_id,
     aws_api_gateway_resource.customer_owners_pets,
     aws_api_gateway_resource.customer_owners_pets_id,
+    aws_api_gateway_resource.customer_pet_types,
     # 동적 메서드 의존성
     aws_api_gateway_method.service_methods,
     aws_api_gateway_method.service_proxy_methods,
@@ -518,6 +548,7 @@ resource "aws_api_gateway_deployment" "petclinic" {
     aws_api_gateway_method.customer_owners_id_get,
     aws_api_gateway_method.customer_owners_pets_method,
     aws_api_gateway_method.customer_owners_pets_id_method,
+    aws_api_gateway_method.customer_pet_types_method,
     # 동적 통합 의존성
     aws_api_gateway_integration.alb_service_integrations,
     aws_api_gateway_integration.alb_service_proxy_integrations,
@@ -530,6 +561,7 @@ resource "aws_api_gateway_deployment" "petclinic" {
     aws_api_gateway_integration.customer_owners_id_get_integration,
     aws_api_gateway_integration.customer_owners_pets_integration,
     aws_api_gateway_integration.customer_owners_pets_id_integration,
+    aws_api_gateway_integration.customer_pet_types_integration,
     # CORS 관련 의존성 추가
     aws_api_gateway_method.cors_options,
     aws_api_gateway_integration.cors_integrations,

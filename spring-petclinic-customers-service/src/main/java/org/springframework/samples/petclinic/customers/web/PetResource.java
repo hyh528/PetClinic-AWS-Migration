@@ -46,12 +46,12 @@ class PetResource {
         this.ownerRepository = ownerRepository;
     }
 
-    @GetMapping("/api/customers/petTypes")
+    @GetMapping("/petTypes")
     public List<PetType> getPetTypes() {
         return petRepository.findPetTypes();
     }
 
-    @PostMapping("/api/customers/owners/{ownerId}/pets")
+    @PostMapping("/owners/{ownerId}/pets")
     @ResponseStatus(HttpStatus.CREATED)
     public Pet processCreationForm(
         @RequestBody PetRequest petRequest,
@@ -65,7 +65,7 @@ class PetResource {
         return save(pet, petRequest);
     }
 
-    @PutMapping("/api/customers/owners/*/pets/{petId}")
+    @PutMapping("/owners/*/pets/{petId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void processUpdateForm(@RequestBody PetRequest petRequest) {
         int petId = petRequest.id();
@@ -85,7 +85,7 @@ class PetResource {
         return petRepository.save(pet);
     }
 
-    @GetMapping("/api/customers/owners/*/pets/{petId}")
+    @GetMapping("/owners/*/pets/{petId}")
     public PetDetails findPet(@PathVariable("petId") int petId) {
         Pet pet = findPetById(petId);
         return new PetDetails(pet);
