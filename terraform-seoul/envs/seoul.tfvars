@@ -31,8 +31,13 @@ single_nat_gateway = false
 create_nat_per_az  = true
 
 # VPC 엔드포인트 서비스 (security 레이어에서 사용)
-# ECR 엔드포인트 제거 - ECR DKR은 CloudFront를 통해 S3에 접근하므로 VPC 엔드포인트로는 해결되지 않음
+# ECR 접근을 위해서는 ecr.api와 ecr.dkr 엔드포인트가 모두 필요합니다
+# ecr.api: ECR API 호출용
+# ecr.dkr: Docker 이미지 레이어 다운로드용
+# S3 Gateway 엔드포인트도 필요합니다 (ECR이 S3에 이미지 레이어를 저장하므로)
 vpc_endpoint_services = [
+  "ecr.api",
+  "ecr.dkr",
   "logs",
   "xray",
   "ssm",
