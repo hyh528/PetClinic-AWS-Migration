@@ -1,0 +1,108 @@
+# Checkov Configuration for PetClinic AWS Migration
+# https://www.checkov.io/
+
+# 프레임워크 설정
+framework:
+  - terraform
+  - secrets
+
+# 제외할 체크 (프로젝트 특성상 예외 처리)
+skip-check:
+  # S3 관련
+  - CKV_AWS_18  # S3 버킷 액세스 로깅 - 비용 절감
+  - CKV_AWS_19  # S3 버킷 암호화 (SSE-KMS) - SSE-S3로 충분
+  - CKV_AWS_21  # S3 버킷 버전 관리 - 일부 버킷은 불필요
+  - CKV_AWS_145 # S3 버킷 KMS 암호화 - SSE-S3로 충분
+  
+  # RDS/Aurora 관련
+  - CKV_AWS_16  # RDS 스토리지 암호화 - Aurora 기본 암호화 사용
+  - CKV_AWS_17  # RDS 백업 활성화 - 모듈에서 관리
+  - CKV_AWS_129 # RDS 성능 인사이트 암호화 - 기본 설정 사용
+  - CKV_AWS_133 # RDS 다중 AZ - Serverless는 자동 관리
+  
+  # EC2/ECS 관련
+  - CKV_AWS_79  # ECS 작업 정의 권한 상승 - 애플리케이션 필요
+  - CKV_AWS_97  # ECS 작업 실행 역할 - 모듈에서 관리
+  - CKV_AWS_158 # CloudWatch 로그 KMS 암호화 - 비용 절감
+  
+  # Lambda 관련
+  - CKV_AWS_50  # Lambda X-Ray 추적 - 선택적 활성화
+  - CKV_AWS_115 # Lambda 함수 동시성 제한 - 기본값 사용
+  - CKV_AWS_116 # Lambda DLQ 구성 - 간단한 함수는 불필요
+  - CKV_AWS_117 # Lambda VPC 구성 - 일부 함수는 Public 필요
+  - CKV_AWS_173 # Lambda 환경 변수 암호화 - Secrets Manager 사용
+  
+  # API Gateway 관련
+  - CKV_AWS_73  # API Gateway X-Ray 추적 - 선택적 활성화
+  - CKV_AWS_76  # API Gateway 액세스 로깅 - CloudWatch 통합 사용
+  - CKV_AWS_120 # API Gateway 캐시 암호화 - 캐시 미사용
+  
+  # CloudFront 관련
+  - CKV_AWS_68  # CloudFront WAF 필수 - 개발 환경 선택적
+  - CKV_AWS_86  # CloudFront 액세스 로깅 - 비용 절감
+  
+  # VPC 관련
+  - CKV_AWS_35  # VPC Flow Logs - 개발 환경 비활성화
+  
+  # IAM 관련
+  - CKV_AWS_107 # IAM 정책 와일드카드 - 일부 필요
+  - CKV_AWS_108 # IAM 정책 NotAction - 특정 케이스 필요
+  - CKV_AWS_109 # IAM 정책 NotPrincipal - 특정 케이스 필요
+  - CKV_AWS_111 # IAM 정책 와일드카드 Write - 관리형 정책 필요
+  
+  # SNS/SQS 관련
+  - CKV_AWS_26  # SNS 토픽 암호화 - 간단한 알림은 불필요
+  - CKV_AWS_27  # SQS 큐 암호화 - 간단한 큐는 불필요
+  
+  # Secrets Manager 관련
+  - CKV_AWS_149 # Secrets Manager 자동 로테이션 - 수동 관리
+
+# 제외할 디렉토리
+skip-path:
+  - node_modules
+  - .terraform
+  - .git
+  - test
+  - tests
+
+# 소프트 실패 (경고만 표시, 빌드 실패 안 함)
+soft-fail: true
+
+# 출력 형식
+output:
+  - cli
+  - sarif
+
+# 심각도별 필터 (HIGH 이상만 표시)
+# compact: true
+quiet: false
+
+# 다운로드 외부 모듈 (성능 고려)
+download-external-modules: false
+
+# 병렬 처리
+parallel: true
+
+# 프레임워크별 설정
+framework-config:
+  terraform:
+    # Terraform 계획 파일도 스캔
+    # plan-file: plan.json
+    
+    # 변수 파일 포함
+    var-file: []
+    
+    # 컴팩트 모드 (간결한 출력)
+    compact: false
+
+# 커스텀 체크 디렉토리 (선택사항)
+# external-checks-dir: []
+
+# 베이스라인 파일 (처음 실행 시 생성, 이후 비교)
+# baseline: .checkov.baseline
+
+# GitHub 통합
+# github-api-url: https://api.github.com
+
+# 프로젝트별 커스텀 정책 (선택사항)
+# policy-metadata-filter: "Policy.category=Security"

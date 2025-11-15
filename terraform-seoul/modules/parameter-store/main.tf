@@ -8,10 +8,9 @@ data "aws_region" "current" {}
 resource "aws_ssm_parameter" "common_config" {
   for_each = var.common_parameters
 
-  name      = each.key
-  type      = "String"
-  value     = each.value
-  overwrite = true
+  name  = each.key
+  type  = "String"
+  value = each.value
 
   description = "PetClinic 공통 설정: ${split("/", each.key)[length(split("/", each.key)) - 1]}"
 
@@ -27,10 +26,9 @@ resource "aws_ssm_parameter" "common_config" {
 resource "aws_ssm_parameter" "environment_config" {
   for_each = var.environment_parameters
 
-  name      = each.key
-  type      = "String"
-  value     = each.value
-  overwrite = true
+  name  = each.key
+  type  = "String"
+  value = each.value
 
   description = "PetClinic ${var.environment} 환경 설정: ${split("/", each.key)[length(split("/", each.key)) - 1]}"
 

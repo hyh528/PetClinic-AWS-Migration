@@ -30,7 +30,7 @@ locals {
     "/petclinic-seoul/${var.environment}/customers/server.port" = "8080"
     "/petclinic-seoul/${var.environment}/vets/server.port"      = "8080"
     "/petclinic-seoul/${var.environment}/visits/server.port"    = "8080"
-    "/petclinic-seoul/${var.environment}/admin/server.port"     = "9090"
+    "/petclinic-seoul/${var.environment}/admin/server.port"     = "8080"
   }
 
   # 데이터베이스 연결 정보 (data.tf에서 참조)
