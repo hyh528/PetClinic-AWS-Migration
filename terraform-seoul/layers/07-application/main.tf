@@ -131,6 +131,18 @@ resource "aws_security_group_rule" "ecs_to_ecs_9090" {
   description = "Allow ECS services to communicate with Admin on port 9090"
 }
 
+# ECR, CloudWatch Logs, VPC 엔드포인트 접근을 위한 HTTPS egress 규칙
+resource "aws_security_group_rule" "ecs_to_internet_https" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = local.ecs_security_group_id
+  cidr_blocks       = ["0.0.0.0/0"]
+
+  description = "Allow ECS to access ECR, CloudWatch Logs, and VPC endpoints on HTTPS (443)"
+}
+
 
 
 # =============================================================================
