@@ -264,7 +264,13 @@ SQL: "SELECT p.name as pet_name FROM pets p JOIN owners o ON p.owner_id = o.id W
 SQL: "SELECT p.name as pet_name FROM pets p JOIN owners o ON p.owner_id = o.id WHERE o.first_name LIKE '%George%' AND o.last_name LIKE '%Franklin%'"
 
 질문: "Coco의 검진기록 알려줘"
-SQL: "SELECT v.visit_date, v.description FROM visits v JOIN pets p ON v.pet_id = p.id WHERE p.name LIKE '%Coco%'"
+SQL: "SELECT v.visit_date, v.description FROM visits v JOIN pets p ON v.pet_id = p.id WHERE p.name LIKE '%Coco%' ORDER BY v.visit_date DESC"
+
+질문: "Leo의 가장 최근 검진일은 언제야?"
+SQL: "SELECT v.visit_date, v.description FROM visits v JOIN pets p ON v.pet_id = p.id WHERE p.name LIKE '%Leo%' ORDER BY v.visit_date DESC LIMIT 1"
+
+질문: "페페는 가장 최근에 언제 검진을 받으러 왔어?"
+SQL: "SELECT v.visit_date, v.description FROM visits v JOIN pets p ON v.pet_id = p.id WHERE p.name LIKE '%페페%' ORDER BY v.visit_date DESC LIMIT 1"
 
 질문: "George의 주소는 뭐야?"
 SQL: "SELECT o.address, o.city, o.telephone FROM owners o WHERE o.first_name LIKE '%George%'"
@@ -293,6 +299,7 @@ SQL: "SELECT DISTINCT o.first_name, o.last_name FROM owners o JOIN pets p ON o.i
 - 존재 여부 확인 시 COUNT(*)를 사용하세요
 - 반려동물이 없는 주인 조회 시 LEFT JOIN과 IS NULL을 사용하세요
 - 데이터베이스에 실제 존재하는 반려동물 이름만 검색하세요 (Leo, Basil, Rosy, Jewel, Iggy, George, Samantha, Max, Lucky, Mulligan, Freddy, Sly)
+- 데이터베이스에 존재하지 않는 이름에 대해서는 쿼리를 생성하지 말고 빈 결과를 반환하세요
 """
 
         messages = [{"role": "user", "content": prompt}]
@@ -412,16 +419,23 @@ def call_bedrock_ai(prompt: str, context_data: str = "", is_general_advice: bool
 데이터베이스 조회 결과:
 {context_data}
 
-[중요 지침]
-- 위의 데이터베이스 조회 결과에 있는 정보만 사용하세요
-- 결과에 정보가 있으면 그 정보를 바탕으로 자연스럽게 한국어로 답변하세요
-- 결과에 정보가 없거나 "정보 없음"이면 "해당 정보를 찾을 수 없습니다."라고 답변하세요
+[중요 지침 - 반드시 준수]
+- 위의 "데이터베이스 조회 결과:" 섹션에 있는 내용만 사용하세요
+- 결과에 명시적으로 나열된 데이터만 답변에 포함시키세요
+- 데이터베이스에 없는 고객, 반려동물, 수의사 이름을 절대 생성하거나 언급하지 마세요
+- 결과에 없는 정보를 추측하거나 생성하지 마세요
+- 결과가 "정보 없음"이거나 비어있으면 "해당 정보를 찾을 수 없습니다."라고만 답변하세요
+- 결과에 정보가 있으면 그 정확한 정보를 한국어로 요약해서 답변하세요
+- 결과에 있는 데이터의 개수와 종류를 정확히 반영하세요
 - 모든 답변을 한국어로 하세요
+- 절대 hallucination(허구 정보 생성)을 하지 마세요
 
 예시:
-- 결과에 "반려동물 주인: Yeonghyeon Hwang"가 있으면: "Yeonghyeon Hwang님이 Coco를 키우고 있습니다."
+- 결과에 "반려동물 주인: George Franklin"가 있으면: "George Franklin님이 Leo를 키우고 있습니다."
 - 결과에 "주소 정보: 110 W. Liberty St., Madison"가 있으면: "George Franklin의 주소는 110 W. Liberty St., Madison입니다."
-- 결과가 "정보 없음"이면: "해당 정보를 찾을 수 없습니다."
+- 결과에 중성화 수술 정보가 있으면: "Max가 2009-06-04에 중성화 수술을 받았습니다."
+- 결과가 "정보 없음"이거나 빈 결과면: "해당 정보를 찾을 수 없습니다."
+- 결과에 없는 반려동물은 절대 언급하지 마세요
 
 데이터베이스 결과를 보고 질문에 답변하세요:"""
 

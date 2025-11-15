@@ -14,7 +14,7 @@ tfstate_bucket_name = "petclinic-tfstate-seoul-dev"
 backend_bucket       = "petclinic-tfstate-seoul-dev"
 
 # 네트워킹 설정
-name_prefix = "petclinic-dev"
+name_prefix = "petclinic-seoul-dev"
 vpc_cidr    = "10.0.0.0/16"
 
 azs = [
@@ -98,14 +98,14 @@ tags = {
 # =============================================================================
 
 shared_config = {
-  name_prefix = "petclinic-dev"
+  name_prefix = "petclinic-seoul-dev"
   environment = "dev"
   aws_region  = "ap-northeast-2"
   aws_profile = "petclinic-dev"
-  common_name = "petclinic-dev"
+  common_name = "petclinic-seoul-dev"
   common_tags = {
     Project     = "petclinic"
-    Environment = "dev"
+    Environment = "seoul-dev"
     ManagedBy   = "terraform"
     Owner       = "team-petclinic"
     CostCenter  = "training"
@@ -128,10 +128,10 @@ state_config = {
 
 # Application Layer 설정
 service_image_map = {
-  customers = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-dev-customers:latest"
-  vets      = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-dev-vets:latest"
-  visits    = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-dev-visits:latest"
-  admin     = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-dev-admin:latest"
+  customers = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-seoul-dev-customers:latest"
+  vets      = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-seoul-dev-vets:latest"
+  visits    = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-seoul-dev-visits:latest"
+  admin     = "897722691159.dkr.ecr.ap-northeast-2.amazonaws.com/petclinic-seoul-dev-admin:latest"
 }
 
 # Bastion Host 설정 (개발 환경에서만 활성화)
@@ -193,4 +193,4 @@ email_endpoint    = "" # 이메일 알림 (선택사항)
 create_test_alarm = true
 
 # 알람 액션 (12-notification 레이어 배포 후 SNS 토픽 ARN으로 업데이트)
-alarm_actions = ["arn:aws:sns:ap-northeast-2:897722691159:petclinic-dev-alerts"] # 예: ["arn:aws:sns:ap-northeast-2:123456789012:petclinic-dev-alerts"]
+alarm_actions = ["arn:aws:sns:ap-northeast-2:897722691159:petclinic-seoul-dev-alerts"] # 예: ["arn:aws:sns:ap-northeast-2:123456789012:petclinic-seoul-dev-alerts"]
