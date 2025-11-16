@@ -37,6 +37,50 @@
 
 ---
 
+## ⚠️ 서울 리전 (ap-northeast-2) 사용 시 중요 사항
+
+### Bedrock Cross-Region Inference Profile 사용
+
+서울 리전에서 Claude 모델을 사용하려면 **Cross-Region Inference Profile**을 사용해야 합니다.
+
+#### 문제 상황
+```
+❌ 직접 모델 ID 사용 시 에러:
+"Invocation of model ID anthropic.claude-3-sonnet-20240229-v1:0 with on-demand throughput isn't supported. 
+Retry your request with the ID or ARN of an inference profile that contains this model."
+```
+
+#### 해결 방법
+```python
+# ❌ 잘못된 방법 (서울 리전에서 직접 호출)
+model_id = 'anthropic.claude-3-5-sonnet-20240620-v1:0'
+
+# ✅ 올바른 방법 (Cross-Region Inference Profile 사용)
+model_id = 'us.anthropic.claude-3-5-sonnet-20240620-v1:0'
+```
+
+#### 자동 처리
+람다 함수는 서울 리전을 자동으로 감지하여 적절한 모델 ID를 사용합니다:
+
+```python
+# 서울 리전에서는 Cross-Region Inference Profile 사용
+region = os.getenv('AWS_REGION', 'ap-northeast-2')
+if region == 'ap-northeast-2':
+    model_id = 'us.anthropic.claude-3-5-sonnet-20240620-v1:0'
+```
+
+### 지원되는 모델 ID (서울 리전)
+
+| 원본 모델 ID | 서울 리전 Cross-Region Profile |
+|-------------|-------------------------------|
+| anthropic.claude-3-5-sonnet-20240620-v1:0 | us.anthropic.claude-3-5-sonnet-20240620-v1:0 |
+| anthropic.claude-3-sonnet-20240229-v1:0 | us.anthropic.claude-3-sonnet-20240229-v1:0 |
+| anthropic.claude-3-haiku-20240307-v1:0 | us.anthropic.claude-3-haiku-20240307-v1:0 |
+
+**참고**: Cross-Region Inference Profile을 사용하면 요청이 US 리전의 Bedrock으로 라우팅되지만, 람다 함수는 서울 리전에서 실행됩니다.
+
+---
+
 ## AWS Lambda와 Bedrock 개념
 
 ### 1. AWS Lambda란? ⚡
