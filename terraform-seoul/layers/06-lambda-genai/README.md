@@ -76,13 +76,14 @@
 "Model access is denied due to IAM user or service role is not authorized"
 ```
 
-#### 서울 리전에서 직접 지원되는 Claude 모델
+#### 서울 리전에서 직접 지원되는 Claude 모델 (2025년 공식 문서 기준)
 
 | 모델 | 모델 ID | 지원 여부 | 특징 |
 |------|---------|----------|------|
 | **Claude 3 Haiku** | `anthropic.claude-3-haiku-20240307-v1:0` | ✅ 지원 | 빠른 속도, 낮은 비용 |
-| Claude 3 Sonnet | `anthropic.claude-3-sonnet-20240229-v1:0` | ❌ 미지원 | - |
-| Claude 3.5 Sonnet | `anthropic.claude-3-5-sonnet-20240620-v1:0` | ❌ 미지원 | - |
+| **Claude 3.5 Sonnet** | `anthropic.claude-3-5-sonnet-20250619-v1:0` | ✅ 지원 | 최신 모델, 높은 성능 |
+| **Claude Sonnet 4.5** | `anthropic.claude-sonnet-4-5-20250929-v1:0` | ✅ 지원 | 최고 성능 |
+| Claude 3 Sonnet (구버전) | `anthropic.claude-3-sonnet-20240229-v1:0` | ⚠️ 지원 중단 | 사용 비권장 |
 | Claude 3 Opus | `anthropic.claude-3-opus-20240229-v1:0` | ❌ 미지원 | - |
 
 #### 현재 설정
@@ -95,11 +96,20 @@ bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"
 ```
 
 **선택 이유**:
-- ✅ 서울 리전에서 직접 지원
+- ✅ 서울 리전에서 직접 지원 (2025년 공식 확인)
 - ✅ 한국어 지원 우수
 - ✅ 빠른 응답 속도
 - ✅ 낮은 비용
 - ✅ PetClinic 챗봇에 충분한 성능
+
+**다른 옵션**:
+```terraform
+# Claude 3.5 Sonnet (더 높은 성능이 필요한 경우)
+bedrock_model_id = "anthropic.claude-3-5-sonnet-20250619-v1:0"
+
+# Claude Sonnet 4.5 (최고 성능)
+bedrock_model_id = "anthropic.claude-sonnet-4-5-20250929-v1:0"
+```
 
 #### 다른 모델 사용이 필요한 경우
 

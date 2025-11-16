@@ -192,9 +192,10 @@ email_endpoint    = "" # 이메일 알림 (선택사항)
 # 테스트 설정 (개발 환경에서만)
 create_test_alarm = true
 
-# Bedrock 모델 설정 (서울 리전용)
-# Amazon Titan Text Lite - AWS 자체 모델, 권한 문제 없음, 가장 가벼운 모델
-bedrock_model_id = "amazon.titan-text-lite-v1"
+# Bedrock 모델 설정 (서울 리전용 - 공식 문서 기준)
+# Claude 3 Haiku - 서울 리전에서 직접 지원, 빠르고 저렴한 모델
+# 참고: Claude 3.5 Sonnet도 사용 가능 (anthropic.claude-3-5-sonnet-20250619-v1:0)
+bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"
 # 알람 액션 (12-notification 레이어 배포 후 SNS 토픽 ARN으로 업데이트)
 alarm_actions = ["arn:aws:sns:ap-northeast-2:897722691159:petclinic-seoul-dev-alerts"] # 예: ["arn:aws:sns:ap-northeast-2:123456789012:petclinic-seoul-dev-alerts"]
 
