@@ -93,13 +93,23 @@ resource "aws_iam_role_policy" "bedrock_invoke_policy" {
         Effect = "Allow"
         Action = [
           "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        Resource = [
+          # 서울 리전 foundation models
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/*",
+          # Cross-region inference profiles (US 리전)
+          "arn:aws:bedrock:us-east-1:${data.aws_caller_identity.current.account_id}:inference-profile/*",
+          "arn:aws:bedrock:us-west-2:${data.aws_caller_identity.current.account_id}:inference-profile/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "bedrock:GetFoundationModel",
           "bedrock:ListFoundationModels"
         ]
-        Resource = [
-          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/*"
-        ]
+        Resource = "*"
       }
     ]
   })
