@@ -93,17 +93,13 @@ resource "aws_iam_role_policy" "bedrock_invoke_policy" {
         Effect = "Allow"
         Action = [
           "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream"
+          "bedrock:InvokeModelWithResponseStream",
+          "bedrock:GetFoundationModel",
+          "bedrock:ListFoundationModels"
         ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "aws-marketplace:ViewSubscriptions",
-          "aws-marketplace:Subscribe"
+        Resource = [
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/*"
         ]
-        Resource = "*"
       }
     ]
   })

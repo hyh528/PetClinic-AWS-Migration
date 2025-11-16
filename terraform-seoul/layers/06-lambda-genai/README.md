@@ -39,39 +39,26 @@
 
 ## ⚠️ 서울 리전 (ap-northeast-2) 사용 시 중요 사항
 
-### 🚨 필수 사전 작업: Bedrock 모델 액세스 활성화
+### 📢 2025년 업데이트: 모델 액세스 자동 활성화
 
-**Lambda 배포 전에 반드시 AWS Bedrock 콘솔에서 모델 액세스를 활성화해야 합니다!**
+**좋은 소식!** 2024년 말부터 AWS Bedrock의 모델 액세스 정책이 변경되었습니다:
 
-#### 1단계: AWS Bedrock 콘솔에서 모델 액세스 활성화
-
-```bash
-# AWS 콘솔 접속
-https://ap-northeast-2.console.aws.amazon.com/bedrock/home?region=ap-northeast-2#/modelaccess
+```
+✅ 모든 서버리스 Foundation 모델에 대한 액세스가 자동으로 활성화됩니다
+✅ 더 이상 수동으로 모델 액세스를 요청할 필요가 없습니다
+✅ IAM 정책만으로 모델 접근을 제어합니다
 ```
 
-**절차**:
-1. AWS 콘솔 → **Amazon Bedrock** 서비스로 이동
-2. 왼쪽 메뉴에서 **Model access** 클릭
-3. **Manage model access** 또는 **Edit** 버튼 클릭
-4. **Anthropic** 섹션에서 다음 모델 체크:
-   - ☑️ **Claude 3 Haiku** (anthropic.claude-3-haiku-20240307-v1:0)
-   - ☑️ Claude 3 Sonnet (선택 사항)
-   - ☑️ Claude 3.5 Sonnet (선택 사항)
-5. **Request model access** 또는 **Save changes** 클릭
-6. 승인 대기 (보통 즉시 승인됨)
+**이전 (2024년 이전)**:
+- AWS Bedrock 콘솔에서 각 모델별로 수동 액세스 요청 필요
+- "Model access" 페이지에서 승인 대기
 
-#### 2단계: 모델 액세스 확인
+**현재 (2025년)**:
+- 모든 모델 자동 활성화
+- IAM 정책으로만 접근 제어
+- "Model access" 페이지는 폐지됨
 
-```bash
-# 액세스 상태가 "Access granted"로 표시되는지 확인
-```
-
-**주의**: 모델 액세스 활성화 없이 Lambda를 실행하면 다음 에러가 발생합니다:
-```
-❌ AccessDeniedException: Model access is denied due to IAM user or service role 
-is not authorized to perform the required AWS Marketplace actions
-```
+**참고**: Anthropic 모델의 경우, 일부 신규 사용자는 첫 사용 시 use case 제출이 필요할 수 있습니다.
 
 ---
 
@@ -662,14 +649,13 @@ terraform output -state=../01-network/terraform.tfstate vpc_id
 terraform output -state=../03-database/terraform.tfstate cluster_arn
 ```
 
-3. **🚨 Bedrock 모델 액세스 활성화 (필수!)**
+3. **IAM 권한 확인**
 ```bash
-# AWS Console → Amazon Bedrock → Model access → Manage model access
-# 서울 리전: https://ap-northeast-2.console.aws.amazon.com/bedrock/home?region=ap-northeast-2#/modelaccess
-# Claude 3 Haiku 모델을 반드시 활성화해야 합니다!
+# 2025년부터는 모델 액세스가 자동 활성화됩니다
+# Lambda 실행 역할에 Bedrock 호출 권한만 있으면 됩니다
 ```
 
-**중요**: 이 단계를 건너뛰면 Lambda 실행 시 AccessDeniedException 에러가 발생합니다.
+**참고**: Terraform이 자동으로 필요한 IAM 정책을 생성합니다.
 
 ---
 
@@ -751,46 +737,70 @@ cat response.json
 
 ## 문제 해결
 
-### 문제 1: Bedrock 모델 액세스 거부 (가장 흔한 문제!)
+### 문제 1: Bedrock IAM 권한 부족
 
-#### 에러 메시지 1:
+#### 에러 메시지:
 ```
-AccessDeniedException: Model access is denied due to IAM user or service role 
-is not authorized to perform the required AWS Marketplace actions 
-(aws-marketplace:ViewSubscriptions, aws-marketplace:Subscribe)
+AccessDeniedException: Model access is denied
 ```
 
-#### 에러 메시지 2:
-```
-AccessDeniedException: You don't have access to the model
-```
-
-**원인**: AWS Bedrock 콘솔에서 모델 액세스를 활성화하지 않았습니다.
+**원인**: Lambda 실행 역할에 Bedrock 호출 권한이 없거나 잘못 설정됨
 
 **해결 방법**:
 
-1. **AWS Bedrock 콘솔 접속**
+1. **Terraform 상태 확인**
+   ```bash
+   cd terraform-seoul/layers/06-lambda-genai
+   terraform state list | grep bedrock
    ```
-   서울 리전: https://ap-northeast-2.console.aws.amazon.com/bedrock/home?region=ap-northeast-2#/modelaccess
+
+2. **IAM 정책 재적용**
+   ```bash
+   # 최신 코드로 업데이트
+   git pull origin seoul-region-test
+   
+   # IAM 정책 업데이트
+   terraform apply -var-file=../../envs/seoul.tfvars -target=aws_iam_role_policy.bedrock_invoke_policy
    ```
 
-2. **모델 액세스 활성화**
-   - 왼쪽 메뉴에서 **"Model access"** 클릭
-   - **"Manage model access"** 또는 **"Edit"** 버튼 클릭
-   - **Anthropic** 섹션 찾기
-   - ☑️ **"Claude 3 Haiku"** 체크 (anthropic.claude-3-haiku-20240307-v1:0)
-   - ☑️ Claude 3 Sonnet (선택 사항)
-   - **"Request model access"** 또는 **"Save changes"** 클릭
+3. **Lambda 함수 재배포**
+   ```bash
+   terraform apply -var-file=../../envs/seoul.tfvars
+   ```
 
-3. **승인 확인**
-   - 보통 즉시 승인됨 (Access granted 상태 확인)
-   - 드물게 수 분 대기 필요
+4. **IAM 역할 확인 (AWS CLI)**
+   ```bash
+   # Lambda 함수의 역할 확인
+   aws lambda get-function --function-name petclinic-seoul-dev-genai-function \
+     --query 'Configuration.Role'
+   
+   # 역할에 연결된 정책 확인
+   aws iam list-role-policies --role-name petclinic-seoul-dev-lambda-genai-execution-role
+   
+   # Bedrock 정책 내용 확인
+   aws iam get-role-policy \
+     --role-name petclinic-seoul-dev-lambda-genai-execution-role \
+     --policy-name petclinic-seoul-dev-lambda-bedrock-invoke-policy
+   ```
 
-4. **Lambda 재실행**
-   - 모델 액세스 활성화 후 Lambda 함수를 다시 호출하세요
-   - 첫 실행 시 초기화 시간이 걸릴 수 있습니다
-
-**주의**: 이 작업은 리전별로 수행해야 합니다. 서울 리전에서 사용한다면 서울 리전 콘솔에서 활성화하세요.
+**필요한 IAM 권한**:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream",
+        "bedrock:GetFoundationModel",
+        "bedrock:ListFoundationModels"
+      ],
+      "Resource": "arn:aws:bedrock:ap-northeast-2::foundation-model/*"
+    }
+  ]
+}
+```
 
 ---
 
