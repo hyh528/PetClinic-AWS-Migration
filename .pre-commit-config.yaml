@@ -1,0 +1,120 @@
+# Pre-commit hooks 설정
+# 설치: pip install pre-commit
+# 활성화: pre-commit install
+# 실행: pre-commit run --all-files
+
+repos:
+  # Terraform 관련 hooks
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.88.4
+    hooks:
+      # Terraform 포맷팅
+      - id: terraform_fmt
+        args:
+          - --args=-recursive
+        
+      # Terraform 검증
+      - id: terraform_validate
+        args:
+          - --args=-json
+          - --hook-config=--retry-once-with-cleanup=true
+        
+      # TFLint 실행
+      - id: terraform_tflint
+        args:
+          - --args=--config=__GIT_WORKING_DIR__/terraform/.tflint.hcl
+          - --args=--init
+        
+      # Checkov 보안 스캔
+      - id: terraform_checkov
+        args:
+          - --args=--config-file __GIT_WORKING_DIR__/terraform/.checkov.yaml
+          - --args=--quiet
+        
+      # Terraform 문서 생성
+      - id: terraform_docs
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+          - --hook-config=--create-file-if-not-exist=true
+        
+      # Terraform 제공자 잠금 파일 업데이트
+      - id: terraform_providers_lock
+        args:
+          - --args=-platform=windows_amd64
+          - --args=-platform=darwin_amd64
+          - --args=-platform=linux_amd64
+
+  # 일반적인 파일 검사
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # 파일 끝 개행 문자 확인
+      - id: end-of-file-fixer
+        exclude: \.tfvars$
+        
+      # 후행 공백 제거
+      - id: trailing-whitespace
+        exclude: \.md$
+        
+      # 큰 파일 체크 (500KB 제한)
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+        
+      # JSON 구문 검사
+      - id: check-json
+        
+      # YAML 구문 검사
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+        
+      # 병합 충돌 마커 검사
+      - id: check-merge-conflict
+        
+      # 실행 권한이 있는 텍스트 파일 검사
+      - id: check-executables-have-shebangs
+        
+      # 케이스 충돌 검사
+      - id: check-case-conflict
+
+  # 보안 검사
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: \.tfvars$
+
+  # Markdown 린팅
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.39.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+        exclude: ^\.github/
+
+# 전역 제외 패턴
+exclude: |
+  (?x)^(
+    \.terraform/.*|
+    \.terraform\.lock\.hcl|
+    terraform\.tfstate.*|
+    .*\.zip|
+    .*\.tar\.gz|
+    node_modules/.*|
+    target/.*|
+    \.mvn/.*
+  )$
+
+# CI 환경에서의 설정
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

@@ -85,7 +85,7 @@ class PetResource {
         return petRepository.save(pet);
     }
 
-    @GetMapping("owners/*/pets/{petId}")
+    @GetMapping("/owners/*/pets/{petId}")
     public PetDetails findPet(@PathVariable("petId") int petId) {
         Pet pet = findPetById(petId);
         return new PetDetails(pet);

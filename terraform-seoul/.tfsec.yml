@@ -1,0 +1,60 @@
+# TFSec Configuration for PetClinic AWS Migration
+# https://aquasecurity.github.io/tfsec/
+
+# 최소 심각도 설정 (LOW, MEDIUM, HIGH, CRITICAL)
+minimum_severity: MEDIUM
+
+# 제외할 체크 (프로젝트 특성상 예외 처리)
+exclude:
+  # S3 버킷 로깅 - 비용 절감을 위해 일부 버킷은 로깅 비활성화
+  - aws-s3-enable-bucket-logging
+  
+  # S3 버킷 암호화 - terraform.tfstate 버킷은 SSE-S3로 충분
+  - aws-s3-encryption-customer-key
+  
+  # CloudWatch 로그 그룹 KMS - 비용 절감을 위해 기본 암호화 사용
+  - aws-cloudwatch-log-group-customer-key
+  
+  # RDS 암호화 - Aurora는 기본 암호화 사용
+  - aws-rds-encrypt-instance-storage-data
+  
+  # VPC Flow Logs - 개발 환경에서는 비활성화 (비용 절감)
+  - aws-ec2-require-vpc-flow-logs-for-all-vpcs
+  
+  # ECS 작업 정의 컨테이너 읽기 전용 루트 파일시스템
+  # 애플리케이션 특성상 쓰기 권한 필요
+  - aws-ecs-enable-container-readonly-root-filesystem
+  
+  # ECS 작업 정의 권한 상승 비활성화
+  # 일부 컨테이너는 권한 필요
+  - aws-ecs-no-privileged-container
+  
+  # Lambda 환경 변수 암호화 - Secrets Manager 사용으로 불필요
+  - aws-lambda-enable-tracing
+  
+  # API Gateway 액세스 로깅 - CloudWatch 통합으로 충분
+  - aws-api-gateway-enable-access-logging
+  
+  # API Gateway 캐시 암호화 - 캐시 미사용
+  - aws-api-gateway-enable-cache-encryption
+  
+  # CloudFront WAF 필수 - 개발 환경에서는 선택적
+  - aws-cloudfront-enable-waf
+
+# 특정 디렉토리 제외
+exclude_paths:
+  - "**/node_modules/**"
+  - "**/.terraform/**"
+  - "**/test/**"
+  - "**/.git/**"
+
+# 심각도별 색상 설정 (CLI 출력용)
+severity_overrides:
+  # 프로젝트에서 중요하지 않은 체크를 LOW로 조정
+  aws-s3-specify-public-access-block: LOW
+  aws-cloudwatch-log-group-customer-key: LOW
+
+# 결과 포맷 옵션
+format: default
+no-colour: false
+concise-output: false

@@ -1,13 +1,63 @@
+server:
+  port: 9090
+  servlet:
+    context-path: /admin
+
 spring:
   application:
     name: admin-server
-  config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
+  profiles:
+    active: aws
+  boot:
+    admin:
+      ui:
+        enabled: true
+        title: "PetClinic Admin Dashboard"
+        brand: "PetClinic"
+        favicon: "favicon.ico"
+        favicon-danger: "favicon-danger.ico"
+        cache:
+          no-cache: true
+      server:
+        enabled: true
+      client:
+        enabled: false # Admin 서버는 클라이언트가 아님
+      discovery:
+        enabled: true # 자동 서비스 디스커버리 활성화
+      monitor:
+        status-interval: 30s # 상태 체크 간격을 30초로 증가
+        info-interval: 60s   # 정보 업데이트 간격을 60초로 증가
+        default-timeout: 15s # 기본 타임아웃을 15초로 증가
+        status-lifetime: 300s # 상태 유지 시간을 5분으로 증가
+  # Thymeleaf 설정 제거 - Admin UI는 자체 템플릿 엔진 사용
+  web:
+    resources:
+      static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/
+      add-mappings: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  server:
+    port: 9090
 
----
-spring:
-  config:
-    activate:
-      on-profile: docker
-    import: configserver:http://config-server:8888
+# PetClinic 특정 설정
+petclinic:
+  alb:
+    dns-name: ${ALB_DNS_NAME:petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com}
+
+# 로깅 설정
+logging:
+  level:
+    de.codecentric.boot.admin: DEBUG
+    org.springframework.samples.petclinic.admin: DEBUG
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

@@ -1,0 +1,196 @@
+version: '3.8'
+
+services:
+  # 로컬 MySQL 데이터베이스 (AWS Aurora 시뮬레이션)
+  mysql:
+    image: mysql:8.0
+    container_name: petclinic-mysql-local
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: petclinic_customers
+      MYSQL_USER: petclinic
+      MYSQL_PASSWORD: petclinic123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - petclinic-network
+
+  # 로컬 Parameter Store 시뮬레이션 (실제 AWS Parameter Store 대신)
+  parameter-store-mock:
+    image: localstack/localstack:3.0
+    container_name: petclinic-parameter-store-mock
+    environment:
+      SERVICES: ssm,secretsmanager
+      DEBUG: 1
+      DATA_DIR: /tmp/localstack/data
+      DOCKER_HOST: unix:///var/run/docker.sock
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - petclinic-network
+
+  # 로컬 Cloud Map 시뮬레이션 (실제 AWS Cloud Map 대신)
+  cloud-map-mock:
+    image: localstack/localstack:3.0
+    container_name: petclinic-cloud-map-mock
+    environment:
+      SERVICES: servicediscovery
+      DEBUG: 1
+    ports:
+      - "4567:4566"
+    volumes:
+      - cloudmap_data:/tmp/localstack
+    networks:
+      - petclinic-network
+
+  # PetClinic Customers 서비스
+  customers-service:
+    build:
+      context: ../../spring-petclinic-customers-service
+      dockerfile: Dockerfile
+    container_name: petclinic-customers
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql,aws
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/petclinic_customers?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: petclinic
+      SPRING_DATASOURCE_PASSWORD: petclinic123
+      SPRING_CLOUD_AWS_PARAMSTORE_ENABLED: false  # 로컬에서는 비활성화
+      SPRING_CLOUD_AWS_SECRETSMANAGER_ENABLED: false  # 로컬에서는 비활성화
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - petclinic-network
+
+  # PetClinic Vets 서비스
+  vets-service:
+    build:
+      context: ../../spring-petclinic-vets-service
+      dockerfile: Dockerfile
+    container_name: petclinic-vets
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql,aws
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/petclinic_vets?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: petclinic
+      SPRING_DATASOURCE_PASSWORD: petclinic123
+      SPRING_CLOUD_AWS_PARAMSTORE_ENABLED: false
+      SPRING_CLOUD_AWS_SECRETSMANAGER_ENABLED: false
+      SERVER_PORT: 8082
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - petclinic-network
+
+  # PetClinic Visits 서비스
+  visits-service:
+    build:
+      context: ../../spring-petclinic-visits-service
+      dockerfile: Dockerfile
+    container_name: petclinic-visits
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql,aws
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/petclinic_visits?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: petclinic
+      SPRING_DATASOURCE_PASSWORD: petclinic123
+      SPRING_CLOUD_AWS_PARAMSTORE_ENABLED: false
+      SPRING_CLOUD_AWS_SECRETSMANAGER_ENABLED: false
+      SERVER_PORT: 8083
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - petclinic-network
+
+  # PetClinic Admin 서버
+  admin-server:
+    build:
+      context: ../../spring-petclinic-admin-server
+      dockerfile: Dockerfile
+    container_name: petclinic-admin
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql,aws
+      SERVER_PORT: 9090
+    ports:
+      - "9090:9090"
+    depends_on:
+      customers-service:
+        condition: service_healthy
+      vets-service:
+        condition: service_healthy
+      visits-service:
+        condition: service_healthy
+    networks:
+      - petclinic-network
+
+  # API Gateway (Spring Cloud Gateway)
+  api-gateway:
+    build:
+      context: ../../spring-petclinic-api-gateway
+      dockerfile: Dockerfile
+    container_name: petclinic-api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql,aws
+      SERVER_PORT: 8080
+      # 서비스 디스커버리 설정 (로컬 호스트명 사용)
+      SPRING_CLOUD_GATEWAY_ROUTES[0]_ID: customers
+      SPRING_CLOUD_GATEWAY_ROUTES[0]_URI: http://customers-service:8081
+      SPRING_CLOUD_GATEWAY_ROUTES[0]_PREDICATES[0]: Path=/api/customers/**
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_ID: vets
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_URI: http://vets-service:8082
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_PREDICATES[0]: Path=/api/vets/**
+      SPRING_CLOUD_GATEWAY_ROUTES[2]_ID: visits
+      SPRING_CLOUD_GATEWAY_ROUTES[2]_URI: http://visits-service:8083
+      SPRING_CLOUD_GATEWAY_ROUTES[2]_PREDICATES[0]: Path=/api/visits/**
+    ports:
+      - "8080:8080"
+    depends_on:
+      customers-service:
+        condition: service_healthy
+      vets-service:
+        condition: service_healthy
+      visits-service:
+        condition: service_healthy
+    networks:
+      - petclinic-network
+
+volumes:
+  mysql_data:
+  localstack_data:
+  cloudmap_data:
+
+networks:
+  petclinic-network:
+    driver: bridge

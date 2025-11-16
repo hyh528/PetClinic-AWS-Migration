@@ -2,6 +2,15 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
 
+# Maven installation files
+apache-maven-*.zip
+apache-maven-*/
+
+# Build artifacts
+*.zip
+*.jar
+!**/maven-wrapper.jar
+
 # Jenv
 .java-version
 
@@ -27,3 +36,25 @@ GEMINI.md
 
 # 개인 작업
 /todolist/
+
+# 환경 변수
+.env
+
+# Terraform 환경별 변수 파일 (민감 정보 포함 가능)
+terraform/envs/*.tfvars
+
+# .terraform/ 디렉터리 (모듈, 플러그인 등)
+.terraform/
+.terraform.lock.hcl
+# terraform.tfstate (민감 정보 및 상태)
+*.tfstate
+*.tfstate.*
+
+# Local environment and IDE settings
+.kiro/
+.vscode/
+venv/
+.kilocode/
+
+# Generated/Temporary Files
+*.json

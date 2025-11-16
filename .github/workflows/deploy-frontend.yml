@@ -1,0 +1,102 @@
+name: Deploy Frontend to S3
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'spring-petclinic-api-gateway/src/main/resources/static/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'spring-petclinic-api-gateway/src/main/resources/static/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '배포 환경 선택'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  AWS_REGION: us-west-2
+  S3_BUCKET_DEV: petclinic-dev-frontend-dev
+  CLOUDFRONT_DISTRIBUTION_DEV: ${{ secrets.CLOUDFRONT_DISTRIBUTION_DEV }}
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+      url: ${{ steps.deploy.outputs.website-url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Check frontend files
+      id: check-files
+      run: |
+        if [ -d "spring-petclinic-api-gateway/src/main/resources/static" ]; then
+          echo "Frontend files found"
+          echo "files_exist=true" >> $GITHUB_OUTPUT
+          echo "file_count=$(find spring-petclinic-api-gateway/src/main/resources/static -type f | wc -l)" >> $GITHUB_OUTPUT
+        else
+          echo "Frontend files not found"
+          echo "files_exist=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+    - name: Sync files to S3
+      if: steps.check-files.outputs.files_exist == 'true'
+      run: |
+        echo "📦 Syncing ${{ steps.check-files.outputs.file_count }} files to S3..."
+        aws s3 sync spring-petclinic-api-gateway/src/main/resources/static/ s3://${{ env.S3_BUCKET_DEV }}/ --delete --size-only
+
+    - name: Verify S3 upload
+      run: |
+        echo "🔍 Verifying S3 upload..."
+        UPLOADED_COUNT=$(aws s3 ls s3://${{ env.S3_BUCKET_DEV }}/ --recursive | wc -l)
+        echo "Files in S3: $UPLOADED_COUNT"
+
+    - name: Invalidate CloudFront cache
+      if: steps.check-files.outputs.files_exist == 'true'
+      run: |
+        echo "🚀 Invalidating CloudFront cache..."
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_DEV }} \
+          --paths "/*"
+
+    - name: Get CloudFront URL
+      id: deploy
+      run: |
+        DISTRIBUTION_URL=$(aws cloudfront get-distribution --id ${{ env.CLOUDFRONT_DISTRIBUTION_DEV }} --query "Distribution.DomainName" --output text)
+        echo "website-url=https://$DISTRIBUTION_URL" >> $GITHUB_OUTPUT
+        echo "🌐 Frontend deployed to: https://$DISTRIBUTION_URL"
+
+    - name: Notify deployment
+      if: success()
+      run: |
+        echo "✅ Frontend deployment completed successfully!"
+        echo "📊 Deployment Summary:"
+        echo "  - Files uploaded: ${{ steps.check-files.outputs.file_count }}"
+        echo "  - S3 Bucket: ${{ env.S3_BUCKET_DEV }}"
+        echo "  - CloudFront Distribution: ${{ env.CLOUDFRONT_DISTRIBUTION_DEV }}"
+        echo "  - URL: https://$(aws cloudfront get-distribution --id ${{ env.CLOUDFRONT_DISTRIBUTION_DEV }} --query "Distribution.DomainName" --output text)"
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Frontend deployment failed!"
+        exit 1

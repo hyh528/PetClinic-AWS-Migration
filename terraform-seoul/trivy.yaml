@@ -1,0 +1,44 @@
+# Trivy Configuration for Terraform IaC Scanning
+# https://aquasecurity.github.io/trivy/
+
+# 스캔 설정
+scan:
+  # 스캔 대상
+  file-patterns:
+    - "*.tf"
+    - "*.tfvars"
+  
+  # 보안 체크
+  security-checks:
+    - config      # IaC 설정 스캔
+    - secret      # 하드코딩된 시크릿 감지
+
+# 심각도 설정
+severity:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+
+# 취약점 데이터베이스
+vulnerability:
+  type:
+    - os          # OS 패키지
+    - library     # 애플리케이션 라이브러리
+
+# 보고서 형식
+format: table
+
+# 무시 설정
+ignorefile: .trivyignore
+
+# 캐시 설정
+cache:
+  backend: fs
+  ttl: 24h
+
+# 타임아웃
+timeout: 5m
+
+# 종료 코드
+# 취약점 발견 시에도 0 반환 (CI/CD에서 계속 진행)
+exit-code: 0

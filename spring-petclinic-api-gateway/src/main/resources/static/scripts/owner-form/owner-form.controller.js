@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('ownerForm')
-    .controller('OwnerFormController', ["$http", '$state', '$stateParams', function ($http, $state, $stateParams) {
+    .controller('OwnerFormController', ["$http", '$state', '$stateParams', 'API_BASE_URL', function ($http, $state, $stateParams, API_BASE_URL) {
         var self = this;
 
         var ownerId = $stateParams.ownerId || 0;
@@ -9,8 +9,10 @@ angular.module('ownerForm')
         if (!ownerId) {
             self.owner = {};
         } else {
-            $http.get("api/customer/owners/" + ownerId).then(function (resp) {
+            $http.get(API_BASE_URL + "/api/customers/owners/" + ownerId).then(function (resp) {
                 self.owner = resp.data;
+            }).catch(function (error) {
+                console.error('Error loading owner:', error);
             });
         }
 
@@ -18,12 +20,16 @@ angular.module('ownerForm')
             var id = self.owner.id;
 
             if (id) {
-                $http.put('api/customer/owners/' + id, self.owner).then(function () {
+                $http.put(API_BASE_URL + '/api/customers/owners/' + id, self.owner).then(function () {
                     $state.go('ownerDetails', {ownerId: ownerId});
+                }).catch(function (error) {
+                    console.error('Error updating owner:', error);
                 });
             } else {
-                $http.post('api/customer/owners', self.owner).then(function () {
+                $http.post(API_BASE_URL + '/api/customers/owners', self.owner).then(function () {
                     $state.go('owners');
+                }).catch(function (error) {
+                    console.error('Error creating owner:', error);
                 });
             }
         };
