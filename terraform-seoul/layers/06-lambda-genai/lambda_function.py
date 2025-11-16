@@ -553,10 +553,63 @@ def format_context_data(results: List[Dict], question: str) -> str:
     logger.info(f"컨텍스트 데이터 생성 완료: {len(context_data)}자")
     return context_data
 
+def test_bedrock_models():
+    """서울 리전에서 사용 가능한 Bedrock 모델 테스트"""
+    try:
+        client = get_bedrock_client()
+        
+        # 테스트할 모델 ID 목록
+        test_models = [
+            "amazon.titan-text-lite-v1",
+            "amazon.titan-text-express-v1",
+            "meta.llama3-8b-instruct-v1:0",
+            "meta.llama3-70b-instruct-v1:0",
+            "anthropic.claude-3-haiku-20240307-v1:0",
+            "anthropic.claude-instant-v1"
+        ]
+        
+        available_models = []
+        for model_id in test_models:
+            try:
+                # 간단한 테스트 호출
+                test_body = {
+                    "inputText": "Hello",
+                    "textGenerationConfig": {
+                        "maxTokenCount": 10,
+                        "temperature": 0.1
+                    }
+                }
+                
+                client.invoke_model(
+                    modelId=model_id,
+                    body=json.dumps(test_body),
+                    contentType='application/json'
+                )
+                available_models.append(model_id)
+                logger.info(f"✅ 사용 가능: {model_id}")
+            except Exception as e:
+                logger.warning(f"❌ 사용 불가: {model_id} - {str(e)[:100]}")
+        
+        return available_models
+    except Exception as e:
+        logger.error(f"모델 테스트 실패: {str(e)}")
+        return []
+
 def lambda_handler(event, context):
     """Lambda 함수 메인 핸들러"""
     try:
         logger.info(f"Lambda 함수 시작 - Request ID: {context.aws_request_id}")
+        
+        # 모델 테스트 모드 (특수 이벤트)
+        if event.get('test_models', False):
+            available_models = test_bedrock_models()
+            return {
+                'statusCode': 200,
+                'body': {
+                    'available_models': available_models,
+                    'request_id': context.aws_request_id
+                }
+            }
         
         # HTTP 요청 처리
         if 'httpMethod' in event:
