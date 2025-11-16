@@ -133,6 +133,56 @@ def execute_sql(database: str, sql: str, parameters: List = None) -> List[Dict]:
 
         return []
 
+def invoke_bedrock_model(client, model_id: str, prompt: str, max_tokens: int = 500) -> str:
+    """Bedrock 모델 호출 헬퍼 함수 - 모델별 형식 자동 처리"""
+    logger.info(f"Bedrock 모델 호출: {model_id}")
+    
+    # 모델별로 다른 request body 형식 사용
+    if 'anthropic' in model_id.lower() or 'claude' in model_id.lower():
+        # Claude 모델용 형식
+        messages = [{"role": "user", "content": prompt}]
+        body = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": max_tokens,
+            "messages": messages,
+            "temperature": 0.1
+        }
+    elif 'titan' in model_id.lower():
+        # Amazon Titan 모델용 형식
+        body = {
+            "inputText": prompt,
+            "textGenerationConfig": {
+                "maxTokenCount": max_tokens,
+                "temperature": 0.1,
+                "topP": 0.9
+            }
+        }
+    else:
+        # 기본 형식 (Claude)
+        messages = [{"role": "user", "content": prompt}]
+        body = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": max_tokens,
+            "messages": messages,
+            "temperature": 0.1
+        }
+    
+    response = client.invoke_model(
+        modelId=model_id,
+        body=json.dumps(body),
+        contentType='application/json'
+    )
+    
+    response_body = json.loads(response['body'].read())
+    
+    # 모델별로 다른 response 파싱
+    if 'anthropic' in model_id.lower() or 'claude' in model_id.lower():
+        return response_body['content'][0]['text']
+    elif 'titan' in model_id.lower():
+        return response_body['results'][0]['outputText']
+    else:
+        return response_body.get('content', [{}])[0].get('text', '')
+
 def analyze_question_type(question: str) -> Dict[str, Any]:
     """질문을 분석해서 데이터베이스 조회가 필요한지 판단"""
     try:
@@ -175,29 +225,14 @@ GENERAL_ADVICE 예시:
 - "개가 먹으면 안 되는 음식은?" (식단 관련 상담)
 """
 
-        messages = [{"role": "user", "content": prompt}]
-        
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 500,
-            "messages": messages,
-            "temperature": 0.1
-        }
-        
         # Bedrock 모델 ID 가져오기
         region = os.getenv('AWS_REGION', 'ap-northeast-2')
         model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-haiku-20240307-v1:0')
         
         logger.info(f"사용할 Bedrock 모델: {model_id} (리전: {region})")
         
-        response = client.invoke_model(
-            modelId=model_id,
-            body=json.dumps(body),
-            contentType='application/json'
-        )
-        
-        response_body = json.loads(response['body'].read())
-        ai_response = response_body['content'][0]['text']
+        # 헬퍼 함수로 모델 호출
+        ai_response = invoke_bedrock_model(client, model_id, prompt, max_tokens=500)
         
         # JSON 응답 파싱
         try:
@@ -314,29 +349,14 @@ SQL: "SELECT DISTINCT o.first_name, o.last_name FROM owners o JOIN pets p ON o.i
 - 데이터베이스에 존재하지 않는 이름에 대해서는 쿼리를 생성하지 말고 빈 결과를 반환하세요
 """
 
-        messages = [{"role": "user", "content": prompt}]
-        
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1000,
-            "messages": messages,
-            "temperature": 0.1
-        }
-        
         # Bedrock 모델 ID 가져오기
         region = os.getenv('AWS_REGION', 'ap-northeast-2')
         model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-haiku-20240307-v1:0')
         
         logger.info(f"사용할 Bedrock 모델: {model_id} (리전: {region})")
         
-        response = client.invoke_model(
-            modelId=model_id,
-            body=json.dumps(body),
-            contentType='application/json'
-        )
-        
-        response_body = json.loads(response['body'].read())
-        ai_response = response_body['content'][0]['text']
+        # 헬퍼 함수로 모델 호출
+        ai_response = invoke_bedrock_model(client, model_id, prompt, max_tokens=1000)
         
         # JSON 응답 파싱
         try:
@@ -461,36 +481,10 @@ def call_bedrock_ai(prompt: str, context_data: str = "", is_general_advice: bool
 
 데이터베이스 결과를 보고 질문에 답변하세요:"""
 
-        # Claude 3 모델용 메시지 형식
-        messages = [
-            {
-                "role": "user",
-                "content": full_prompt
-            }
-        ]
-        
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1000,
-            "messages": messages,
-            "temperature": 0.1
-        }
-        
-        response = client.invoke_model(
-            modelId=model_id,
-            body=json.dumps(body),
-            contentType='application/json'
-        )
-        
-        response_body = json.loads(response['body'].read())
-        
-        if 'content' in response_body and len(response_body['content']) > 0:
-            ai_response = response_body['content'][0]['text']
-            logger.info("Bedrock AI 응답 생성 성공")
-            return ai_response
-        else:
-            logger.error("Bedrock 응답에서 content를 찾을 수 없습니다")
-            return "죄송합니다. AI 응답을 생성할 수 없습니다."
+        # 헬퍼 함수로 모델 호출
+        ai_response = invoke_bedrock_model(client, model_id, full_prompt, max_tokens=1000)
+        logger.info("Bedrock AI 응답 생성 성공")
+        return ai_response
             
     except Exception as e:
         logger.error(f"Bedrock AI 호출 실패: {str(e)}")
