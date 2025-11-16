@@ -12,7 +12,7 @@ data "terraform_remote_state" "network" {
   backend = "s3"
   config = {
     bucket  = var.tfstate_bucket_name
-    key     = "${var.environment}/01-network/terraform.tfstate"
+    key     = "seoul-dev/01-network/terraform.tfstate"
     region  = var.aws_region
     profile = var.aws_profile
   }
@@ -23,7 +23,7 @@ data "terraform_remote_state" "security" {
   backend = "s3"
   config = {
     bucket  = var.tfstate_bucket_name
-    key     = "${var.environment}/02-security/terraform.tfstate"
+    key     = "seoul-dev/02-security/terraform.tfstate"
     region  = var.aws_region
     profile = var.aws_profile
   }
@@ -34,7 +34,7 @@ data "terraform_remote_state" "lambda_genai" {
   backend = "s3"
   config = {
     bucket  = var.tfstate_bucket_name
-    key     = "${var.environment}/06-lambda-genai/terraform.tfstate"
+    key     = "seoul-dev/06-lambda-genai/terraform.tfstate"
     region  = var.aws_region
     profile = var.aws_profile
   }
@@ -45,7 +45,7 @@ data "terraform_remote_state" "application" {
   backend = "s3"
   config = {
     bucket  = var.tfstate_bucket_name
-    key     = "${var.environment}/07-application/terraform.tfstate"
+    key     = "seoul-dev/07-application/terraform.tfstate"
     region  = var.aws_region
     profile = var.aws_profile
   }

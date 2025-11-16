@@ -1,8 +1,8 @@
 # Script to manually register services to Spring Boot Admin
 # This is a PowerShell script for Windows
 
-$adminUrl = "http://petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com/admin"
-$albDns = "petclinic-dev-alb-1211424104.us-west-2.elb.amazonaws.com"
+$adminUrl = "http://petclinic-dev-alb-213395322.us-west-2.elb.amazonaws.com/admin"
+$albDns = "petclinic-dev-alb-213395322.us-west-2.elb.amazonaws.com"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Manual Service Registration to Admin UI" -ForegroundColor Cyan
