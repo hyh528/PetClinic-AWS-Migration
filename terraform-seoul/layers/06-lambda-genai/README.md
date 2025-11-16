@@ -39,45 +39,49 @@
 
 ## ⚠️ 서울 리전 (ap-northeast-2) 사용 시 중요 사항
 
-### Bedrock Cross-Region Inference Profile 사용
+### Bedrock 모델 지원 현황
 
-서울 리전에서 Claude 모델을 사용하려면 **Cross-Region Inference Profile**을 사용해야 합니다.
+서울 리전에서는 **모든 Claude 모델이 직접 지원되지 않습니다**. 사용 가능한 모델을 확인하고 올바른 모델 ID를 설정해야 합니다.
 
 #### 문제 상황
 ```
-❌ 직접 모델 ID 사용 시 에러:
-"Invocation of model ID anthropic.claude-3-sonnet-20240229-v1:0 with on-demand throughput isn't supported. 
-Retry your request with the ID or ARN of an inference profile that contains this model."
+❌ 서울 리전에서 미지원 모델 사용 시 에러:
+"The provided model identifier is invalid."
+"Invocation of model with on-demand throughput isn't supported."
 ```
 
-#### 해결 방법
-```python
-# ❌ 잘못된 방법 (서울 리전에서 직접 호출)
-model_id = 'anthropic.claude-3-5-sonnet-20240620-v1:0'
+#### 서울 리전에서 직접 지원되는 Claude 모델
 
-# ✅ 올바른 방법 (Cross-Region Inference Profile 사용)
-model_id = 'us.anthropic.claude-3-5-sonnet-20240620-v1:0'
+| 모델 | 모델 ID | 지원 여부 | 특징 |
+|------|---------|----------|------|
+| **Claude 3 Haiku** | `anthropic.claude-3-haiku-20240307-v1:0` | ✅ 지원 | 빠른 속도, 낮은 비용 |
+| Claude 3 Sonnet | `anthropic.claude-3-sonnet-20240229-v1:0` | ❌ 미지원 | - |
+| Claude 3.5 Sonnet | `anthropic.claude-3-5-sonnet-20240620-v1:0` | ❌ 미지원 | - |
+| Claude 3 Opus | `anthropic.claude-3-opus-20240229-v1:0` | ❌ 미지원 | - |
+
+#### 현재 설정
+
+**우리 프로젝트**: `anthropic.claude-3-haiku-20240307-v1:0` (Claude 3 Haiku)
+
+```terraform
+# terraform-seoul/envs/seoul.tfvars
+bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"
 ```
 
-#### 자동 처리
-람다 함수는 서울 리전을 자동으로 감지하여 적절한 모델 ID를 사용합니다:
+**선택 이유**:
+- ✅ 서울 리전에서 직접 지원
+- ✅ 한국어 지원 우수
+- ✅ 빠른 응답 속도
+- ✅ 낮은 비용
+- ✅ PetClinic 챗봇에 충분한 성능
 
-```python
-# 서울 리전에서는 Cross-Region Inference Profile 사용
-region = os.getenv('AWS_REGION', 'ap-northeast-2')
-if region == 'ap-northeast-2':
-    model_id = 'us.anthropic.claude-3-5-sonnet-20240620-v1:0'
-```
+#### 다른 모델 사용이 필요한 경우
 
-### 지원되는 모델 ID (서울 리전)
+Claude 3.5 Sonnet 등의 최신 모델이 필요하다면:
 
-| 원본 모델 ID | 서울 리전 Cross-Region Profile |
-|-------------|-------------------------------|
-| anthropic.claude-3-5-sonnet-20240620-v1:0 | us.anthropic.claude-3-5-sonnet-20240620-v1:0 |
-| anthropic.claude-3-sonnet-20240229-v1:0 | us.anthropic.claude-3-sonnet-20240229-v1:0 |
-| anthropic.claude-3-haiku-20240307-v1:0 | us.anthropic.claude-3-haiku-20240307-v1:0 |
-
-**참고**: Cross-Region Inference Profile을 사용하면 요청이 US 리전의 Bedrock으로 라우팅되지만, 람다 함수는 서울 리전에서 실행됩니다.
+1. **옵션 1**: Cross-Region Inference 사용 (추가 지연 시간 발생)
+2. **옵션 2**: US East (N. Virginia) 리전 사용
+3. **옵션 3**: AWS에 서울 리전 모델 지원 요청
 
 ---
 

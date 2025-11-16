@@ -184,14 +184,11 @@ GENERAL_ADVICE 예시:
             "temperature": 0.1
         }
         
-        model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-5-sonnet-20240620-v1:0')
-        
-        # 서울 리전에서는 Cross-Region Inference Profile 사용
+        # Bedrock 모델 ID 가져오기
         region = os.getenv('AWS_REGION', 'ap-northeast-2')
-        if region == 'ap-northeast-2':
-            # 서울 리전용 Cross-Region Inference Profile
-            # Claude 3.5 Sonnet - US region inference profile accessible from Seoul
-            model_id = 'us.anthropic.claude-3-5-sonnet-20240620-v1:0'
+        model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-haiku-20240307-v1:0')
+        
+        logger.info(f"사용할 Bedrock 모델: {model_id} (리전: {region})")
         
         response = client.invoke_model(
             modelId=model_id,
@@ -326,14 +323,11 @@ SQL: "SELECT DISTINCT o.first_name, o.last_name FROM owners o JOIN pets p ON o.i
             "temperature": 0.1
         }
         
-        model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-5-sonnet-20240620-v1:0')
-        
-        # 서울 리전에서는 Cross-Region Inference Profile 사용
+        # Bedrock 모델 ID 가져오기
         region = os.getenv('AWS_REGION', 'ap-northeast-2')
-        if region == 'ap-northeast-2':
-            # 서울 리전용 Cross-Region Inference Profile
-            # Claude 3.5 Sonnet - US region inference profile accessible from Seoul
-            model_id = 'us.anthropic.claude-3-5-sonnet-20240620-v1:0'
+        model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-haiku-20240307-v1:0')
+        
+        logger.info(f"사용할 Bedrock 모델: {model_id} (리전: {region})")
         
         response = client.invoke_model(
             modelId=model_id,
@@ -425,14 +419,11 @@ def call_bedrock_ai(prompt: str, context_data: str = "", is_general_advice: bool
     """Bedrock AI 모델 호출"""
     try:
         client = get_bedrock_client()
-        model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-5-sonnet-20240620-v1:0')
-        
-        # 서울 리전에서는 Cross-Region Inference Profile 사용
+        # Bedrock 모델 ID 가져오기
         region = os.getenv('AWS_REGION', 'ap-northeast-2')
-        if region == 'ap-northeast-2':
-            # 서울 리전용 Cross-Region Inference Profile
-            # Claude 3.5 Sonnet - US region inference profile accessible from Seoul
-            model_id = 'us.anthropic.claude-3-5-sonnet-20240620-v1:0'
+        model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-haiku-20240307-v1:0')
+        
+        logger.info(f"사용할 Bedrock 모델: {model_id} (리전: {region})")
         
         if is_general_advice:
             # 일반적인 반려동물 상담
