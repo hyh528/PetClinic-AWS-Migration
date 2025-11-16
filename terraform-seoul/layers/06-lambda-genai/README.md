@@ -39,15 +39,54 @@
 
 ## ⚠️ 서울 리전 (ap-northeast-2) 사용 시 중요 사항
 
+### 🚨 필수 사전 작업: Bedrock 모델 액세스 활성화
+
+**Lambda 배포 전에 반드시 AWS Bedrock 콘솔에서 모델 액세스를 활성화해야 합니다!**
+
+#### 1단계: AWS Bedrock 콘솔에서 모델 액세스 활성화
+
+```bash
+# AWS 콘솔 접속
+https://ap-northeast-2.console.aws.amazon.com/bedrock/home?region=ap-northeast-2#/modelaccess
+```
+
+**절차**:
+1. AWS 콘솔 → **Amazon Bedrock** 서비스로 이동
+2. 왼쪽 메뉴에서 **Model access** 클릭
+3. **Manage model access** 또는 **Edit** 버튼 클릭
+4. **Anthropic** 섹션에서 다음 모델 체크:
+   - ☑️ **Claude 3 Haiku** (anthropic.claude-3-haiku-20240307-v1:0)
+   - ☑️ Claude 3 Sonnet (선택 사항)
+   - ☑️ Claude 3.5 Sonnet (선택 사항)
+5. **Request model access** 또는 **Save changes** 클릭
+6. 승인 대기 (보통 즉시 승인됨)
+
+#### 2단계: 모델 액세스 확인
+
+```bash
+# 액세스 상태가 "Access granted"로 표시되는지 확인
+```
+
+**주의**: 모델 액세스 활성화 없이 Lambda를 실행하면 다음 에러가 발생합니다:
+```
+❌ AccessDeniedException: Model access is denied due to IAM user or service role 
+is not authorized to perform the required AWS Marketplace actions
+```
+
+---
+
 ### Bedrock 모델 지원 현황
 
 서울 리전에서는 **모든 Claude 모델이 직접 지원되지 않습니다**. 사용 가능한 모델을 확인하고 올바른 모델 ID를 설정해야 합니다.
 
-#### 문제 상황
+#### 일반적인 에러 메시지
 ```
-❌ 서울 리전에서 미지원 모델 사용 시 에러:
+❌ 서울 리전에서 미지원 모델 사용 시:
 "The provided model identifier is invalid."
 "Invocation of model with on-demand throughput isn't supported."
+
+❌ 모델 액세스 미활성화 시:
+"Model access is denied due to IAM user or service role is not authorized"
 ```
 
 #### 서울 리전에서 직접 지원되는 Claude 모델
@@ -623,11 +662,14 @@ terraform output -state=../01-network/terraform.tfstate vpc_id
 terraform output -state=../03-database/terraform.tfstate cluster_arn
 ```
 
-3. **Bedrock 모델 액세스 활성화**
+3. **🚨 Bedrock 모델 액세스 활성화 (필수!)**
 ```bash
-# AWS Console → Bedrock → Model access
-# Claude 3 Sonnet 활성화 필요
+# AWS Console → Amazon Bedrock → Model access → Manage model access
+# 서울 리전: https://ap-northeast-2.console.aws.amazon.com/bedrock/home?region=ap-northeast-2#/modelaccess
+# Claude 3 Haiku 모델을 반드시 활성화해야 합니다!
 ```
+
+**중요**: 이 단계를 건너뛰면 Lambda 실행 시 AccessDeniedException 에러가 발생합니다.
 
 ---
 
@@ -709,22 +751,46 @@ cat response.json
 
 ## 문제 해결
 
-### 문제 1: Bedrock 모델 액세스 거부
+### 문제 1: Bedrock 모델 액세스 거부 (가장 흔한 문제!)
+
+#### 에러 메시지 1:
+```
+AccessDeniedException: Model access is denied due to IAM user or service role 
+is not authorized to perform the required AWS Marketplace actions 
+(aws-marketplace:ViewSubscriptions, aws-marketplace:Subscribe)
+```
+
+#### 에러 메시지 2:
 ```
 AccessDeniedException: You don't have access to the model
 ```
 
-**원인**: Bedrock 모델 액세스 미활성화
+**원인**: AWS Bedrock 콘솔에서 모델 액세스를 활성화하지 않았습니다.
 
-**해결**:
-```bash
-# AWS Console에서 활성화
-1. Bedrock Console → Model access
-2. "Manage model access" 클릭
-3. "Anthropic - Claude 3 Sonnet" 체크
-4. "Request model access" 클릭
-5. 승인 대기 (수 분 소요)
-```
+**해결 방법**:
+
+1. **AWS Bedrock 콘솔 접속**
+   ```
+   서울 리전: https://ap-northeast-2.console.aws.amazon.com/bedrock/home?region=ap-northeast-2#/modelaccess
+   ```
+
+2. **모델 액세스 활성화**
+   - 왼쪽 메뉴에서 **"Model access"** 클릭
+   - **"Manage model access"** 또는 **"Edit"** 버튼 클릭
+   - **Anthropic** 섹션 찾기
+   - ☑️ **"Claude 3 Haiku"** 체크 (anthropic.claude-3-haiku-20240307-v1:0)
+   - ☑️ Claude 3 Sonnet (선택 사항)
+   - **"Request model access"** 또는 **"Save changes"** 클릭
+
+3. **승인 확인**
+   - 보통 즉시 승인됨 (Access granted 상태 확인)
+   - 드물게 수 분 대기 필요
+
+4. **Lambda 재실행**
+   - 모델 액세스 활성화 후 Lambda 함수를 다시 호출하세요
+   - 첫 실행 시 초기화 시간이 걸릴 수 있습니다
+
+**주의**: 이 작업은 리전별로 수행해야 합니다. 서울 리전에서 사용한다면 서울 리전 콘솔에서 활성화하세요.
 
 ---
 
