@@ -193,8 +193,8 @@ email_endpoint    = "" # 이메일 알림 (선택사항)
 create_test_alarm = true
 
 # Bedrock 모델 설정 (서울 리전용)
-# Amazon Titan Text Express - AWS 자체 모델, 권한 문제 없음
-bedrock_model_id = "amazon.titan-text-express-v1"
+# Amazon Titan Text Lite - AWS 자체 모델, 권한 문제 없음, 가장 가벼운 모델
+bedrock_model_id = "amazon.titan-text-lite-v1"
 # 알람 액션 (12-notification 레이어 배포 후 SNS 토픽 ARN으로 업데이트)
 alarm_actions = ["arn:aws:sns:ap-northeast-2:897722691159:petclinic-seoul-dev-alerts"] # 예: ["arn:aws:sns:ap-northeast-2:123456789012:petclinic-seoul-dev-alerts"]
 
