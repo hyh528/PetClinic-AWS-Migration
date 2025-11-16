@@ -157,6 +157,14 @@ def invoke_bedrock_model(client, model_id: str, prompt: str, max_tokens: int = 5
                 "topP": 0.9
             }
         }
+    elif 'llama' in model_id.lower() or 'meta' in model_id.lower():
+        # Meta Llama 모델용 형식
+        body = {
+            "prompt": prompt,
+            "max_gen_len": max_tokens,
+            "temperature": 0.1,
+            "top_p": 0.9
+        }
     else:
         # 기본 형식 (Claude)
         messages = [{"role": "user", "content": prompt}]
@@ -180,6 +188,8 @@ def invoke_bedrock_model(client, model_id: str, prompt: str, max_tokens: int = 5
         return response_body['content'][0]['text']
     elif 'titan' in model_id.lower():
         return response_body['results'][0]['outputText']
+    elif 'llama' in model_id.lower() or 'meta' in model_id.lower():
+        return response_body['generation']
     else:
         return response_body.get('content', [{}])[0].get('text', '')
 
