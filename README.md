@@ -19,8 +19,7 @@
 
 ## 🚀 최종 목표 아키텍처 (To-Be Architecture)
 
-![To-Be Architecture Diagram](docs/to-be-architecture.png)
-*위 다이어그램은 1주차에 팀이 확정한 최종 목표 아키텍처 이미지로 교체될 예정입니다.*
+<img width="2400" height="1350" alt="image" src="https://github.com/user-attachments/assets/4c3f90c1-007e-4d06-96e3-2cc9377bd9f0" />
 
 ### 아키텍처 흐름
 
@@ -50,6 +49,14 @@
 - **IAM**과 **Security Group**을 통해 '최소 권한의 원칙'에 입각한 접근 제어를 구현했습니다.
 - **Amazon CloudWatch**를 통해 모든 서비스의 로그와 지표를 중앙에서 관리하여 시스템의 가시성을 확보하고, 이상 상황 발생 시 즉각적인 알림을 받을 수 있도록 구성했습니다.
 
+---
+## 📌 주요 성과 (Outcomes)
+
+- IaC 기반으로 인프라 재현성 확보
+- GitHub Actions 구축으로 배포 자동화 (기존 수동 40분 이상 → 자동화 7분)
+- 안전한 파라미터 관리 도입 → **비밀정보 노출 리스크 0%**
+- MSA 서비스 간 트래픽 구조 개선으로 서비스 독립성 확보
+- 오토스케일링을 통한 서비스 안정성 향상
 ---
 
 ## 🛠️ 기술 스택 (Tech Stack)
