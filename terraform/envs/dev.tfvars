@@ -30,6 +30,9 @@ private_db_subnet_cidrs  = ["10.0.5.0/24", "10.0.6.0/24"]
 single_nat_gateway = false
 create_nat_per_az  = true
 
+# IPv6 설정 (비용 절감 및 미래 확장성)
+enable_ipv6 = true
+
 # VPC 엔드포인트 서비스 (security 레이어에서 사용)
 vpc_endpoint_services = [
   "ecr.api",

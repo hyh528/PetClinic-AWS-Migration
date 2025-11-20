@@ -234,23 +234,21 @@ microservices = ["customers", "vets", "visits", "admin"]
 각 Cloud Map Service는 다음 설정을 갖습니다:
 
 ```hcl
-# 모듈 내부 (참고용)
-resource "aws_service_discovery_service" "this" {
-  name = "customers"
-  
+# 실제 모듈 코드 (단순화됨)
+resource "aws_service_discovery_service" "microservices" {
+  for_each = toset(var.microservices)
+
+  name = each.value
+
   dns_config {
     namespace_id = aws_service_discovery_private_dns_namespace.this.id
-    
+
     dns_records {
-      type = "A"      # IPv4 주소
-      ttl  = 60       # 60초 캐시
+      ttl  = var.dns_ttl
+      type = "A"
     }
-    
-    routing_policy = "MULTIVALUE"  # 모든 정상 IP 반환
-  }
-  
-  health_check_custom_config {
-    failure_threshold = 1  # 1번 실패 시 제거
+
+    routing_policy = "MULTIVALUE"
   }
 }
 ```
@@ -258,7 +256,7 @@ resource "aws_service_discovery_service" "this" {
 **주요 설정**:
 - **DNS 레코드 타입**: A (IPv4)
 - **라우팅 정책**: MULTIVALUE (여러 IP 동시 반환)
-- **헬스체크**: ECS 헬스체크 기반 자동 등록/해제
+- **헬스체크**: 기본 설정 (ECS 헬스체크 기반 자동 등록/해제)
 
 ---
 
@@ -799,6 +797,6 @@ ResponseEntity<List<Vet>> response = restTemplate.exchange(
 
 ---
 
-**작성일**: 2025-11-09  
-**작성자**: 황영현 
-**버전**: 1.0
+**작성일**: 2025-11-20
+**작성자**: 황영현
+**버전**: 1.1

@@ -66,12 +66,12 @@ server:
 # ✅ 좋은 예: 런타임에 Parameter Store에서 조회
 spring:
   datasource:
-    url: ${ssm:/petclinic/dev/db/url}
-    username: ${ssm:/petclinic/dev/db/username}
+    url: ${ssm:/petclinic-seoul/dev/db/url}
+    username: ${ssm:/petclinic-seoul/dev/db/username}
     password: ${secretsmanager:petclinic-db-password:password::}
-  
+
 server:
-  port: ${ssm:/petclinic/dev/customers/server.port}
+  port: ${ssm:/petclinic-seoul/dev/customers/server.port}
 ```
 
 **장점**:
@@ -101,7 +101,7 @@ server:
 Parameter Store는 **경로 기반**으로 구조화됩니다.
 
 ```
-/petclinic/                              # 프로젝트 루트
+/petclinic-seoul/                        # 프로젝트 루트
 ├── common/                              # 모든 환경 공통 설정
 │   ├── spring.profiles.active           # "mysql,aws"
 │   └── logging.level.root               # "INFO"
@@ -131,9 +131,9 @@ Parameter Store는 **경로 기반**으로 구조화됩니다.
 ```
 
 **환경별 분리**:
-- Dev: `/petclinic/dev/*`
-- Staging: `/petclinic/staging/*`
-- Prod: `/petclinic/prod/*`
+- Dev: `/petclinic-seoul/dev/*`
+- Staging: `/petclinic-seoul/staging/*`
+- Prod: `/petclinic-seoul/prod/*`
 
 ---
 
@@ -217,12 +217,12 @@ basic_parameters = {
 
 | Parameter 이름 | 값 | 타입 | 설명 |
 |---------------|-----|------|------|
-| `/petclinic/common/spring.profiles.active` | `mysql,aws` | String | Spring Profile |
-| `/petclinic/common/logging.level.root` | `INFO` | String | Root Logger 레벨 |
-| `/petclinic/dev/customers/server.port` | `8080` | String | Customers 서비스 포트 |
-| `/petclinic/dev/vets/server.port` | `8080` | String | Vets 서비스 포트 |
-| `/petclinic/dev/visits/server.port` | `8080` | String | Visits 서비스 포트 |
-| `/petclinic/dev/admin/server.port` | `9090` | String | Admin 서버 포트 |
+| `/petclinic-seoul/common/spring.profiles.active` | `mysql,aws` | String | Spring Profile |
+| `/petclinic-seoul/common/logging.level.root` | `INFO` | String | Root Logger 레벨 |
+| `/petclinic-seoul/dev/customers/server.port` | `8080` | String | Customers 서비스 포트 |
+| `/petclinic-seoul/dev/vets/server.port` | `8080` | String | Vets 서비스 포트 |
+| `/petclinic-seoul/dev/visits/server.port` | `8080` | String | Visits 서비스 포트 |
+| `/petclinic-seoul/dev/admin/server.port` | `9090` | String | Admin 서버 포트 |
 
 ---
 
@@ -232,13 +232,13 @@ basic_parameters = {
 # locals.tf - 03-database 레이어에서 엔드포인트 가져옴
 database_parameters = {
   # JDBC URL (Aurora 엔드포인트 동적 참조)
-  "/petclinic/dev/db/url" = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic?useSSL=false&allowPublicKeyRetrieval=true"
-  
+  "/petclinic-seoul/dev/db/url" = "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic?useSSL=false&allowPublicKeyRetrieval=true"
+
   # DB 사용자명
-  "/petclinic/dev/db/username" = "petclinic"
-  
+  "/petclinic-seoul/dev/db/username" = var.database_username
+
   # Secrets Manager ARN (비밀번호 조회용)
-  "/petclinic/dev/db/secrets-manager-name" = data.terraform_remote_state.database.outputs.master_user_secret_name
+  "/petclinic-seoul/dev/db/secrets-manager-name" = data.terraform_remote_state.database.outputs.master_user_secret_name
 }
 ```
 
@@ -260,12 +260,12 @@ JDBC URL 자동 생성: jdbc:mysql://petclinic-dev-aurora.cluster-xxx.us-west-2.
 **우리 프로젝트**:
 ```bash
 terraform output parameter_count
-# 출력: 9
+# 출력: 8
 
 # 상세:
 # - 공통: 2개 (spring.profiles.active, logging.level.root)
 # - 서비스 포트: 4개 (customers, vets, visits, admin)
-# - 데이터베이스: 3개 (url, username, secrets-manager-name)
+# - 데이터베이스: 2개 (url, username, secrets-manager-name)
 ```
 
 ---
@@ -291,23 +291,23 @@ terraform output parameter_count
 spring:
   application:
     name: customers-service
-  
+
   # Parameter Store에서 자동 로드
   config:
-    import: "aws-parameterstore:/petclinic/"
-  
+    import: "aws-parameterstore:/petclinic-seoul/"
+
   datasource:
     # Parameter Store 값 참조
-    url: ${/petclinic/dev/db/url}
-    username: ${/petclinic/dev/db/username}
-    password: ${secretsmanager:${/petclinic/dev/db/secrets-manager-name}:password::}
+    url: ${/petclinic-seoul/dev/db/url}
+    username: ${/petclinic-seoul/dev/db/username}
+    password: ${secretsmanager:${/petclinic-seoul/dev/db/secrets-manager-name}:password::}
 
 server:
-  port: ${/petclinic/dev/customers/server.port}  # 8080
+  port: ${/petclinic-seoul/dev/customers/server.port}  # 8080
 
 logging:
   level:
-    root: ${/petclinic/common/logging.level.root}  # INFO
+    root: ${/petclinic-seoul/common/logging.level.root}  # INFO
 ```
 
 ---
@@ -327,7 +327,7 @@ logging:
         "ssm:GetParameters",
         "ssm:GetParametersByPath"
       ],
-      "Resource": "arn:aws:ssm:us-west-2:*:parameter/petclinic/*"
+      "Resource": "arn:aws:ssm:us-west-2:*:parameter/petclinic-seoul/*"
     }
   ]
 }
@@ -356,12 +356,12 @@ environment = [
 1. ECS 컨테이너 시작
    ↓
 2. Spring Boot 애플리케이션 초기화
-   ↓
+    ↓
 3. Spring Cloud AWS가 Parameter Store 접근
-   GET /petclinic/common/spring.profiles.active
-   GET /petclinic/dev/customers/server.port
-   GET /petclinic/dev/db/url
-   GET /petclinic/dev/db/username
+    GET /petclinic-seoul/common/spring.profiles.active
+    GET /petclinic-seoul/dev/customers/server.port
+    GET /petclinic-seoul/dev/db/url
+    GET /petclinic-seoul/dev/db/username
    ↓
 4. Secrets Manager에서 비밀번호 조회
    GET /secrets/petclinic-dev-aurora-master-password
@@ -408,23 +408,23 @@ locals {
   
   # 기본 공통 설정
   basic_parameters = {
-    "/petclinic/common/spring.profiles.active" = "mysql,aws"
-    "/petclinic/common/logging.level.root"     = "INFO"
-    
-    "/petclinic/${var.environment}/customers/server.port" = "8080"
-    "/petclinic/${var.environment}/vets/server.port"      = "8080"
-    "/petclinic/${var.environment}/visits/server.port"    = "8080"
-    "/petclinic/${var.environment}/admin/server.port"     = "9090"
+    "/petclinic-seoul/common/spring.profiles.active" = "mysql,aws"
+    "/petclinic-seoul/common/logging.level.root"     = "INFO"
+
+    "/petclinic-seoul/${var.environment}/customers/server.port" = "8080"
+    "/petclinic-seoul/${var.environment}/vets/server.port"      = "8080"
+    "/petclinic-seoul/${var.environment}/visits/server.port"    = "8080"
+    "/petclinic-seoul/${var.environment}/admin/server.port"     = "9090"
   }
   
   # 데이터베이스 연결 정보
   database_parameters = local.dependencies_ready ? {
-    "/petclinic/${var.environment}/db/url" = 
+    "/petclinic-seoul/${var.environment}/db/url" =
       "jdbc:mysql://${local.aurora_endpoint}:3306/petclinic?useSSL=false&allowPublicKeyRetrieval=true"
-    
-    "/petclinic/${var.environment}/db/username" = var.database_username
-    
-    "/petclinic/${var.environment}/db/secrets-manager-name" = 
+
+    "/petclinic-seoul/${var.environment}/db/username" = var.database_username
+
+    "/petclinic-seoul/${var.environment}/db/secrets-manager-name" =
       data.terraform_remote_state.database.outputs.master_user_secret_name
   } : {}
   
@@ -495,7 +495,7 @@ aws_region  = "us-west-2"
 aws_profile = "default"
 
 # Parameter Store 설정
-parameter_prefix = "/petclinic"
+parameter_prefix = "/petclinic-seoul"
 database_username = "petclinic"
 
 # 로깅 설정
@@ -524,7 +524,7 @@ terraform plan -var-file=terraform.tfvars
 ```
 
 **확인사항**:
-- Parameter 9개 생성 예정
+- Parameter 8개 생성 예정
 - Aurora 엔드포인트가 정상적으로 참조되는지 확인
 
 #### 5단계: 배포 실행
@@ -538,7 +538,7 @@ terraform apply -var-file=terraform.tfvars
 ```bash
 # 파라미터 개수 확인
 terraform output parameter_count
-# 9
+# 8
 
 # Parameter 목록 확인 (AWS CLI)
 aws ssm get-parameters-by-path \
@@ -553,15 +553,15 @@ aws ssm get-parameters-by-path \
 --------------------------------------------------------------
 | GetParametersByPath                                        |
 +------------------------------------------+-----------------+
-| /petclinic/common/spring.profiles.active | mysql,aws       |
-| /petclinic/common/logging.level.root     | INFO            |
-| /petclinic/dev/customers/server.port     | 8080            |
-| /petclinic/dev/vets/server.port          | 8080            |
-| /petclinic/dev/visits/server.port        | 8080            |
-| /petclinic/dev/admin/server.port         | 9090            |
-| /petclinic/dev/db/url                    | jdbc:mysql://...  |
-| /petclinic/dev/db/username               | petclinic       |
-| /petclinic/dev/db/secrets-manager-name   | arn:aws:secret...|
+| /petclinic-seoul/common/spring.profiles.active | mysql,aws       |
+| /petclinic-seoul/common/logging.level.root     | INFO            |
+| /petclinic-seoul/dev/customers/server.port     | 8080            |
+| /petclinic-seoul/dev/vets/server.port          | 8080            |
+| /petclinic-seoul/dev/visits/server.port        | 8080            |
+| /petclinic-seoul/dev/admin/server.port         | 9090            |
+| /petclinic-seoul/dev/db/url                    | jdbc:mysql://...  |
+| /petclinic-seoul/dev/db/username               | petclinic       |
+| /petclinic-seoul/dev/db/secrets-manager-name   | arn:aws:secret...|
 +------------------------------------------+-----------------+
 ```
 
@@ -724,7 +724,7 @@ aws ssm put-parameter \
 
 | 구성 요소 | 타입 | 개수 | 월 비용 (USD) |
 |----------|------|------|---------------|
-| Standard Parameters | String | 9개 | $0 (무료) |
+| Standard Parameters | String | 8개 | $0 (무료) |
 | Advanced Parameters | String | 0개 | $0 |
 | API 호출 (처리량) | - | < 1,000 TPS | $0 (무료) |
 | **합계** | - | - | **$0** |
@@ -783,8 +783,8 @@ terraform plan -var-file=terraform.tfvars
 ### 생성되는 파라미터
 - 공통: 2개 (Spring Profile, 로깅 레벨)
 - 서비스 포트: 4개 (customers, vets, visits, admin)
-- 데이터베이스: 3개 (JDBC URL, Username, Secrets Manager ARN)
-- **합계**: 9개
+- 데이터베이스: 2개 (JDBC URL, Username, Secrets Manager ARN)
+- **합계**: 8개
 
 ### 애플리케이션 사용
 ```yaml
@@ -803,6 +803,6 @@ spring:
 
 ---
 
-**작성일**: 2025-11-09  
-**작성자**: 황영현 
-**버전**: 1.0
+**작성일**: 2025-11-20
+**작성자**: 황영현
+**버전**: 1.1

@@ -154,18 +154,18 @@ common_environment = [
 ]
 
 common_secrets = [
-  {
-    name      = "SPRING_DATASOURCE_URL"
-    valueFrom = "/petclinic/dev/db/url"  # Parameter Store
-  },
-  {
-    name      = "SPRING_DATASOURCE_USERNAME"
-    valueFrom = "/petclinic/dev/db/username"  # Parameter Store
-  },
-  {
-    name      = "SPRING_DATASOURCE_PASSWORD"
-    valueFrom = "arn:aws:secretsmanager:...:password::"  # Secrets Manager
-  }
+   {
+     name      = "SPRING_DATASOURCE_URL"
+     valueFrom = "/petclinic/${var.environment}/db/url"  # Parameter Store
+   },
+   {
+     name      = "SPRING_DATASOURCE_USERNAME"
+     valueFrom = "/petclinic/${var.environment}/db/username"  # Parameter Store
+   },
+   {
+     name      = "SPRING_DATASOURCE_PASSWORD"
+     valueFrom = "${local.db_secret_arn}:password::"  # Secrets Manager
+   }
 ]
 ```
 
@@ -224,24 +224,22 @@ service_registries {
 ### 1. ALB 리스너 규칙
 
 ```
-HTTP :80 → HTTPS :443 리다이렉트
-
-HTTPS :443
-    │
-    ├─ Path: /api/customers/*  → customers-service :8080
-    ├─ Path: /api/vets/*       → vets-service :8080
-    ├─ Path: /api/visits/*     → visits-service :8080
-    └─ Path: /admin/*          → admin-server :9090
+HTTP :80
+     │
+     ├─ Path: /api/customers/*  → customers-service :8080
+     ├─ Path: /api/vets/*       → vets-service :8080
+     ├─ Path: /api/visits/*     → visits-service :8080
+     └─ Path: /admin/*          → admin-server :9090
 ```
 
 ### 2. 라우팅 예시
 
 ```
 사용자 요청:
-https://petclinic-alb.us-west-2.elb.amazonaws.com/api/customers
+http://petclinic-alb.us-west-2.elb.amazonaws.com/api/customers
 
 ALB 처리:
-1. HTTPS :443 리스너 매칭
+1. HTTP :80 리스너 매칭
 2. Path "/api/customers/*" 규칙 매칭
 3. customers-service 타겟 그룹으로 전달
 4. ECS Task 10.0.10.45:8080으로 프록시
@@ -278,17 +276,17 @@ ALB 처리:
 
 ```
 1. 사용자 브라우저
-   https://petclinic-alb.amazonaws.com/api/customers
-   ↓
+    http://petclinic-alb.amazonaws.com/api/customers
+    ↓
 2. Route 53 (DNS 해석)
-   ALB Public IP 반환
-   ↓
+    ALB Public IP 반환
+    ↓
 3. WAF (Web Application Firewall)
-   SQL Injection, XSS 차단
-   ↓
+    SQL Injection, XSS 차단
+    ↓
 4. ALB (Public Subnet)
-   Security Group: 0.0.0.0/0 :443 허용
-   Path 기반 라우팅
+    Security Group: 0.0.0.0/0 :80 허용
+    Path 기반 라우팅
    ↓
 5. Target Group (customers-service)
    Security Group: ALB SG :8080 허용
@@ -389,14 +387,16 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-west-2#dashboards:name=
 
 ---
 
-### 2. CloudWatch 알람 (4개)
+### 2. CloudWatch 알람 (12개)
 
 | 알람 이름 | 메트릭 | 임계값 | 동작 |
 |----------|--------|-------|------|
-| **ECS High CPU** | CPUUtilization | > 80% | SNS 알림 |
-| **ECS High Memory** | MemoryUtilization | > 80% | SNS 알림 |
+| **ECS CPU High** | CPUUtilization | > 80% | SNS 알림 |
+| **ECS Memory High** | MemoryUtilization | > 85% | SNS 알림 |
+| **ECS Running Tasks Low** | RunningTaskCount | < 1 | SNS 알림 |
+| **ALB Unhealthy Hosts** | UnHealthyHostCount | > 0 | SNS 알림 |
+| **ALB Response Time High** | TargetResponseTime | > 5초 | SNS 알림 |
 | **ALB 5XX Errors** | HTTPCode_Target_5XX_Count | > 10 | SNS 알림 |
-| **Aurora DB Connections** | DatabaseConnections | > 90 | SNS 알림 |
 
 **알람 트리거 시**:
 ```
@@ -513,27 +513,17 @@ resource "aws_ecs_task_definition" "services" {
   
   family = "${var.name_prefix}-${each.key}"
   
-  container_definitions = jsonencode([{
-    name  = each.value.name
-    image = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${each.value.name}:latest"
-    
-    portMappings = [{
-      containerPort = each.value.port
-      protocol      = "tcp"
-    }]
-    
-    environment = each.key == "admin" ? local.admin_environment : local.common_environment
-    secrets     = each.key == "admin" ? local.admin_secrets : local.common_secrets
-    
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = "/ecs/${var.name_prefix}-${each.key}"
-        "awslogs-region"        = var.aws_region
-        "awslogs-stream-prefix" = "ecs"
-      }
-    }
-  }])
+  container_definitions = templatefile("${path.module}/templates/container-definition.json.tpl", {
+    service_name     = each.key
+    image_uri        = lookup(var.service_image_map, each.key, "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.name_prefix}-${each.key}:latest")
+    cpu              = each.value.cpu
+    memory           = each.value.memory
+    container_port   = each.value.port
+    log_group_name   = aws_cloudwatch_log_group.services[each.key].name
+    aws_region       = var.aws_region
+    environment_vars = each.key == "admin" ? local.admin_environment : local.common_environment
+    secrets          = each.key == "admin" ? local.admin_secrets : local.common_secrets
+  })
   
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
@@ -592,17 +582,26 @@ resource "aws_lb_target_group" "services" {
 # 8. ALB Listener Rule (반복)
 resource "aws_lb_listener_rule" "services" {
   for_each = local.services
-  
-  listener_arn = module.alb.https_listener_arn
-  
+
+  listener_arn = module.alb.listener_http_arn
+  priority     = 100 + index(keys(local.services), each.key)
+
   action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.services[each.key].arn
+    type = "forward"
+    forward {
+      target_group {
+        arn = aws_lb_target_group.services[each.key].arn
+      }
+      stickiness {
+        enabled  = false
+        duration = 1
+      }
+    }
   }
-  
+
   condition {
     path_pattern {
-      values = ["/api/${each.key}/*"]
+      values = each.key == "admin" ? ["/admin", "/admin/*"] : ["/api/${each.key}", "/api/${each.key}/*"]
     }
   }
 }
@@ -684,7 +683,7 @@ terraform plan -var-file=terraform.tfvars
 - Target Group 4개
 - ALB Listener Rule 4개
 - CloudWatch Dashboard 1개
-- CloudWatch Alarm 4개
+- CloudWatch Alarm 12개 (서비스별 3개씩)
 
 #### 5단계: 배포 실행
 ```bash
@@ -851,7 +850,7 @@ aws cloudwatch get-metric-statistics \
 - ECS 서비스: 4개 (customers, vets, visits, admin)
 - Target Group: 4개
 - CloudWatch Dashboard: 1개
-- CloudWatch Alarm: 4개
+- CloudWatch Alarm: 12개 (서비스별 3개씩)
 
 ### 네트워크 흐름
 ```
@@ -862,6 +861,6 @@ Internet → WAF → ALB → ECS (Private Subnet) → Aurora (Private DB Subnet)
 
 ---
 
-**작성일**: 2025-11-09  
-**작성자**: 황영현 
-**버전**: 1.0
+**작성일**: 2025-11-20
+**작성자**: 황영현
+**버전**: 1.1

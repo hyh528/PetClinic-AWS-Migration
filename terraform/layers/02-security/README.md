@@ -188,8 +188,8 @@ Outbound (아웃바운드):
 │  Group          │            │  Security Group │
 │  (rds-sg)       │            │  (vpce-sg)      │
 │                 │            │                 │
-│  PostgreSQL     │            │  ECR, Logs,     │
-│  5432 포트      │            │  Secrets 등     │
+│  Aurora MySQL   │            │  ECR, Logs,     │
+│  3306 포트      │            │  Secrets 등     │
 └─────────────────┘            └─────────────────┘
      ↑                                  ↑
      └──── ECS에서만 접근 허용 ──────────┘
@@ -201,55 +201,14 @@ Outbound (아웃바운드):
 
 | 보안 그룹 이름 | 용도 | 주요 규칙 |
 |---------------|------|----------|
-| **alb-sg** | Application Load Balancer | Inbound: 0.0.0.0/0:80,443<br>Outbound: ECS:8080,9090 |
-| **ecs-sg** | ECS Fargate 컨테이너 | Inbound: ALB:8080,9090<br>Outbound: RDS:3306, VPC Endpoints |
-| **rds-sg** | Aurora MySQL | Inbound: ECS:3306<br>Outbound: 없음 (DB는 나갈 필요 없음) |
-| **vpce-sg** | VPC Endpoints | Inbound: ECS:443<br>Outbound: 없음 |
+| **ecs-sg** | ECS Fargate 컨테이너 | Inbound: ALB:8080,9090 (통합 시)<br>Outbound: RDS:3306, VPC Endpoints:443 |
+| **rds-sg** | Aurora MySQL | Inbound: ECS:3306, Lambda:3306<br>Outbound: 없음 (DB는 나갈 필요 없음) |
 
 ---
 
 ## 보안 그룹 규칙 상세 설명
 
-### 1. ALB Security Group (alb-sg)
-
-**목적**: 외부 인터넷에서 들어오는 HTTP/HTTPS 트래픽을 받아서 ECS로 전달
-
-#### Inbound Rules (들어오는 트래픽)
-
-| 타입 | 프로토콜 | 포트 | 소스 | 설명 |
-|------|---------|------|------|------|
-| HTTP | TCP | 80 | 0.0.0.0/0 | 전 세계에서 HTTP 접근 허용 |
-| HTTPS | TCP | 443 | 0.0.0.0/0 | 전 세계에서 HTTPS 접근 허용 |
-
-```hcl
-# HTTP 규칙 예시
-ingress {
-  from_port   = 80
-  to_port     = 80
-  protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]  # 모든 IP 허용
-  description = "Allow HTTP from internet"
-}
-```
-
-#### Outbound Rules (나가는 트래픽)
-
-| 타입 | 프로토콜 | 포트 | 대상 | 설명 |
-|------|---------|------|------|------|
-| Custom TCP | TCP | 8080 | ecs-sg | 마이크로서비스 (customers, vets, visits) |
-| Custom TCP | TCP | 9090 | ecs-sg | Admin 서버 (Spring Boot Admin) |
-
-```
-사용자 브라우저
-    ↓ (HTTP/HTTPS)
-[ALB Security Group] ← 여기서 검사
-    ↓ (8080 또는 9090)
-ECS 컨테이너
-```
-
----
-
-### 2. ECS Security Group (ecs-sg)
+### 1. ECS Security Group (ecs-sg)
 
 **목적**: ECS 컨테이너가 ALB의 요청을 받고, RDS/VPC 엔드포인트에 접근
 
@@ -257,14 +216,12 @@ ECS 컨테이너
 
 | 타입 | 프로토콜 | 포트 | 소스 | 설명 |
 |------|---------|------|------|------|
-| Custom TCP | TCP | 8080 | alb-sg | 마이크로서비스 (customers, vets, visits) |
-| Custom TCP | TCP | 9090 | alb-sg | Admin 서버 (Spring Boot Admin) |
+| Custom TCP | TCP | 8080 | alb-sg (통합 시) | 마이크로서비스 (customers, vets, visits) |
+| Custom TCP | TCP | 9090 | alb-sg (통합 시) | Admin 서버 (Spring Boot Admin) |
 | Custom TCP | TCP | 8080 | ecs-sg (self) | ECS 서비스 간 통신 (Admin → 서비스 actuator) |
 | Custom TCP | TCP | 9090 | ecs-sg (self) | ECS 서비스 간 통신 (서비스 → Admin) |
 
-**Note**: Config Server와 Discovery Server는 **제거**되었습니다.
-- Config Server → **Parameter Store**로 대체
-- Discovery Server (Eureka) → **CloudMap**으로 대체
+**Note**: ALB 보안 그룹은 07-application 레이어에서 생성됩니다.
 
 ```hcl
 # ALB에서 마이크로서비스 접근 허용 (8080 포트)
@@ -301,9 +258,9 @@ ingress {
 | 타입 | 프로토콜 | 포트 | 대상 | 설명 |
 |------|---------|------|------|------|
 | MySQL | TCP | 3306 | rds-sg | Aurora MySQL 접근 |
-| HTTPS | TCP | 443 | vpce-sg | VPC Endpoints (ECR, Logs 등) |
-| HTTP | TCP | 80 | 0.0.0.0/0 | Admin → ALB 경유 서비스 접근 |
-| HTTPS | TCP | 443 | 0.0.0.0/0 | 외부 API 호출 (NAT Gateway 경유) |
+| HTTPS | TCP | 443 | vpce-sg (있을 경우) | VPC Endpoints (ECR, Logs 등) |
+| HTTPS | TCP | 443 | 0.0.0.0/0 (IPv4) | VPC Endpoint 없을 때 인터넷 접근 |
+| HTTPS | TCP | ::/0 (IPv6) | VPC Endpoint 없을 때 인터넷 접근 |
 
 ```
 ECS 컨테이너가 할 수 있는 일:
@@ -321,13 +278,14 @@ ECS 컨테이너가 할 수 있는 일:
 
 ### 3. RDS Security Group (rds-sg)
 
-**목적**: Aurora MySQL이 ECS에서만 접근을 받음
+**목적**: Aurora MySQL이 ECS와 Lambda에서만 접근을 받음
 
 #### Inbound Rules
 
 | 타입 | 프로토콜 | 포트 | 소스 | 설명 |
 |------|---------|------|------|------|
-| MySQL | TCP | 3306 | ecs-sg | ECS 컨테이너만 DB 접근 허용 |
+| MySQL | TCP | 3306 | ecs-sg | ECS 컨테이너 DB 접근 허용 |
+| MySQL | TCP | 3306 | lambda-sg (있을 경우) | Lambda GenAI 함수 DB 접근 허용 |
 
 ```hcl
 ingress {
@@ -351,29 +309,12 @@ ingress {
 ❌ Lambda → RDS (차단, 필요 시 Lambda SG 추가)
 ```
 
----
-
-### 4. VPC Endpoint Security Group (vpce-sg)
-
-**목적**: ECS가 VPC 엔드포인트를 통해 AWS 서비스 사용
-
-#### Inbound Rules
-
-| 타입 | 프로토콜 | 포트 | 소스 | 설명 |
-|------|---------|------|------|------|
-| HTTPS | TCP | 443 | ecs-sg | ECS에서 AWS 서비스 접근 |
-
+**보안 효과**:
 ```
-ECS → VPC Endpoint → AWS 서비스
-         ↑
-   [vpce-sg 검사]
-   
-허용되는 서비스:
-- ECR (Docker 이미지)
-- CloudWatch Logs (로그)
-- Secrets Manager (비밀번호)
-- SSM Parameter Store (설정값)
-- KMS (암호화 키)
+✅ ECS → RDS (허용)
+✅ Lambda → RDS (허용, GenAI용)
+❌ 인터넷 → RDS (차단)
+❌ ALB → RDS (차단)
 ```
 
 ---
@@ -396,8 +337,11 @@ ECS 서비스가 하는 일:
 | 정책 이름 | 용도 |
 |----------|------|
 | **AmazonECSTaskExecutionRolePolicy** | AWS 관리형 - ECR, CloudWatch 기본 권한 |
-| **SecretsManagerReadWrite** | Secrets Manager 비밀 읽기 |
-| **SSMParameterStoreAccess** | Parameter Store 파라미터 읽기 |
+| **AmazonSSMReadOnlyAccess** | Parameter Store 읽기 권한 |
+| **parameter-store-read** | 프로젝트별 Parameter Store 접근 정책 |
+| **rds-secret-access** | RDS Secrets Manager 접근 정책 |
+| **parameter-store-access** | Parameter Store 쓰기 권한 정책 |
+| **cloudwatch-logs-access** | CloudWatch Logs 접근 정책 |
 
 #### 정책 예시 (Secrets Manager)
 
@@ -590,9 +534,11 @@ terraform plan -var-file=terraform.tfvars
 ```
 
 **확인사항**:
-- 보안 그룹 4개 생성 (ALB, ECS, RDS, VPC Endpoint)
+- 보안 그룹 2개 생성 (ECS, RDS)
 - IAM 역할 1개 생성 (ECS Task Execution Role)
-- IAM 정책 3개 생성 (Secrets Manager, SSM, CloudWatch)
+- IAM 정책 5개 생성 (Parameter Store, Secrets Manager, CloudWatch 등)
+- IAM 사용자 4개 생성 (팀 멤버별)
+- IAM 그룹 1개 생성 (CLI 사용자 그룹)
 
 #### 5단계: 배포 실행
 ```bash
@@ -879,20 +825,23 @@ terraform plan -var-file=terraform.tfvars
 - ✅ **최소 권한 원칙**: 꼭 필요한 권한만 부여
 
 ### 생성되는 주요 리소스
-- 보안 그룹 4개 (ALB, ECS, RDS, VPC Endpoint)
+- 보안 그룹 2개 (ECS, RDS)
 - IAM 역할 1개 (ECS Task Execution Role)
-- IAM 정책 3개 (Secrets Manager, SSM, CloudWatch)
+- IAM 정책 5개 (Parameter Store, Secrets Manager, CloudWatch 등)
+- IAM 사용자 4개 (팀 멤버별)
+- IAM 그룹 1개 (CLI 사용자 그룹)
 
 ### 보안 규칙 요약
 ```
-Internet → ALB (80,443)
-ALB → ECS (8080-8088)
-ECS → RDS (5432)
-ECS → VPC Endpoints (443)
+Internet → ALB (80,443) - 07-application 레이어
+ALB → ECS (8080-8088) - 통합 시 적용
+ECS → RDS (3306)
+ECS → VPC Endpoints (443) - 네트워크 레이어
+Lambda → RDS (3306) - GenAI용
 ```
 
 ---
 
-**작성일**: 2025-11-09  
-**작성자**: 황영현 
-**버전**: 1.0
+**작성일**: 2025-11-20
+**작성자**: 황영현
+**버전**: 1.1

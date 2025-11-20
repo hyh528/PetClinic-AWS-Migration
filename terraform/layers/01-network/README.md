@@ -76,9 +76,9 @@ VPC: 10.0.0.0/16
 
 ```
 가용영역 A (us-west-2a)              가용영역 B (us-west-2b)
-├─ Public:      10.0.0.0/24        ├─ Public:      10.0.1.0/24
-├─ Private App: 10.0.10.0/24       ├─ Private App: 10.0.11.0/24
-└─ Private DB:  10.0.20.0/24       └─ Private DB:  10.0.21.0/24
+├─ Public:      10.0.1.0/24        ├─ Public:      10.0.2.0/24
+├─ Private App: 10.0.3.0/24       ├─ Private App: 10.0.4.0/24
+└─ Private DB:  10.0.5.0/24       └─ Private DB:  10.0.6.0/24
 ```
 
 ---
@@ -115,8 +115,8 @@ Private Subnet (ECS) → NAT Gateway → Internet Gateway → 인터넷
 
 **비용 최적화**:
 - NAT Gateway는 비쌉니다 ($30-40/월)
-- 우리 프로젝트: 1개만 사용 (모든 AZ가 공유)
-- 고가용성 필요 시: AZ마다 1개씩 (`create_nat_per_az = true`)
+- 우리 프로젝트: AZ마다 1개씩 사용 (고가용성)
+- 비용 절감 필요 시: 1개만 사용 (`create_nat_per_az = false`)
 
 ---
 
@@ -204,20 +204,20 @@ ECS → VPC Endpoint → ECR
 │  ║         가용영역 A (us-west-2a)                               ║  │
 │  ╠═══════════════════════════════════════════════════════════════╣  │
 │  ║  ┌─────────────────────────────────────────────────────┐     ║  │
-│  ║  │  Public Subnet (10.0.0.0/24)                        │     ║  │
+│  ║  │  Public Subnet (10.0.1.0/24)                        │     ║  │
 │  ║  │  - ALB (Application Load Balancer)                  │     ║  │
 │  ║  │  - NAT Gateway ──→ Elastic IP                      │     ║  │
 │  ║  └─────────────────────────────────────────────────────┘     ║  │
 │  ║           │                                                   ║  │
 │  ║  ┌────────▼──────────────────────────────────────────┐       ║  │
-│  ║  │  Private App Subnet (10.0.10.0/24)               │       ║  │
+│  ║  │  Private App Subnet (10.0.3.0/24)               │       ║  │
 │  ║  │  - ECS Fargate 컨테이너 (Spring 마이크로서비스)   │       ║  │
 │  ║  │  - Lambda 함수                                    │       ║  │
 │  ║  │  [VPC Endpoints: ECR, Logs, Secrets Manager]     │       ║  │
 │  ║  └────────┬──────────────────────────────────────────┘       ║  │
 │  ║           │                                                   ║  │
 │  ║  ┌────────▼──────────────────────────────────────────┐       ║  │
-│  ║  │  Private DB Subnet (10.0.20.0/24)                │       ║  │
+│  ║  │  Private DB Subnet (10.0.5.0/24)                │       ║  │
 │  ║  │  - Aurora PostgreSQL (Primary)                   │       ║  │
 │  ║  └───────────────────────────────────────────────────┘       ║  │
 │  ╚═══════════════════════════════════════════════════════════════╝  │
@@ -226,17 +226,17 @@ ECS → VPC Endpoint → ECR
 │  ║         가용영역 B (us-west-2b)                               ║  │
 │  ╠═══════════════════════════════════════════════════════════════╣  │
 │  ║  ┌─────────────────────────────────────────────────────┐     ║  │
-│  ║  │  Public Subnet (10.0.1.0/24)                        │     ║  │
+│  ║  │  Public Subnet (10.0.2.0/24)                        │     ║  │
 │  ║  │  - ALB (다중화)                                      │     ║  │
 │  ║  └─────────────────────────────────────────────────────┘     ║  │
 │  ║           │                                                   ║  │
 │  ║  ┌────────▼──────────────────────────────────────────┐       ║  │
-│  ║  │  Private App Subnet (10.0.11.0/24)               │       ║  │
+│  ║  │  Private App Subnet (10.0.4.0/24)               │       ║  │
 │  ║  │  - ECS Fargate 컨테이너 (복제본)                  │       ║  │
 │  ║  └────────┬──────────────────────────────────────────┘       ║  │
 │  ║           │                                                   ║  │
 │  ║  ┌────────▼──────────────────────────────────────────┐       ║  │
-│  ║  │  Private DB Subnet (10.0.21.0/24)                │       ║  │
+│  ║  │  Private DB Subnet (10.0.6.0/24)                │       ║  │
 │  ║  │  - Aurora PostgreSQL (Replica - Read Only)       │       ║  │
 │  ║  └───────────────────────────────────────────────────┘       ║  │
 │  ╚═══════════════════════════════════════════════════════════════╝  │
@@ -248,9 +248,9 @@ ECS → VPC Endpoint → ECR
 
 | 서브넷 타입 | AZ-A | AZ-B | 사용 가능 IP | 용도 |
 |-------------|------|------|--------------|------|
-| Public | 10.0.0.0/24 | 10.0.1.0/24 | 각 251개 | ALB, NAT GW |
-| Private App | 10.0.10.0/24 | 10.0.11.0/24 | 각 251개 | ECS, Lambda |
-| Private DB | 10.0.20.0/24 | 10.0.21.0/24 | 각 251개 | Aurora DB |
+| Public | 10.0.1.0/24 | 10.0.2.0/24 | 각 251개 | ALB, NAT GW |
+| Private App | 10.0.3.0/24 | 10.0.4.0/24 | 각 251개 | ECS, Lambda |
+| Private DB | 10.0.5.0/24 | 10.0.6.0/24 | 각 251개 | Aurora DB |
 
 **주의**: AWS는 각 서브넷에서 5개 IP를 예약합니다 (.0, .1, .2, .3, .255)
 
@@ -372,11 +372,11 @@ module "vpc" {
   vpc_cidr    = "10.0.0.0/16"
   azs         = ["us-west-2a", "us-west-2b"]
   
-  public_subnet_cidrs      = ["10.0.0.0/24", "10.0.1.0/24"]
-  private_app_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
-  private_db_subnet_cidrs  = ["10.0.20.0/24", "10.0.21.0/24"]
-  
-  create_nat_per_az = false  # NAT Gateway 1개만 사용
+  public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_app_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+  private_db_subnet_cidrs  = ["10.0.5.0/24", "10.0.6.0/24"]
+
+  create_nat_per_az = true  # AZ마다 NAT Gateway 1개씩 (고가용성)
 }
 
 # 3. VPC 엔드포인트
@@ -413,9 +413,9 @@ vpc_cidr = "10.0.0.0/16"
 azs = ["us-west-2a", "us-west-2b"]
 
 # 서브넷 CIDR
-public_subnet_cidrs      = ["10.0.0.0/24", "10.0.1.0/24"]
-private_app_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
-private_db_subnet_cidrs  = ["10.0.20.0/24", "10.0.21.0/24"]
+public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
+private_app_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+private_db_subnet_cidrs  = ["10.0.5.0/24", "10.0.6.0/24"]
 
 # VPC 엔드포인트
 vpc_endpoint_services = [
@@ -429,8 +429,8 @@ vpc_endpoint_services = [
 ]
 
 # 비용 최적화
-create_nat_per_az = false  # NAT Gateway 1개만
-enable_ipv6       = false  # IPv6 비활성화
+create_nat_per_az = true   # AZ마다 NAT Gateway 1개씩 (고가용성)
+enable_ipv6       = true   # IPv6 듀얼스택 지원 (비용 절감)
 
 # 태그
 tags = {
@@ -498,7 +498,7 @@ terraform plan -var-file=terraform.tfvars
 - 생성될 리소스 개수 (약 30-40개)
 - VPC CIDR 주소
 - 서브넷 개수 (6개: Public 2, Private App 2, Private DB 2)
-- NAT Gateway 개수 (1개 또는 2개)
+- NAT Gateway 개수 (2개 - AZ마다 1개씩)
 - VPC 엔드포인트 개수
 
 #### 5단계: 배포 실행
@@ -537,15 +537,15 @@ terraform output nat_gateway_ids
 |--------|------|---------------|---------------|
 | VPC | 1 | $0 | $0 |
 | Internet Gateway | 1 | $0 | $0 |
-| NAT Gateway | 1 | $32 | $384 |
-| Elastic IP (NAT용) | 1 | $3.6 | $43 |
+| NAT Gateway | 2 | $64 | $768 |
+| Elastic IP (NAT용) | 2 | $7.2 | $86 |
 | VPC Interface Endpoint | 7개 | $49 | $588 |
 | S3 Gateway Endpoint | 1 | $0 | $0 |
-| **합계** | - | **$85** | **$1,015** |
+| **합계** | - | **$157** | **$1,859** |
 
 **비용 최적화 팁**:
-- NAT Gateway를 1개만 사용 (AZ당 1개 대신)
-- 개발 환경에서는 필요 없을 때 삭제
+- 개발 환경에서는 NAT Gateway를 1개만 사용으로 변경 가능 (`create_nat_per_az = false`)
+- 미사용 시 리소스 삭제
 - VPC 엔드포인트는 필수 항목만 활성화
 
 ---
@@ -664,27 +664,30 @@ terraform plan -var-file=terraform.tfvars
 ## 요약
 
 ### 핵심 개념 정리
-- ✅ **VPC**: 나만의 독립된 네트워크 공간 (10.0.0.0/16)
+- ✅ **VPC**: 나만의 독립된 네트워크 공간 (10.0.0.0/16 + IPv6 /56)
 - ✅ **Public Subnet**: 인터넷 직접 접근 가능 (ALB 배치)
 - ✅ **Private App Subnet**: NAT Gateway 경유 인터넷 접근 (ECS 배치)
-- ✅ **Private DB Subnet**: 인터넷 접근 불가 (Aurora 배치)
-- ✅ **NAT Gateway**: Private → 인터넷 단방향 통신
+- ✅ **Private DB Subnet**: IPv6 EIGW로 제한적 인터넷 접근 (Aurora 배치)
+- ✅ **NAT Gateway**: Private → 인터넷 단방향 통신 (IPv4)
+- ✅ **Egress-only IGW**: Private → 인터넷 단방향 통신 (IPv6)
 - ✅ **VPC Endpoint**: AWS 서비스 프라이빗 접근 (비용/속도 최적화)
 
 ### 생성되는 주요 리소스
-- VPC 1개
+- VPC 1개 (IPv4/IPv6 듀얼스택)
 - 서브넷 6개 (AZ별 3종류)
-- NAT Gateway 1개
+- NAT Gateway 2개
 - Internet Gateway 1개
+- Egress-only Internet Gateway 1개 (IPv6용)
 - VPC 엔드포인트 8개
 - 라우팅 테이블 4개
 
 ### 예상 비용
-- **월 $85** (NAT Gateway + VPC Endpoints)
+- **월 $157** (NAT Gateway + VPC Endpoints + IPv6 듀얼스택)
+- IPv6: 무료 (Egress-only Internet Gateway 무료)
 - 개발 환경: 미사용 시 삭제 권장
 
 ---
 
-**작성일**: 2025-11-09  
-**작성자**: 황영현 
-**버전**: 1.0
+**작성일**: 2025-11-20
+**작성자**: 황영현
+**버전**: 1.2

@@ -116,22 +116,31 @@ results = cursor.fetchall()
 - Connection Pool 관리 어려움
 - 동시 연결 수 제한
 
-#### RDS Data API 방식
+#### RDS Data API 방식 (실제 구현)
 
 ```python
-# ✅ 새 방식: HTTP API, VPC 불필요 (하지만 우리는 VPC 사용)
+# ✅ 실제 구현: AI 기반 SQL 생성 + RDS Data API
 import boto3
 
-client = boto3.client('rds-data')
+# 1. 질문 유형 분석 (AI 사용)
+question_type = analyze_question_type(question)  # DATABASE_QUERY or GENERAL_ADVICE
 
-response = client.execute_statement(
-    resourceArn='arn:aws:rds:...:cluster:petclinic',
-    secretArn='arn:aws:secretsmanager:...:secret:...',
-    database='petclinic',
-    sql='SELECT * FROM owners'
-)
+# 2. 데이터베이스 쿼리가 필요한 경우 AI로 SQL 생성
+if question_type == 'DATABASE_QUERY':
+    sql_info = generate_sql_from_question(question)  # AI가 SQL 생성
+    results = execute_sql(sql_info['database'], sql_info['sql'])
 
-results = response['records']
+# 3. RDS Data API로 SQL 실행
+def execute_sql(database: str, sql: str):
+    client = boto3.client('rds-data')
+    response = client.execute_statement(
+        resourceArn=os.getenv('DB_CLUSTER_ARN'),
+        secretArn=os.getenv('DB_SECRET_ARN'),
+        database=database,
+        sql=sql,
+        includeResultMetadata=True
+    )
+    return parse_results(response)  # 결과 파싱
 ```
 
 **장점**:
@@ -139,8 +148,9 @@ results = response['records']
 - 자동 연결 관리
 - 동시 연결 수 무제한
 - IAM 기반 인증
+- **AI 기반 자연어 SQL 변환** (핵심 차별화)
 
-**우리 프로젝트**: RDS Data API 사용 (VPC 내에서 실행)
+**우리 프로젝트**: AI 기반 SQL 생성 + RDS Data API (VPC 내에서 실행)
 
 ---
 
@@ -199,37 +209,42 @@ results = response['records']
 
 ## Lambda 함수 아키텍처
 
-### 1. 전체 구조
+### 1. 전체 구조 (실제 AI 기반 구현)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│             Lambda Function                              │
+│             Lambda Function (AI 기반 SQL 생성)           │
 │  ┌───────────────────────────────────────────────────┐  │
 │  │  lambda_handler(event, context)                   │  │
 │  │  - 입력: 사용자 질문                              │  │
-│  │  - 출력: AI 응답                                  │  │
+│  │  - 출력: AI 응답 + 데이터 소스 정보               │  │
 │  └──────────┬────────────────────────────────────────┘  │
 │             │                                            │
 │  ┌──────────▼────────────────────────────────────────┐  │
-│  │  1. 데이터베이스 정보 조회 (RDS Data API)        │  │
-│  │     - owners, pets, vets, visits 테이블           │  │
-│  │     - SQL: SELECT * FROM ...                      │  │
+│  │  1. 질문 유형 분석 (AI: Bedrock Claude 3)       │  │
+│  │     - DATABASE_QUERY vs GENERAL_ADVICE           │  │
 │  └──────────┬────────────────────────────────────────┘  │
 │             │                                            │
 │  ┌──────────▼────────────────────────────────────────┐  │
-│  │  2. 프롬프트 생성                                 │  │
-│  │     - 시스템 프롬프트 + DB 데이터 + 사용자 질문  │  │
+│  │  2. DB 쿼리 필요 시 AI SQL 생성                   │  │
+│  │     - 자연어 → SQL 변환 (Claude 3)               │  │
+│  │     - 데이터베이스 스키마 기반                   │  │
 │  └──────────┬────────────────────────────────────────┘  │
 │             │                                            │
 │  ┌──────────▼────────────────────────────────────────┐  │
-│  │  3. Bedrock API 호출 (Claude 3 Sonnet)          │  │
-│  │     - 모델: anthropic.claude-3-sonnet            │  │
-│  │     - 응답: AI 답변                               │  │
+│  │  3. RDS Data API로 DB 조회                       │  │
+│  │     - AI 생성 SQL 실행                           │  │
+│  │     - 결과 파싱 및 포맷팅                        │  │
 │  └──────────┬────────────────────────────────────────┘  │
 │             │                                            │
 │  ┌──────────▼────────────────────────────────────────┐  │
-│  │  4. 응답 반환                                     │  │
-│  │     - JSON 형식                                   │  │
+│  │  4. 최종 AI 응답 생성 (Bedrock Claude 3)        │  │
+│  │     - DB 데이터 + 사용자 질문 → 자연어 응답      │  │
+│  └──────────┬────────────────────────────────────────┘  │
+│             │                                            │
+│  ┌──────────▼────────────────────────────────────────┐  │
+│  │  5. JSON 응답 반환                               │  │
+│  │     - answer, data_source, question_type         │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -239,86 +254,61 @@ results = response['records']
 ### 2. Lambda 함수 코드 구조
 
 ```python
-# lambda_function.py
+# lambda_function.py (실제 구현 - AI 기반 SQL 생성)
 
 def lambda_handler(event, context):
-    """Lambda 진입점"""
+    """Lambda 진입점 - HTTP 요청 및 직접 호출 모두 지원"""
     try:
-        # 1. 사용자 질문 파싱
-        body = json.loads(event.get('body', '{}'))
-        user_question = body.get('question', '')
-        
-        # 2. 데이터베이스 정보 조회
-        db_context = get_database_context()
-        
-        # 3. Bedrock 호출
-        ai_response = call_bedrock_api(user_question, db_context)
-        
-        # 4. 응답 반환
+        # 질문 유형 분석 (DATABASE_QUERY vs GENERAL_ADVICE)
+        question_analysis = analyze_question_type(question)
+        question_type = question_analysis.get('type', 'GENERAL_ADVICE')
+
+        if question_type == 'DATABASE_QUERY':
+            # AI가 SQL 생성 후 데이터베이스 조회
+            db_results = query_database_by_question(question)
+            context_data = format_context_data(db_results, question)
+            ai_response = call_bedrock_ai(question, context_data, is_general_advice=False)
+        else:
+            # 일반적인 반려동물 상담
+            ai_response = call_bedrock_ai(question, "", is_general_advice=True)
+
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'answer': ai_response
-            })
+                'question': question,
+                'answer': ai_response,
+                'data_source': 'aurora_rds_data_api' if question_type == 'DATABASE_QUERY' else 'general_advice',
+                'question_type': question_type
+            }, ensure_ascii=False)
         }
     except Exception as e:
-        logger.error(f"오류 발생: {str(e)}")
         return {
             'statusCode': 500,
             'body': json.dumps({'error': str(e)})
         }
 
-def get_database_context():
-    """RDS Data API로 DB 조회"""
-    client = boto3.client('rds-data')
-    
-    # Owners 조회
-    owners = execute_sql(
-        'petclinic',
-        'SELECT id, first_name, last_name, city FROM owners'
-    )
-    
-    # Pets 조회
-    pets = execute_sql(
-        'petclinic',
-        'SELECT id, name, birth_date, owner_id FROM pets'
-    )
-    
-    return {
-        'owners': owners,
-        'pets': pets
-    }
+def analyze_question_type(question: str) -> Dict[str, Any]:
+    """AI를 사용해서 질문 유형 분석 (DB 조회 필요 여부)"""
+    # Bedrock Claude 3로 질문 분석
+    # DATABASE_QUERY: "춘식이를 키우는 사람은 누구야?"
+    # GENERAL_ADVICE: "강아지가 기침을 해요"
 
-def call_bedrock_api(question, db_context):
-    """Bedrock Claude 3 호출"""
-    bedrock = boto3.client('bedrock-runtime')
-    
-    prompt = f"""
-    당신은 PetClinic 데이터베이스 전문가입니다.
-    
-    데이터베이스 정보:
-    {json.dumps(db_context, ensure_ascii=False)}
-    
-    사용자 질문: {question}
-    
-    위 데이터를 바탕으로 질문에 답변해주세요.
-    """
-    
-    response = bedrock.invoke_model(
-        modelId='anthropic.claude-3-sonnet-20240229-v1:0',
-        body=json.dumps({
-            'anthropic_version': 'bedrock-2023-05-31',
-            'messages': [{
-                'role': 'user',
-                'content': prompt
-            }],
-            'max_tokens': 1000,
-            'temperature': 0.7
-        })
+def generate_sql_from_question(question: str) -> Dict[str, Any]:
+    """AI를 사용해서 자연어 질문을 SQL로 변환"""
+    # 데이터베이스 스키마 기반 SQL 생성
+    # 예: "춘식이를 키우는 사람은 누구야?" → 적절한 JOIN SQL
+
+def execute_sql(database: str, sql: str) -> List[Dict]:
+    """RDS Data API로 SQL 실행"""
+    client = boto3.client('rds-data')
+    response = client.execute_statement(
+        resourceArn=os.getenv('DB_CLUSTER_ARN'),
+        secretArn=os.getenv('DB_SECRET_ARN'),
+        database=database,
+        sql=sql,
+        includeResultMetadata=True
     )
-    
-    result = json.loads(response['body'].read())
-    return result['content'][0]['text']
+    # 결과 파싱 및 반환
 ```
 
 ---
@@ -326,16 +316,16 @@ def call_bedrock_api(question, db_context):
 ### 3. 환경 변수
 
 ```hcl
-# main.tf
+# main.tf (실제 환경 변수)
 environment {
   variables = {
-    AWS_REGION       = "us-west-2"
-    BEDROCK_MODEL_ID = "anthropic.claude-3-sonnet-20240229-v1:0"
+    BEDROCK_MODEL_ID = var.bedrock_model_id
     LOG_LEVEL        = "INFO"
-    DB_CLUSTER_ARN   = "arn:aws:rds:...:cluster:petclinic-dev"
-    DB_SECRET_ARN    = "arn:aws:secretsmanager:...:secret:..."
+    DB_CLUSTER_ARN   = data.terraform_remote_state.database.outputs.cluster_arn
+    DB_SECRET_ARN    = data.terraform_remote_state.database.outputs.master_user_secret_name
   }
 }
+# AWS_REGION은 Lambda 런타임에서 자동으로 제공됨
 ```
 
 ---
@@ -851,13 +841,14 @@ terraform plan -var-file=terraform.tfvars
 - 보안 그룹: 1개
 - CloudWatch Log Group: 1개
 
-### Lambda 환경 변수
+### Lambda 환경 변수 (실제)
 ```
-AWS_REGION=us-west-2
 BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+LOG_LEVEL=INFO
 DB_CLUSTER_ARN=arn:aws:rds:...:cluster:petclinic-dev
 DB_SECRET_ARN=arn:aws:secretsmanager:...:secret:...
 ```
+# AWS_REGION은 Lambda 런타임에서 자동 제공
 
 ### 비용
 - Lambda: $1.70/월
@@ -866,6 +857,6 @@ DB_SECRET_ARN=arn:aws:secretsmanager:...:secret:...
 
 ---
 
-**작성일**: 2025-11-09  
-**작성자**: 황영현 
-**버전**: 1.0
+**작성일**: 2025-11-20
+**작성자**: 황영현
+**버전**: 1.1
