@@ -1541,10 +1541,3 @@ aws logs start-query \
 4. **비용 최적화**
    - Cost Anomaly Detection
    - Savings Plans 활용
-
----
-
-**작성일**: 2024-01-15  
-**버전**: 1.0  
-**작성자**: PetClinic 황영현 
-**업데이트**: WAF 로깅 제거 반영 (비용 최적화)
