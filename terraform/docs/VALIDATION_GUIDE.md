@@ -31,7 +31,8 @@ terraform/
 │   ├── 08-api-gateway/
 │   ├── 09-aws-native/
 │   ├── 10-monitoring/
-│   └── 11-frontend/
+│   ├── 11-frontend/
+│   └── 12-notification/
 └── modules/
 ```
 
@@ -57,7 +58,7 @@ aws sts get-caller-identity
 cd terraform/layers
 
 # 각 레이어별 원격 상태 확인 (백엔드 연결 필요)
-for dir in 01-network 02-security 03-database 07-application 09-monitoring 10-aws-native; do
+for dir in 01-network 02-security 03-database 04-parameter-store 05-cloud-map 06-lambda-genai 07-application 08-api-gateway 09-aws-native 10-monitoring 11-frontend 12-notification; do
     echo "=== $dir 레이어 확인 ==="
     cd $dir
     terraform init -backend-config=backend.config -reconfigure >/dev/null 2>&1
@@ -96,7 +97,7 @@ done
 # 레이어별 검증 (백엔드 없이)
 cd terraform/layers
 
-for layer in 01-network 02-security 03-database 04-parameter-store 05-cloud-map 06-lambda-genai 07-application 08-api-gateway 09-aws-native 10-monitoring; do
+for layer in 01-network 02-security 03-database 04-parameter-store 05-cloud-map 06-lambda-genai 07-application 08-api-gateway 09-aws-native 10-monitoring 11-frontend 12-notification; do
     echo "=== $layer 레이어 검증 ==="
     cd "$layer"
     terraform fmt -check
@@ -165,12 +166,28 @@ terraform apply -var-file=../../envs/dev.tfvars
 
 ```bash
 cd terraform/layers/07-application
-
-# ⚠️ 현재 알려진 이슈: task_role_arn 속성 오류
-# 배포 전 이슈 해결 필요
-
 terraform init -backend-config=backend.config -reconfigure
 terraform plan -var-file=../../envs/dev.tfvars  # 오류 확인
+```
+
+### 3.6 기타 레이어 (순차적 진행)
+
+나머지 레이어들도 동일한 방식으로 검증 및 배포합니다:
+
+- **04-parameter-store**
+- **05-cloud-map**
+- **06-lambda-genai**
+- **08-api-gateway**
+- **09-aws-native**
+- **10-monitoring**
+- **11-frontend**
+- **12-notification**
+
+```bash
+# 예시: 12-notification 레이어
+cd terraform/layers/12-notification
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 ## 🚨 4단계: 문제 해결

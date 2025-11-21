@@ -203,7 +203,26 @@ terraform apply -var-file=../../envs/dev.tfvars
 
 ---
 
+#### 12. Notification Layer
+```bash
+cd terraform/layers/12-notification
+terraform init -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/dev.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
+```
+**이유**: CloudWatch 알람을 Slack으로 전송하기 위한 알림 시스템 구축
 
+**생성 리소스**:
+- SNS 토픽 (알림용)
+- Lambda 함수 (Slack Notifier)
+- CloudWatch Log Group
+- 테스트 알람 (선택사항)
+
+---
+
+### Phase 6: 유틸리티 (Utilities)
+
+#### 13. State Management (Bootstrap)
 **이유**: 다른 레이어들의 상태 관리를 위한 유틸리티 레이어
 
 **생성 리소스**:
@@ -231,6 +250,7 @@ LAYERS=(
     "09-aws-native"
     "10-monitoring"
     "11-frontend"
+    "12-notification"
 )
 
 BASE_DIR="terraform/layers"
@@ -277,7 +297,8 @@ $Layers = @(
     "08-api-gateway",
     "09-aws-native",
     "10-monitoring",
-    "11-frontend"
+    "11-frontend",
+    "12-notification"
 )
 
 $BaseDir = "terraform\layers"
@@ -325,7 +346,7 @@ foreach ($layer in $Layers) {
 **역순으로 실행해야 합니다**:
 ```bash
 # 정리 순서 (역순)
-11-frontend → 10-monitoring → 09-aws-native → 08-api-gateway →
+12-notification → 11-frontend → 10-monitoring → 09-aws-native → 08-api-gateway →
 07-application → 06-lambda-genai → 05-cloud-map → 04-parameter-store →
 03-database → 02-security → 01-network
 ```
@@ -367,8 +388,8 @@ terraform output
 | aws-native | 1-2분 | 통합 설정 |
 | monitoring | 2-3분 | 대시보드 생성 |
 | frontend | 3-5분 | S3 + CloudFront 배포 |
+| notification | 1-2분 | SNS + Lambda 배포 |
 
-
-**총 예상 시간**: 35-50분
+**총 예상 시간**: 36-52분
 
 이 순서를 따라 실행하면 의존성 문제 없이 전체 인프라를 성공적으로 구축할 수 있습니다!

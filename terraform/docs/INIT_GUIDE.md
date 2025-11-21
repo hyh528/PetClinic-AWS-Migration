@@ -46,7 +46,3 @@ CI(파이프라인) 권장사항
 - `terraform init`은 실제로 S3/KMS/DynamoDB에 접근하므로 적절한 권한이 있는 자격증명이 필요합니다.
 - `.terraform.lock.hcl`은 provider 버전 재현성을 위해 커밋하는 것을 권장합니다.
 - 레이어별 key 네이밍 규칙을 명확히 문서화하세요. 예: `dev/01-network/terraform.tfstate`, `prod/01-network/terraform.tfstate`.
-
-추가 지원
-- 원하시면 이 문서에 환경별 예시(staging/prod), CI 파이프라인 샘플, 또는 `scripts/init-layer.sh` 같은 단일 레이어 초기화 유틸 스크립트를 추가해 드리겠습니다.
-

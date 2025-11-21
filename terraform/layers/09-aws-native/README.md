@@ -594,28 +594,43 @@ log_retention_days = 14
 ```hcl
 module "aws_native_integration" {
   source = "../../modules/aws-native-integration"
-  
+
   # 기본 설정
   name_prefix = "petclinic"
   aws_region  = "us-west-2"
-  
-  # API Gateway 설정 (08-api-gateway에서 참조)
-  api_gateway_rest_api_id = data.terraform_remote_state.api_gateway.outputs.api_gateway_id
-  api_gateway_stage_name  = data.terraform_remote_state.api_gateway.outputs.api_gateway_stage_name
-  
-  # Lambda 설정 (06-lambda-genai에서 참조)
+  common_tags = local.layer_common_tags
+
+  # API Gateway 설정 (data.tf에서 참조)
+  api_gateway_rest_api_id      = data.terraform_remote_state.api_gateway.outputs.api_gateway_id
+  api_gateway_root_resource_id = "dy3iydgydc" # root resource ID (실제 API Gateway에서 확인)
+  api_gateway_execution_arn    = data.terraform_remote_state.api_gateway.outputs.api_gateway_execution_arn
+  api_gateway_api_name         = "petclinic-api" # 고정값
+  api_gateway_stage_name       = data.terraform_remote_state.api_gateway.outputs.api_gateway_stage_name
+  api_gateway_domain_name      = "placeholder" # 실제로는 모듈에서 생성
+  api_gateway_stage_arn        = "placeholder" # 실제로는 모듈에서 생성
+
+  # Lambda GenAI 설정 (data.tf에서 참조)
   lambda_genai_invoke_arn    = data.terraform_remote_state.lambda_genai.outputs.lambda_function_invoke_arn
   lambda_genai_function_name = data.terraform_remote_state.lambda_genai.outputs.lambda_function_name
-  
-  # 기능 활성화
+
+  # 기능 활성화 플래그
   enable_genai_integration     = true
   enable_monitoring            = true
   create_integration_dashboard = true
-  enable_waf_protection        = false  # 선택
-  
-  # 알람 임계값
-  api_gateway_4xx_threshold = 10
-  lambda_error_threshold    = 5
+  enable_health_checks         = true
+  enable_waf_protection        = false
+
+  # 보안 설정
+  require_api_key = false
+
+  # 성능 및 제한 설정
+  genai_integration_timeout_ms = 29000
+  api_gateway_4xx_threshold    = 10
+  lambda_error_threshold       = 5
+  waf_rate_limit               = 2000
+
+  # 알람 설정
+  alarm_actions = ["arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts"]
 }
 ```
 
@@ -650,7 +665,7 @@ cd terraform/layers/09-aws-native
 
 #### 2단계: 변수 파일 확인
 ```bash
-cat terraform.tfvars
+cat ../../envs/dev.tfvars
 ```
 
 예시:
@@ -703,7 +718,7 @@ terraform init \
 
 #### 4단계: 실행 계획 확인
 ```bash
-terraform plan -var-file=terraform.tfvars
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 **확인사항**:
@@ -716,7 +731,7 @@ terraform plan -var-file=terraform.tfvars
 
 #### 5단계: 배포 실행
 ```bash
-terraform apply -var-file=terraform.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 **소요 시간**: 약 1-2분
@@ -922,7 +937,7 @@ AWS Native Integration 레이어 배포가 완료되면:
 ```bash
 cd ../10-monitoring
 terraform init -backend-config=../../backend.hcl -backend-config=backend.config
-terraform plan -var-file=terraform.tfvars
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 ---

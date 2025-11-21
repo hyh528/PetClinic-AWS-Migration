@@ -29,11 +29,21 @@ CloudWatch Alarms → SNS Topic → Lambda Function → Slack
 ## 2. 알림 시스템 배포
 
 ### 2.1 환경 변수 설정
-`terraform/envs/dev.tfvars` 파일에 Slack 설정 추가:
 
+**⚠️ 보안 주의**: `slack_webhook_url`과 같은 민감한 정보는 `dev.tfvars`에 직접 하드코딩하지 마세요. 대신 환경 변수나 `.env` 파일을 사용해야 합니다.
+
+**1. `.env` 파일 설정 (프로젝트 루트)**
+`.env` 파일을 생성하고 다음과 같이 설정합니다:
+```bash
+# .env
+TF_VAR_slack_webhook_url="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+```
+
+**2. `terraform/envs/dev.tfvars` 설정**
+민감하지 않은 변수만 파일에 저장합니다:
 ```hcl
 # Slack 알림 설정
-slack_webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+# slack_webhook_url은 환경변수(TF_VAR_slack_webhook_url)로 주입받습니다.
 slack_channel     = "#petclinic-alerts"
 email_endpoint    = "admin@yourcompany.com"  # 선택사항
 

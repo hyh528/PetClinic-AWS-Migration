@@ -272,7 +272,7 @@ curl -X POST https://hooks.slack.com/services/T1234/B5678/xyz... \
 Webhook URL:
 https://hooks.slack.com/services/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jkl
 
-→ 이 URL을 terraform.tfvars에 입력
+→ 이 URL을 `../../envs/dev.tfvars`에 입력
 ```
 
 ---
@@ -339,8 +339,8 @@ cd terraform/layers/12-notification
 
 #### 2단계: 변수 파일 수정
 ```bash
-# terraform.tfvars 편집
-vi terraform.tfvars
+# ../../envs/dev.tfvars 편집
+vi ../../envs/dev.tfvars
 ```
 
 **중요한 변수**:
@@ -383,7 +383,7 @@ terraform init \
 
 #### 4단계: 실행 계획 확인
 ```bash
-terraform plan -var-file=terraform.tfvars
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 **확인사항**:
@@ -395,7 +395,7 @@ terraform plan -var-file=terraform.tfvars
 
 #### 5단계: 배포 실행
 ```bash
-terraform apply -var-file=terraform.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 **소요 시간**: 약 1-2분
@@ -505,7 +505,7 @@ cat response.json
 ├── outputs.tf           # 출력값 (SNS ARN, Lambda 이름)
 ├── backend.tf           # Terraform 상태 저장
 ├── backend.config       # 백엔드 키 설정
-├── terraform.tfvars     # 실제 값 입력 (Slack Webhook!)
+├── ../../envs/dev.tfvars     # 실제 값 입력 (Slack Webhook!)
 └── README.md            # 이 문서
 ```
 
@@ -516,23 +516,26 @@ cat response.json
 ```hcl
 module "notification" {
   source = "../../modules/notification"
-  
+
   # 기본 설정
   name_prefix = "petclinic"
   environment = "dev"
-  
+
   # Slack 설정
-  slack_webhook_url = var.slack_webhook_url  # 필수!
+  slack_webhook_url = "https://hooks.slack.com/services/T01234/B56789/xyz..." # 실제 값은 dev.tfvars에
+
   slack_channel     = "#petclinic-alerts"
-  
-  # 이메일 알림 (선택)
-  email_endpoint = "admin@example.com"
-  
+
+  # 이메일 알림 (선택사항)
+  email_endpoint = "2501340070@office.kopo.ac.kr" # 이 URL을 `../../envs/dev.tfvars`에 입력
+
   # Lambda 설정
   log_retention_days = 14
-  
-  # 테스트 알람 생성
+
+  # 테스트 설정
   create_test_alarm = true
+
+  tags = local.layer_common_tags
 }
 ```
 
@@ -615,7 +618,7 @@ aws sns list-subscriptions-by-topic \
 # SubscriptionArn: PendingConfirmation  ← 확인 대기 중
 
 # 해결: 이메일 스팸함 확인 또는 재구독
-terraform apply -var-file=terraform.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 ---
@@ -749,7 +752,7 @@ Notification 레이어 배포가 완료되면:
 # 10-monitoring 레이어에서 SNS 연결
 cd ../10-monitoring
 # main.tf 수정: alarm_actions 추가
-terraform apply -var-file=terraform.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 ---
@@ -783,7 +786,7 @@ Slack 채널에 메시지 표시
 
 ### 설정 필수 항목
 ```bash
-# terraform.tfvars
+# ../../envs/dev.tfvars
 slack_webhook_url = "https://hooks.slack.com/services/..."  # 필수!
 slack_channel     = "#petclinic-alerts"
 ```

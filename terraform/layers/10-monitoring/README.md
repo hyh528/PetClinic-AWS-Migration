@@ -414,7 +414,7 @@ aws s3 cp s3://petclinic-dev-cloudtrail-logs/AWSLogs/123456789012/CloudTrail/us-
 ├── outputs.tf           # 출력값
 ├── backend.tf           # Terraform 상태 저장
 ├── backend.config       # 백엔드 키 설정
-├── terraform.tfvars     # 실제 값 입력
+├── ../../envs/dev.tfvars     # 실제 값 입력
 └── README.md            # 이 문서
 ```
 
@@ -423,36 +423,45 @@ aws s3 cp s3://petclinic-dev-cloudtrail-logs/AWSLogs/123456789012/CloudTrail/us-
 ### main.tf 주요 구성
 
 ```hcl
-# CloudWatch 모니터링 모듈
+# CloudWatch 모니터링 모듈 호출
 module "cloudwatch" {
   source = "../../modules/cloudwatch"
-  
+
   dashboard_name = "petclinic-dev-Dashboard"
   aws_region     = "us-west-2"
-  
-  # 각 레이어에서 참조
-  api_gateway_name     = "petclinic-api"
+
+  # 각 레이어에서 가져온 리소스 정보 (의존성 역전)
+  api_gateway_name     = local.api_gateway_name
   ecs_cluster_name     = data.terraform_remote_state.application.outputs.ecs_cluster_name
-  lambda_function_name = "petclinic-dev-genai-function"
-  aurora_cluster_name  = data.terraform_remote_state.database.outputs.cluster_identifier
-  
-  # 멀티 서비스 지원
-  ecs_services = data.terraform_remote_state.application.outputs.ecs_services
+  lambda_function_name = local.lambda_function_name
+  aurora_cluster_name  = local.aurora_cluster_name
+
+  # 멀티 서비스 지원 (CloudMap 아키텍처)
+  ecs_services   = data.terraform_remote_state.application.outputs.ecs_services
   alb_arn_suffix = data.terraform_remote_state.application.outputs.alb_arn_suffix
-  
+  target_groups  = data.terraform_remote_state.application.outputs.target_group_arns
+
+  # 레거시 단일 서비스 지원 (하위 호환성)
+  ecs_service_name = try(data.terraform_remote_state.application.outputs.ecs_services["customers"].service_name, "")
+  alb_name         = try(data.terraform_remote_state.application.outputs.alb_dns_name, "")
+
   log_retention_days = 30
-  sns_topic_arn      = var.sns_topic_arn
+  sns_topic_arn      = "arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts"
+
+  tags = var.tags
 }
 
-# CloudTrail 감사 로그 모듈
+# CloudTrail 감사 로그 모듈 호출
 module "cloudtrail" {
   source = "../../modules/cloudtrail"
-  
+
   cloudtrail_name        = "petclinic-dev-audit-trail"
   cloudtrail_bucket_name = "petclinic-dev-cloudtrail-logs"
   aws_region             = "us-west-2"
   log_retention_days     = 90
-  sns_topic_arn          = var.sns_topic_arn
+  sns_topic_arn          = "arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts"
+
+  tags = var.tags
 }
 ```
 
@@ -479,7 +488,7 @@ cd terraform/layers/10-monitoring
 
 #### 2단계: 변수 파일 확인
 ```bash
-cat terraform.tfvars
+cat ../../envs/dev.tfvars
 ```
 
 예시:
@@ -513,7 +522,7 @@ terraform init \
 
 #### 4단계: 실행 계획 확인
 ```bash
-terraform plan -var-file=terraform.tfvars
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 **확인사항**:
@@ -525,7 +534,7 @@ terraform plan -var-file=terraform.tfvars
 
 #### 5단계: 배포 실행
 ```bash
-terraform apply -var-file=terraform.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 **소요 시간**: 약 2-3분
@@ -712,7 +721,7 @@ Monitoring 레이어 배포가 완료되면:
 ```bash
 cd ../11-frontend
 terraform init -backend-config=../../backend.hcl -backend-config=backend.config
-terraform plan -var-file=terraform.tfvars
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 ---

@@ -285,7 +285,7 @@ custom_error_response {
 ```bash
 cd terraform/layers/11-frontend
 terraform init -backend-config=../../backend.hcl -backend-config=backend.config
-terraform apply -var-file=terraform.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 #### 2단계: GitHub Secrets 설정
@@ -464,7 +464,7 @@ jobs:
 ├── outputs.tf           # 출력값 (URL, 버킷 이름 등)
 ├── backend.tf           # Terraform 상태 저장
 ├── backend.config       # 백엔드 키 설정
-├── terraform.tfvars     # 실제 값 입력
+├── ../../envs/dev.tfvars     # 실제 값 입력
 └── README.md            # 이 문서
 ```
 
@@ -476,36 +476,48 @@ jobs:
 # S3 프론트엔드 호스팅
 module "s3_frontend" {
   source = "../../modules/s3-frontend"
-  
+
   name_prefix = "petclinic"
   environment = "dev"
-  
-  enable_versioning     = true   # 파일 버전 관리
-  enable_access_logging = false  # 액세스 로그 (비용 절감)
-  enable_cors           = true   # CORS 허용
+  tags        = local.common_tags
+
+  enable_versioning     = true
+  enable_access_logging = false
+  log_retention_days    = 30
+  enable_cors           = true
 }
 
 # CloudFront CDN
 module "cloudfront" {
   source = "../../modules/cloudfront"
-  
+
   name_prefix = "petclinic"
   environment = "dev"
-  
+  tags        = local.common_tags
+
   # S3 연결
   s3_bucket_name                 = module.s3_frontend.bucket_name
   s3_bucket_regional_domain_name = module.s3_frontend.bucket_regional_domain_name
   cloudfront_oai_path            = module.s3_frontend.cloudfront_oai_path
-  
+
   # API Gateway 통합
   enable_api_gateway_integration = true
-  api_gateway_domain_name        = data.terraform_remote_state.api_gateway.outputs.api_gateway_invoke_url
-  
-  # SPA 라우팅
-  enable_spa_routing = true
-  
-  # 성능
-  price_class = "PriceClass_100"  # 북미, 유럽 (비용 절감)
+  api_gateway_domain_name        = local.api_gateway_domain_name
+
+  # 기본 설정
+  price_class             = "PriceClass_100"
+  enable_spa_routing      = true
+  enable_cors_headers     = false
+  use_default_certificate = true
+  acm_certificate_arn     = null
+  enable_logging          = false
+  log_bucket_domain_name  = module.s3_frontend.bucket_regional_domain_name
+  log_prefix              = "cloudfront/"
+  web_acl_arn             = null
+  enable_monitoring       = true
+  error_4xx_threshold     = 5
+  error_5xx_threshold     = 2
+  alarm_actions           = ["arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts"]
 }
 ```
 

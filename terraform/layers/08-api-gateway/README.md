@@ -621,7 +621,7 @@ Access-Control-Allow-Headers: Content-Type,X-Amz-Date,Authorization,X-Api-Key
 ├── outputs.tf           # 출력값
 ├── backend.tf           # Terraform 상태 저장
 ├── backend.config       # 백엔드 키 설정
-├── terraform.tfvars     # 실제 값 입력
+├── ../../envs/dev.tfvars     # 실제 값 입력
 └── README.md            # 이 문서
 ```
 
@@ -632,38 +632,58 @@ Access-Control-Allow-Headers: Content-Type,X-Amz-Date,Authorization,X-Api-Key
 ```hcl
 module "api_gateway" {
   source = "../../modules/api-gateway"
-  
+
   # 기본 설정
   name_prefix = "petclinic"
   environment = "dev"
   stage_name  = "v1"
-  
-  # ALB 통합 (07-application 레이어에서 참조)
-  alb_dns_name = data.terraform_remote_state.application.outputs.alb_dns_name
-  
-  # Lambda 통합 (06-lambda-genai 레이어에서 참조)
-  enable_lambda_integration  = true
-  lambda_function_invoke_arn = data.terraform_remote_state.lambda_genai.outputs.lambda_function_invoke_arn
-  
-  # 스로틀링
+
+  # ALB 통합 설정 (application 레이어에서 참조)
+  alb_dns_name = local.alb_dns_name
+
+  # Lambda 통합 설정 (GenAI 서비스용)
+  enable_lambda_integration     = true
+  lambda_function_invoke_arn    = local.lambda_function_invoke_arn
+  lambda_integration_timeout_ms = 29000
+
+  # 스로틀링 설정
   throttle_rate_limit  = 1000
   throttle_burst_limit = 2000
-  
-  # WAF Rate Limiting
-  enable_waf_integration = true
-  waf_rate_limit_rules = [
-    {
-      name     = "GeneralRateLimit"
-      priority = 1
-      limit    = 1000
-      window   = 300
-      action   = "BLOCK"
-    }
-  ]
-  
-  # 모니터링
+
+  # 통합 설정
+  integration_timeout_ms = 29000
+
+  # 로깅 및 추적 (임시로 로깅 비활성화)
+  log_retention_days  = 14
+  enable_xray_tracing = false # X-Ray 추적도 임시 비활성화
+
+  # CORS 설정
+  enable_cors = true
+
+  # 사용량 계획
+  create_usage_plan = false
+
+  # 모니터링 설정
   enable_monitoring = true
   create_dashboard  = true
+  alarm_actions     = ["arn:aws:sns:us-west-2:123456789012:petclinic-dev-alerts"]
+
+  # 임계값 설정
+  error_4xx_threshold           = 20
+  error_5xx_threshold           = 10
+  latency_threshold             = 2000
+  integration_latency_threshold = 1500
+
+  # Rate Limiting 설정 (보안 강화)
+  enable_rate_limiting         = true
+  rate_limit_per_ip            = 1000
+  rate_limit_burst_per_ip      = 2000
+  rate_limit_window_minutes    = 1
+  enable_waf_integration       = true
+  rate_limit_alarm_threshold   = 50
+  enable_rate_limit_monitoring = true
+
+  tags = local.layer_common_tags
 }
 ```
 
@@ -697,7 +717,7 @@ cd terraform/layers/08-api-gateway
 
 #### 2단계: 변수 파일 확인
 ```bash
-cat terraform.tfvars
+cat ../../envs/dev.tfvars
 ```
 
 예시:
@@ -761,7 +781,7 @@ terraform init \
 
 #### 4단계: 실행 계획 확인
 ```bash
-terraform plan -var-file=terraform.tfvars
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 **확인사항**:
@@ -772,7 +792,7 @@ terraform plan -var-file=terraform.tfvars
 
 #### 5단계: 배포 실행
 ```bash
-terraform apply -var-file=terraform.tfvars
+terraform apply -var-file=../../envs/dev.tfvars
 ```
 
 **소요 시간**: 약 2-3분
@@ -1066,7 +1086,7 @@ API Gateway 레이어 배포가 완료되면:
 ```bash
 cd ../09-aws-native
 terraform init -backend-config=../../backend.hcl -backend-config=backend.config
-terraform plan -var-file=terraform.tfvars
+terraform plan -var-file=../../envs/dev.tfvars
 ```
 
 ---

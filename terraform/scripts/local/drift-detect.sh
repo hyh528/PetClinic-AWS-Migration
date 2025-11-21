@@ -6,7 +6,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # 환경 설정 (기본값: dev)
 ENVIRONMENT="${1:-dev}"
@@ -23,14 +23,17 @@ LAYERS=(
     "06-lambda-genai"
     "07-application"
     "08-api-gateway"
-    "09-monitoring"
-    "10-aws-native"
+    "09-aws-native"
+    "10-monitoring"
+    "11-frontend"
+    "12-notification"
 )
 
-ENV_DIR="$PROJECT_ROOT/envs/$ENVIRONMENT"
+# 변수 파일 경로
+VAR_FILE="$PROJECT_ROOT/envs/${ENVIRONMENT}.tfvars"
 
-if [ ! -d "$ENV_DIR" ]; then
-    echo "❌ 환경 디렉터리가 존재하지 않습니다: $ENV_DIR"
+if [ ! -f "$VAR_FILE" ]; then
+    echo "❌ 변수 파일이 존재하지 않습니다: $VAR_FILE"
     exit 1
 fi
 
@@ -43,7 +46,7 @@ echo "=====================================" >> "$REPORT_FILE"
 
 # 각 레이어에 대해 drift 감지
 for layer in "${LAYERS[@]}"; do
-    LAYER_DIR="$ENV_DIR/$layer"
+    LAYER_DIR="$PROJECT_ROOT/layers/$layer"
 
     if [ -d "$LAYER_DIR" ]; then
         echo "🔎 Checking drift in $layer..."
@@ -53,7 +56,7 @@ for layer in "${LAYERS[@]}"; do
         # Terraform init (필요시)
         if [ ! -d ".terraform" ]; then
             echo "  🔧 Initializing Terraform..."
-            terraform init -upgrade >/dev/null 2>&1
+            terraform init -backend-config=../../backend.hcl -backend-config=backend.config -reconfigure >/dev/null 2>&1
         fi
 
         echo "" >> "$REPORT_FILE"
@@ -62,7 +65,7 @@ for layer in "${LAYERS[@]}"; do
         echo "------------------------" >> "$REPORT_FILE"
 
         # Plan 실행하여 drift 확인
-        PLAN_OUTPUT=$(terraform plan -detailed-exitcode 2>&1)
+        PLAN_OUTPUT=$(terraform plan -detailed-exitcode -var-file="$VAR_FILE" 2>&1)
         EXIT_CODE=$?
 
         if [ $EXIT_CODE -eq 0 ]; then
