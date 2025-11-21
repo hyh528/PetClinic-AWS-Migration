@@ -1,66 +1,71 @@
-# 🚀 Terraform 레이어 단일화 구조 사용법
+# 🚀 Terraform 서울 리전 레이어 단일화 구조 사용법
 
 ## 📁 구조 개요
 
 ```
-terraform/
+terraform-seoul/
 ├── layers/              # 레이어 단일화 (환경 공통)
 │   ├── dependencies.tf  # 환경 변수 주입 + 의존성 관리
 │   ├── 01-network/
 │   ├── 02-security/
 │   └── ...
 ├── envs/               # 환경별 tfvars
-│   ├── dev.tfvars
-│   ├── staging.tfvars
-│   └── prod.tfvars
+│   └── seoul.tfvars    # 서울 리전 환경 설정
 ├── modules/            # 재사용 가능한 모듈
-├── backend.hcl         # 공통 백엔드 설정
+├── scripts/            # 자동화 스크립트
+│   └── local/
+├── backend.hcl         # 서울 리전 백엔드 설정 (ap-northeast-2)
 ├── provider.tf         # 공통 프로바이더 설정
 └── versions.tf         # Terraform 버전 제약
 ```
 
 ## 🎯 사용법
 
-### 1. 개발 환경 배포
+### 1. 서울 개발 환경 배포 (권장: 자동화 스크립트 사용)
 
+#### 자동화 스크립트 사용 (권장)
 ```bash
+# 프로젝트 루트에서 실행
+cd terraform-seoul
+
+# 1. Network 레이어 초기화 및 배포
+./scripts/local/init-layer.sh 01-network seoul
+./scripts/local/plan-layer.ps1 -Layer 01-network -Environment seoul
+./scripts/local/apply-layer.ps1 -Layer 01-network -Environment seoul
+
+# 2. Security 레이어 초기화 및 배포
+./scripts/local/init-layer.sh 02-security seoul
+./scripts/local/plan-layer.ps1 -Layer 02-security -Environment seoul
+./scripts/local/apply-layer.ps1 -Layer 02-security -Environment seoul
+
+# 3. Database 레이어 초기화 및 배포
+./scripts/local/init-layer.sh 03-database seoul
+./scripts/local/plan-layer.ps1 -Layer 03-database -Environment seoul
+./scripts/local/apply-layer.ps1 -Layer 03-database -Environment seoul
+```
+
+#### 수동 명령어 사용
+```bash
+# 프로젝트 루트에서 실행
+cd terraform-seoul
+
 # 1. Network 레이어
-cd terraform/layers/01-network
-terraform init -backend-config=backend.config -reconfigure
-terraform plan -var-file=../../envs/dev.tfvars
-terraform apply -var-file=../../envs/dev.tfvars
+cd layers/01-network
+terraform init -backend-config=../../backend.hcl -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/seoul.tfvars
+terraform apply -var-file=../../envs/seoul.tfvars
 
 # 2. Security 레이어
 cd ../02-security
-terraform init -backend-config=backend.config -reconfigure
-terraform plan -var-file=../../envs/dev.tfvars
-terraform apply -var-file=../../envs/dev.tfvars
+terraform init -backend-config=../../backend.hcl -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/seoul.tfvars
+terraform apply -var-file=../../envs/seoul.tfvars
 
 # 3. Database 레이어
 cd ../03-database
-terraform init -backend-config=backend.config -reconfigure
-terraform plan -var-file=../../envs/dev.tfvars
-terraform apply -var-file=../../envs/dev.tfvars
-```
-
-### 2. 스테이징 환경 배포
-
-```bash
-# Network 레이어
-cd terraform/layers/01-network
-terraform init -backend-config=backend.config -reconfigure
-terraform plan -var-file=../../envs/staging.tfvars
-terraform apply -var-file=../../envs/staging.tfvars
-```
-
-### 3. 프로덕션 환경 배포
-
-```bash
-# Network 레이어
-cd terraform/layers/01-network
-terraform init -backend-config=backend.config -reconfigure
-terraform plan -var-file=../../envs/prod.tfvars
-terraform apply -var-file=../../envs/prod.tfvars
+terraform init -backend-config=../../backend.hcl -backend-config=backend.config -reconfigure
+terraform plan -var-file=../../envs/seoul.tfvars
+terraform apply -var-file=../../envs/seoul.tfvars
 ```
 
 ## 🔧 주요 특징
@@ -80,13 +85,11 @@ terraform apply -var-file=../../envs/prod.tfvars
 - 모듈 기반 재사용
 - Multi-environment 지원
 
-## 📋 환경별 차이점
+## 📋 서울 리전 환경 설정
 
-| 환경 | VPC CIDR | AZ 수 | 프로파일 | 용도 |
-|------|----------|-------|----------|------|
-| **dev** | 10.0.0.0/16 | 2개 | petclinic-dev | 개발/테스트 |
-| **staging** | 10.1.0.0/16 | 2개 | petclinic-staging | 스테이징 |
-| **prod** | 10.2.0.0/16 | 3개 | petclinic-prod | 프로덕션 |
+| 환경 | VPC CIDR | AZ | 리전 | 프로파일 | 용도 |
+|------|----------|----|------|----------|------|
+| **seoul-dev** | 10.0.0.0/16 | ap-northeast-2a, ap-northeast-2c | ap-northeast-2 | petclinic-dev | 서울 리전 개발/테스트 |
 
 ## 🚀 실행 순서
 
@@ -101,8 +104,48 @@ terraform apply -var-file=../../envs/prod.tfvars
 9. **09-monitoring**: CloudWatch
 10. **10-aws-native**: AWS 네이티브 통합
 
+## 🔧 자동화 스크립트
+
+### 사용 가능한 스크립트
+- `init-layer.sh` / `init-layer.ps1`: 레이어 초기화 및 검증
+- `plan-layer.ps1`: Terraform plan 실행
+- `apply-layer.ps1`: Terraform apply 실행
+- `drift-detect.sh`: 인프라 드리프트 감지
+
+### 스크립트 사용 예시
+```bash
+# Bash
+./scripts/local/init-layer.sh 01-network seoul
+./scripts/local/drift-detect.sh seoul
+
+# PowerShell
+.\scripts\local\init-layer.ps1 -Layer 01-network -Environment seoul
+.\scripts\local\plan-layer.ps1 -Layer 01-network -Environment seoul
+.\scripts\local\apply-layer.ps1 -Layer 01-network -Environment seoul
+```
+
+## 💡 서울 리전 특화 기능
+
+### ✅ **서울 리전 최적화**
+- AWS 리전: `ap-northeast-2` (서울)
+- 가용 영역: `ap-northeast-2a`, `ap-northeast-2c`
+- ECR 리포지토리: 서울 리전 네이티브
+- Bedrock 모델: Meta Llama 3 8B (서울 리전 지원)
+
+### ✅ **보안 강화**
+- WAF Rate Limiting: API Gateway 및 ALB용
+- VPC Flow Logs: 네트워크 트래픽 모니터링
+- CloudTrail: API 호출 감사
+
+### ✅ **모니터링 및 알림**
+- CloudWatch 대시보드
+- Slack 알림 통합
+- X-Ray 분산 추적
+
 ## 💡 팁
 
+- 자동화 스크립트 사용으로 배포 표준화
 - 각 레이어에서 `dependencies.tf`를 참조하여 다른 레이어 상태 접근
-- 환경 추가 시 `envs/{new-env}.tfvars` 파일만 생성
-- State key는 `envs/${var.environment}/layer/terraform.tfstate` 형식 자동 적용
+- 드리프트 감지: `./scripts/local/drift-detect.sh seoul`
+- State key는 `seoul/{layer}/terraform.tfstate` 형식 자동 적용
+- 서울 리전 특화 설정은 `envs/seoul.tfvars`에서 관리
