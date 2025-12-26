@@ -7,7 +7,7 @@ environment = "dev"
 
 # AWS 설정
 aws_region  = "us-west-2"
-aws_profile = "petclinic-dev"
+aws_profile = "2501340070@office.kopo.ac.kr"
 
 # Terraform 상태 관리
 tfstate_bucket_name = "petclinic-tfstate-oregon-dev"
